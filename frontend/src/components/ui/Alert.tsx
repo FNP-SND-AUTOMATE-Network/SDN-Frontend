@@ -13,7 +13,7 @@ import {
 import { IconButton } from '@mui/material';
 
 export interface AlertProps {
-  variant?: "success" | "error" | "warning" | "info";
+  variant?: "success" | "error" | "warning" | "info" | "danger";
   title?: string;
   children: React.ReactNode;
   onClose?: () => void;

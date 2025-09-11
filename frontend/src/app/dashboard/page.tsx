@@ -9,5 +9,5 @@ export const Dashboard = () => {
       <DevelopmentStatus />
       <FeatureGrid />
     </main>
-  );
+  )
 };
