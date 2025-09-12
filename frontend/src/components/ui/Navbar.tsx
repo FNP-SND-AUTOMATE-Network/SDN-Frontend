@@ -1,19 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faRightFromBracket, faUser } from "@fortawesome/free-solid-svg-icons";
+import {
+  faChevronDown,
+  faRightFromBracket,
+  faUser,
+} from "@fortawesome/free-solid-svg-icons";
 
 interface NavbarProps {
   className?: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ className = "" }) => {
-  const { user, isAuthenticated, logout, getUserInitials, getUserDisplayName } =
+  const { user, isAuthenticated, logout, getUserDisplayName, isLoading } =
     useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -35,27 +38,59 @@ export const Navbar: React.FC<NavbarProps> = ({ className = "" }) => {
     };
   }, []);
 
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b border-primary-100 ${className}`}
+      >
+        <div className="max-w-12xl px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-start items-center h-16">
+            <div className="flex items-center">
+              <Link href="/dashboard" className="flex items-center">
+                <div className="items-center">
+                  <span className="text-2xl font-bold text-primary-600 font-sf-pro-display">
+                    CMNS-SDN
+                  </span>
+                  <br />
+                  <span className="text-sm text-secondary-400 font-sf-pro-text">
+                    Control and Management Network System
+                  </span>
+                </div>
+              </Link>
+            </div>
+            <div className="flex items-center space-x-4 ml-auto">
+              <div className="w-20 h-8 bg-gray-200 rounded animate-pulse"></div>
+              <div className="w-24 h-8 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
   if (!isAuthenticated) {
     // Show login/register buttons for non-authenticated users
     return (
       <nav
-        className={`bg-white shadow-sm border-b border-primary-100 ${className}`}
+        className={`fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b border-primary-100 ${className}`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+        <div className="max-w-12xl px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-start items-center h-16">
             <div className="flex items-center">
-            <Link href="/dashboard" className="flex items-center">
-              <Image
-                src="/images/SDN-image1.png"
-                alt="SDN Logo"
-                width={120}
-                height={40}
-                className="h-12 w-auto cursor-pointer"
-                priority
-              />
-            </Link>
+              <Link href="/dashboard" className="flex items-center">
+                <div className="items-center">
+                  <span className="text-2xl font-bold text-primary-600 font-sf-pro-display">
+                    CMNS-SDN
+                  </span>
+                  <br />
+                  <span className="text-sm text-secondary-400 font-sf-pro-text">
+                    Control and Management Network System
+                  </span>
+                </div>
+              </Link>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 ml-auto">
               <Link href="/login">
                 <Button variant="outline" className="px-4 py-2 text-sm">
                   เข้าสู่ระบบ
@@ -76,24 +111,25 @@ export const Navbar: React.FC<NavbarProps> = ({ className = "" }) => {
   // Show user info and logout for authenticated users
   return (
     <nav
-      className={`bg-white shadow-sm border-b border-primary-100 ${className}`}
+      className={`fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b border-primary-100 ${className}`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+      <div className="max-w-12xl px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-start items-center h-16">
           <div className="flex items-center">
             <Link href="/dashboard" className="flex items-center">
-              <Image
-                src="/images/SDN-image1.png"
-                alt="SDN Logo"
-                width={120}
-                height={40}
-                className="h-12 w-auto cursor-pointer"
-                priority
-              />
+              <div className="items-center">
+                <span className="text-2xl font-bold text-primary-600 font-sf-pro-display">
+                  CMNS-SDN
+                </span>
+                <br />
+                <span className="text-sm text-secondary-400 font-sf-pro-text">
+                  Control and Management Network System
+                </span>
+              </div>
             </Link>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 ml-auto">
             {/* User Avatar and Name */}
             <div className="relative" ref={dropdownRef}>
               <button
@@ -111,16 +147,12 @@ export const Navbar: React.FC<NavbarProps> = ({ className = "" }) => {
                 </span>
 
                 {/* Dropdown arrow */}
-                <svg
+                <FontAwesomeIcon 
+                  icon={faChevronDown} 
                   className={`w-4 h-4 text-gray-500 transition-transform ${
                     showDropdown ? "rotate-180" : ""
                   }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <FontAwesomeIcon icon={faChevronDown} />
-                </svg>
+                />
               </button>
 
               {/* Dropdown Menu */}

@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { OTPInput } from "@/components/ui/OTPInput";
 import { authApi, getErrorMessage } from "@/lib/api";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { faCircleCheck } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export default function OTPPage() {
   const router = useRouter();
@@ -21,12 +23,12 @@ export default function OTPPage() {
 
   // Get email from localStorage on mount
   useEffect(() => {
-    const storedEmail = localStorage.getItem('registration_email');
+    const storedEmail = localStorage.getItem("registration_email");
     if (storedEmail) {
       setEmail(storedEmail);
     } else {
       // If no email found, redirect to register
-      router.push('/register');
+      router.push("/register");
     }
   }, [router]);
 
@@ -73,7 +75,7 @@ export default function OTPPage() {
 
       // OTP verification successful
       console.log("OTP verification successful:", response);
-      
+
       // Debug: Check response structure
       console.log("OTP Response data check:", {
         user_id: response.user_id,
@@ -81,30 +83,30 @@ export default function OTPPage() {
         email_verified: response.email_verified,
         has_access_token: !!response.access_token,
         has_name: !!response.name,
-        has_surname: !!response.surname
+        has_surname: !!response.surname,
       });
-      
+
       // OTP verification successful - email is now verified
       if (response.email_verified) {
         console.log("✅ Email verified successfully. Redirecting to login...");
-        
+
         // Clear registration email
-        localStorage.removeItem('registration_email');
-        
+        localStorage.removeItem("registration_email");
+
         // Store verified email and success status for login page
-        localStorage.setItem('verified_email', response.email);
-        localStorage.setItem('registration_success', 'true');
-        
+        localStorage.setItem("verified_email", response.email);
+        localStorage.setItem("registration_success", "true");
+
         // Show success message briefly before redirect
         setOtp("");
         setError("");
         setSuccess("🎉 ยืนยัน OTP สำเร็จ! กำลังนำคุณไปหน้าเข้าสู่ระบบ...");
-        
+
         // Redirect to login page with success parameters
         setTimeout(() => {
           router.push("/login?verified=true&registration=success");
         }, 1500);
-        
+
         // Show success state in OTP page
         return;
       } else {
@@ -131,12 +133,11 @@ export default function OTPPage() {
       });
 
       console.log("OTP resent successfully:", response);
-      
+
       setTimeLeft(600); // Reset timer
       setCanResend(false);
       setOtp("");
       setError("");
-      
     } catch (error: any) {
       console.error("Resend OTP error:", error);
       setError(getErrorMessage(error));
@@ -191,10 +192,13 @@ export default function OTPPage() {
           {success && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center">
-                <svg className="h-5 w-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-green-600 text-sm font-medium font-sf-pro-text">{success}</p>
+                <FontAwesomeIcon 
+                  icon={faCircleCheck} 
+                  className="h-5 w-5 text-green-400 mr-2"
+                />
+                <p className="text-green-600 text-sm font-medium font-sf-pro-text">
+                  {success}
+                </p>
               </div>
             </div>
           )}
@@ -217,12 +221,11 @@ export default function OTPPage() {
               disabled={!canResend || isResending}
               loading={isResending}
             >
-              {isResending 
-                ? "กำลังส่ง..." 
-                : canResend 
-                  ? "ส่ง OTP ใหม่" 
-                  : `ส่งใหม่ได้ใน ${formatTime(timeLeft)}`
-              }
+              {isResending
+                ? "กำลังส่ง..."
+                : canResend
+                ? "ส่ง OTP ใหม่"
+                : `ส่งใหม่ได้ใน ${formatTime(timeLeft)}`}
             </Button>
           </div>
 
@@ -239,7 +242,9 @@ export default function OTPPage() {
         {/* Demo hint */}
         <div className="mt-8 p-4 bg-warning-50 rounded-lg border border-warning-200">
           <p className="text-sm text-warning-800">
-            <strong>Demo:</strong> ใช้รหัส <code className="bg-warning-200 px-1 rounded">123456</code> เพื่อทดสอบ
+            <strong>Demo:</strong> ใช้รหัส{" "}
+            <code className="bg-warning-200 px-1 rounded">123456</code>{" "}
+            เพื่อทดสอบ
           </p>
         </div>
       </div>

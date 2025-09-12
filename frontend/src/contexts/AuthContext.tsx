@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 export interface User {
   id: string;
@@ -10,10 +10,40 @@ export interface User {
   role: string;
 }
 
-export const useAuth = () => {
+interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (userData: User, accessToken: string) => void;
+  logout: () => void;
+  getUserDisplayName: () => string;
+  getUserInitials: () => string;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Helper function to check if token is expired
+  const isTokenExpired = (token: string): boolean => {
+    try {
+      // Decode JWT token to check expiration
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Date.now() / 1000;
+      return payload.exp < currentTime;
+    } catch (error) {
+      console.error('Error checking token expiration:', error);
+      return true; // Consider invalid token as expired
+    }
+  };
 
   // Load user data from localStorage on mount
   useEffect(() => {
@@ -23,14 +53,25 @@ export const useAuth = () => {
         const storedUser = localStorage.getItem('user');
 
         if (storedToken && storedUser) {
-          setToken(storedToken);
-          setUser(JSON.parse(storedUser));
+          // Check if token is expired
+          if (isTokenExpired(storedToken)) {
+            console.log('Token expired, clearing user data');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('registration_email');
+            setUser(null);
+            setToken(null);
+          } else {
+            setToken(storedToken);
+            setUser(JSON.parse(storedUser));
+          }
         }
       } catch (error) {
         console.error('Error loading user data:', error);
         // Clear invalid data
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
+        localStorage.removeItem('registration_email');
       } finally {
         // Add small delay to prevent flicker
         setTimeout(() => {
@@ -44,7 +85,7 @@ export const useAuth = () => {
 
   // Login function
   const login = (userData: User, accessToken: string) => {
-    console.log("useAuth.login called with:", {
+    console.log("AuthContext.login called with:", {
       userData,
       accessToken: accessToken ? "present" : "missing"
     });
@@ -101,14 +142,28 @@ export const useAuth = () => {
     return `${user.name}.${surnameInitial}`;
   };
 
-  return {
+  const value: AuthContextType = {
     user,
     token,
     isLoading,
     isAuthenticated,
     login,
     logout,
-    getUserInitials,
     getUserDisplayName,
+    getUserInitials,
   };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

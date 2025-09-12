@@ -3,10 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Button } from "@/components/ui/Button";
 import { authApi, getErrorMessage } from "@/lib/api";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCircleCheck, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,23 +26,26 @@ export default function LoginPage() {
 
   // Check for verified email from OTP
   useEffect(() => {
-    const verifiedEmail = localStorage.getItem('verified_email');
-    const registrationSuccess = localStorage.getItem('registration_success');
-    const isVerified = searchParams.get('verified') === 'true';
-    const isRegistrationComplete = searchParams.get('registration') === 'success';
-    
+    const verifiedEmail = localStorage.getItem("verified_email");
+    const registrationSuccess = localStorage.getItem("registration_success");
+    const isVerified = searchParams.get("verified") === "true";
+    const isRegistrationComplete =
+      searchParams.get("registration") === "success";
+
     if (verifiedEmail && isVerified && registrationSuccess) {
-      setFormData(prev => ({ ...prev, email: verifiedEmail }));
-      
+      setFormData((prev) => ({ ...prev, email: verifiedEmail }));
+
       if (isRegistrationComplete) {
-        setSuccessMessage("🎉 สมัครสมาชิกสำเร็จ! ยืนยันอีเมล OTP เรียบร้อยแล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่านที่สมัครไว้");
+        setSuccessMessage(
+          "🎉 สมัครสมาชิกสำเร็จ! ยืนยันอีเมล OTP เรียบร้อยแล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่านที่สมัครไว้"
+        );
       } else {
         setSuccessMessage("✅ ยืนยัน OTP เรียบร้อยแล้ว กรุณาเข้าสู่ระบบ");
       }
-      
+
       // Cleanup
-      localStorage.removeItem('verified_email');
-      localStorage.removeItem('registration_success');
+      localStorage.removeItem("verified_email");
+      localStorage.removeItem("registration_success");
     }
   }, [searchParams]);
 
@@ -83,7 +89,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
@@ -97,19 +103,21 @@ export default function LoginPage() {
 
       // Login successful
       console.log("Login successful:", response);
-      
+
       // Use auth hook to store user data
-      login({
-        id: response.user_id,
-        email: response.email,
-        name: response.name,
-        surname: response.surname,
-        role: response.role
-      }, response.access_token);
+      login(
+        {
+          id: response.user_id,
+          email: response.email,
+          name: response.name,
+          surname: response.surname,
+          role: response.role,
+        },
+        response.access_token
+      );
 
       // Redirect to dashboard
-      router.push('/dashboard');
-      
+      router.push("/dashboard");
     } catch (error: any) {
       console.error("Login error:", error);
       setApiError(getErrorMessage(error));
@@ -147,15 +155,14 @@ export default function LoginPage() {
               onChange={handleInputChange}
               error={errors.email}
             />
-            <Input
+            <PasswordInput
+              id="password"
               label="รหัสผ่าน"
-              name="password"
-              type="password"
-              autoComplete="current-password"
               placeholder="กรอกรหัสผ่านของคุณ"
               value={formData.password}
-              onChange={handleInputChange}
+              onChange={(value) => setFormData(prev => ({ ...prev, password: value }))}
               error={errors.password}
+              required
             />
           </div>
 
@@ -167,13 +174,19 @@ export default function LoginPage() {
                 type="checkbox"
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+              <label
+                htmlFor="remember-me"
+                className="ml-2 block text-sm text-gray-900"
+              >
                 จดจำการเข้าสู่ระบบ
               </label>
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-200">
+              <a
+                href="#"
+                className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-200"
+              >
                 ลืมรหัสผ่าน?
               </a>
             </div>
@@ -184,12 +197,15 @@ export default function LoginPage() {
             <div className="rounded-md bg-success-50 p-4 border border-success-200">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-success-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                  <FontAwesomeIcon 
+                    icon={faCircleCheck} 
+                    className="h-5 w-5 text-success-400"
+                  />
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-success-800 font-sf-pro-text">{successMessage}</p>
+                  <p className="text-sm text-success-800 font-sf-pro-text">
+                    {successMessage}
+                  </p>
                 </div>
               </div>
             </div>
@@ -200,12 +216,15 @@ export default function LoginPage() {
             <div className="rounded-md bg-danger-50 p-4 border border-danger-200">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-danger-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
+                  <FontAwesomeIcon 
+                    icon={faCircleXmark} 
+                    className="h-5 w-5 text-danger-400"
+                  />
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-danger-800 font-sf-pro-text">{apiError}</p>
+                  <p className="text-sm text-danger-800 font-sf-pro-text">
+                    {apiError}
+                  </p>
                 </div>
               </div>
             </div>
