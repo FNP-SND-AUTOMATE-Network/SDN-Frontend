@@ -3,7 +3,10 @@ FROM oven/bun:1-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Install curl for healthcheck
+RUN apk add --no-cache curl
+
+# Copy package files first for better caching
 COPY package.json bun.lock ./
 
 # Install all dependencies (including devDependencies)
@@ -17,6 +20,8 @@ EXPOSE 3000
 
 # Set environment to development
 ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV WATCHPACK_POLLING=true
 
-# Run development server
-CMD ["bun", "dev"]
+# Run development server with optimizations
+CMD ["bun", "dev", "--turbo"]

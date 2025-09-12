@@ -13,10 +13,13 @@ services:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       - PORT=3000
+      - NEXT_TELEMETRY_DISABLED=1
+      - WATCHPACK_POLLING=true
     volumes:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
+      - nextjs_cache:/app/.next/cache
     container_name: sdn-frontend
     restart: unless-stopped
     healthcheck:
@@ -27,7 +30,16 @@ services:
       start_period: 40s
     networks:
       - sdn-network
+    # Performance optimizations
+    shm_size: 2gb
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
 networks:
   sdn-network:
     driver: bridge
+
+volumes:
+  nextjs_cache:
