@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Button } from "@/components/ui/Button";
 import { authApi, getErrorMessage } from "@/lib/api";
 import Link from "next/link";
@@ -167,26 +168,24 @@ export default function RegisterPage() {
               error={errors.email}
             />
             
-            <Input
+            <PasswordInput
+              id="password"
               label="รหัสผ่าน"
-              name="password"
-              type="password"
-              autoComplete="new-password"
               placeholder="กรอกรหัสผ่านของคุณ"
               value={formData.password}
-              onChange={handleInputChange}
+              onChange={(value) => setFormData(prev => ({ ...prev, password: value }))}
               error={errors.password}
+              required
             />
             
-            <Input
+            <PasswordInput
+              id="confirmPassword"
               label="ยืนยันรหัสผ่าน"
-              name="confirmPassword"
-              type="password"
-              autoComplete="new-password"
               placeholder="กรอกรหัสผ่านอีกครั้ง"
               value={formData.confirmPassword}
-              onChange={handleInputChange}
+              onChange={(value) => setFormData(prev => ({ ...prev, confirmPassword: value }))}
               error={errors.confirmPassword}
+              required
             />
           </div>
 
