@@ -1,12 +1,36 @@
+import { faScrewdriverWrench } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
-import { Navbar } from "@/components/ui/Navbar";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-100 font-sf-pro">
-      {/* Navigation Header */}
-      <Navbar />
+      {/* Simple Navigation Header */}
+      <nav className="bg-white shadow-sm border-b border-primary-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <Link href="/dashboard" className="flex items-center">
+                <div className="text-2xl font-bold text-primary-600 font-sf-pro-display">
+                  SDN Logo
+                </div>
+              </Link>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Link href="/login">
+                <button className="px-4 py-2 text-sm border-2 border-primary-500 bg-transparent text-primary-500 hover:bg-primary-50 rounded-lg transition-colors">
+                  เข้าสู่ระบบ
+                </button>
+              </Link>
+              <Link href="/register">
+                <button className="px-4 py-2 text-sm bg-primary-500 text-white hover:bg-primary-600 rounded-lg transition-colors">
+                  สมัครสมาชิก
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
@@ -18,12 +42,7 @@ export default function HomePage() {
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-              />
+              <FontAwesomeIcon icon={faScrewdriverWrench} />  
             </svg>
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4 font-sf-pro-display">
@@ -32,8 +51,6 @@ export default function HomePage() {
           <p className="text-xl text-gray-600 mb-8 font-sf-pro-text">
             ระบบจัดการข้อมูลเครือข่าย
           </p>
-
-          
         </div>
       </main>
     </div>

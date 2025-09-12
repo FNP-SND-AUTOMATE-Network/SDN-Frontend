@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faRightFromBracket, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faRightFromBracket, faUser } from "@fortawesome/free-solid-svg-icons";
 
 interface NavbarProps {
   className?: string;
@@ -119,12 +119,7 @@ export const Navbar: React.FC<NavbarProps> = ({ className = "" }) => {
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
+                  <FontAwesomeIcon icon={faChevronDown} />
                 </svg>
               </button>
 
