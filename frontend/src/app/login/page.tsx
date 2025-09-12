@@ -197,13 +197,10 @@ export default function LoginPage() {
             <div className="rounded-md bg-success-50 p-4 border border-success-200">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <svg
+                  <FontAwesomeIcon 
+                    icon={faCircleCheck} 
                     className="h-5 w-5 text-success-400"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <FontAwesomeIcon icon={faCircleCheck} />
-                  </svg>
+                  />
                 </div>
                 <div className="ml-3">
                   <p className="text-sm text-success-800 font-sf-pro-text">
@@ -219,13 +216,10 @@ export default function LoginPage() {
             <div className="rounded-md bg-danger-50 p-4 border border-danger-200">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <svg
+                  <FontAwesomeIcon 
+                    icon={faCircleXmark} 
                     className="h-5 w-5 text-danger-400"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <FontAwesomeIcon icon={faCircleXmark} />
-                  </svg>
+                  />
                 </div>
                 <div className="ml-3">
                   <p className="text-sm text-danger-800 font-sf-pro-text">

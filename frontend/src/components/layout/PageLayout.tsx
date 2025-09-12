@@ -18,11 +18,13 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
       {/* Fixed Sidebar */}
       <Sidebar />
 
-      {/* Main Content Area - Scrollable */}
-      <main className="ml-64 pt-16 min-h-screen overflow-y-auto">
-        <div className="py-12 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
-            {children}
+      {/* Main Content Area - Responsive positioning */}
+      <main className="pt-16 lg:ml-64 min-h-screen overflow-y-auto">
+        <div className="w-full">
+          <div className="py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+              {children}
+            </div>
           </div>
         </div>
       </main>

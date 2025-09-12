@@ -147,16 +147,12 @@ export const Navbar: React.FC<NavbarProps> = ({ className = "" }) => {
                 </span>
 
                 {/* Dropdown arrow */}
-                <svg
+                <FontAwesomeIcon 
+                  icon={faChevronDown} 
                   className={`w-4 h-4 text-gray-500 transition-transform ${
                     showDropdown ? "rotate-180" : ""
                   }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <FontAwesomeIcon icon={faChevronDown} />
-                </svg>
+                />
               </button>
 
               {/* Dropdown Menu */}

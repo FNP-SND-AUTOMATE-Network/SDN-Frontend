@@ -10,14 +10,10 @@ export const FeatureGrid = () => {
   const features = [
     {
       icon: (
-        <svg
+        <FontAwesomeIcon 
+          icon={faCertificate} 
           className="w-6 h-6 text-success-600"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <FontAwesomeIcon icon={faCertificate} />
-        </svg>
+        />
       ),
       title: "ระบบรับรอง",
       description: "Login, Register, OTP พร้อมใช้งาน",
@@ -25,14 +21,10 @@ export const FeatureGrid = () => {
     },
     {
       icon: (
-        <svg
+        <FontAwesomeIcon 
+          icon={faShieldAlt} 
           className="w-6 h-6 text-primary-600"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <FontAwesomeIcon icon={faShieldAlt} />
-        </svg>
+        />
       ),
       title: "UI Components",
       description: "Material-UI, Font Awesome, SF Pro Font",
@@ -40,14 +32,10 @@ export const FeatureGrid = () => {
     },
     {
       icon: (
-        <svg
+        <FontAwesomeIcon 
+          icon={faBell} 
           className="w-6 h-6 text-warning-600"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <FontAwesomeIcon icon={faBell} />
-        </svg>
+        />
       ),
       title: "การแจ้งเตือน",
       description: "Alert System พร้อม Animations",
