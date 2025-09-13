@@ -7,6 +7,7 @@ import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronDown,
+  faGear,
   faRightFromBracket,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
@@ -168,6 +169,15 @@ export const Navbar: React.FC<NavbarProps> = ({ className = "" }) => {
                     <p className="text-xs text-primary-600 font-sf-pro-text">
                       {user?.role}
                     </p>
+                  </div>
+
+                  <div className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <Link href="/setting">
+                      <Button variant="outline" className="w-full text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors items-center space-x-2">
+                        <FontAwesomeIcon icon={faGear} className="w-4 h-4" />
+                        <span>setting</span>
+                      </Button>
+                    </Link>
                   </div>
 
                   <button
