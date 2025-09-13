@@ -2,9 +2,23 @@
 
 import { PageLayout } from "@/components/layout/PageLayout";
 import { useState } from "react";
-import { ProfileContent } from "./profile/page";
+import ProfilePage from "./profile/page";
 import { AccountContent } from "./account/page";
-import { MFAContent } from "./mfa/page";
+import { MFAContent as MFAContentComponent } from "./mfa/page";
+
+// Components สำหรับแต่ละหน้า
+const ProfileContent = () => (
+    <ProfilePage />
+);
+
+const AccountContentWrapper = () => (
+    <AccountContent />
+);
+
+
+const MFAContentWrapper = () => (
+    <MFAContentComponent />
+);
 
 export default function SettingPage() {
     const [activeTab, setActiveTab] = useState("profile");
@@ -20,9 +34,9 @@ export default function SettingPage() {
             case "profile":
                 return <ProfileContent />;
             case "account":
-                return <AccountContent />;
+                return <AccountContentWrapper />;
             case "mfa":
-                return <MFAContent />;
+                return <MFAContentWrapper />;
             default:
                 return <ProfileContent />;
         }
