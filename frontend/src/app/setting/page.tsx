@@ -2,9 +2,24 @@
 
 import { PageLayout } from "@/components/layout/PageLayout";
 import { useState } from "react";
-import { ProfileContent } from "./profile/page";
+import ProfilePage from "./profile/page";
 import { AccountContent } from "./account/page";
-import { MFAContent } from "./mfa/page";
+import { MFAContent as MFAContentComponent } from "./mfa/page";
+import { ProtectedRoute } from "@/components/auth/AuthGuard";
+
+// Components สำหรับแต่ละหน้า
+const ProfileContent = () => (
+    <ProfilePage />
+);
+
+const AccountContentWrapper = () => (
+    <AccountContent />
+);
+
+
+const MFAContentWrapper = () => (
+    <MFAContentComponent />
+);
 
 export default function SettingPage() {
     const [activeTab, setActiveTab] = useState("profile");
@@ -20,20 +35,21 @@ export default function SettingPage() {
             case "profile":
                 return <ProfileContent />;
             case "account":
-                return <AccountContent />;
+                return <AccountContentWrapper />;
             case "mfa":
-                return <MFAContent />;
+                return <MFAContentWrapper />;
             default:
                 return <ProfileContent />;
         }
     };
 
     return (
-        <PageLayout>
-            <div className="flex flex-col gap-6">
-                <h1 className="text-3xl font-bold text-gray-900 font-sf-pro-display">
-                    Settings
-                </h1>
+        <ProtectedRoute>
+            <PageLayout>
+                <div className="flex flex-col gap-6">
+                    <h1 className="text-3xl font-bold text-gray-900 font-sf-pro-display">
+                        Settings
+                    </h1>
                 
                 {/* Sub Navigation */}
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -58,7 +74,8 @@ export default function SettingPage() {
                 <div className="flex-1">
                     {renderContent()}
                 </div>
-            </div>
-        </PageLayout>
+                </div>
+            </PageLayout>
+        </ProtectedRoute>
     );
 }

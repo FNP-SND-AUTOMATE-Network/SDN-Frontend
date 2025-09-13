@@ -65,6 +65,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setToken(storedToken);
             setUser(JSON.parse(storedUser));
           }
+        } else {
+          // No token or user data found
+          setToken(null);
+          setUser(null);
         }
       } catch (error) {
         console.error('Error loading user data:', error);

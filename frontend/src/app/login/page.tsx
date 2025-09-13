@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
+import { PublicRoute } from "@/components/auth/AuthGuard";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -127,7 +128,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-100 py-12 px-4 sm:px-6 lg:px-8">
+    <PublicRoute>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-primary-100">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-primary-600">
@@ -243,6 +245,7 @@ export default function LoginPage() {
           </div>
         </form>
       </div>
-    </div>
+      </div>
+    </PublicRoute>
   );
 }

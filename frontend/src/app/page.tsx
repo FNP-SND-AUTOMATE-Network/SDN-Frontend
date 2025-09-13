@@ -10,44 +10,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Navbar } from "@/components/ui/Navbar";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
+import { PublicRoute } from "@/components/auth/AuthGuard";
 
 export default function HomePage() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
-
-  // Redirect to dashboard if user is already authenticated
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.push('/dashboard');
-    }
-  }, [isAuthenticated, isLoading, router]);
-
-  // Show loading while checking authentication
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-100 font-sf-pro flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full mb-4 shadow-lg animate-pulse">
-            <FontAwesomeIcon 
-              icon={faNetworkWired} 
-              className="w-8 h-8 text-white"
-            />
-          </div>
-          <p className="text-gray-600 font-sf-pro-text">กำลังตรวจสอบการเข้าสู่ระบบ...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render landing page if user is authenticated (will redirect)
-  if (isAuthenticated) {
-    return null;
-  }
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-100 font-sf-pro">
+    <PublicRoute>
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-100 font-sf-pro">
       <Navbar />
 
       {/* Hero Section */}
@@ -198,6 +166,7 @@ export default function HomePage() {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+    </PublicRoute>
   );
 }

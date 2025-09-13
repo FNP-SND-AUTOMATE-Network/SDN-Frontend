@@ -19,6 +19,7 @@ import {
   faMapMarkerAlt,
   faTags,
   faDownload,
+  faCode,
 } from "@fortawesome/free-solid-svg-icons";
 
 interface MenuItem {
@@ -110,6 +111,12 @@ const menuItems: MenuItem[] = [
         href: "/device/backup-config",
       },
     ],
+  },
+  {
+    id: "Audit Log",
+    label: "Audit Log",
+    icon: faCode,
+    href: "/audit-log",
   },
 ];
 

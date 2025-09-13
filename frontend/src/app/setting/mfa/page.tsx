@@ -1,6 +1,6 @@
 export function MFAContent() {
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="space-y-6">
                     <div>
