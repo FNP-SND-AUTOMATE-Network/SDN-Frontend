@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, Fragment, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { userService, UserProfile, UserRole, UserListResponse, APIError } from "@/services/userService";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
@@ -21,8 +21,36 @@ export function AccountContent() {
         totalPages: 0
     });
 
-    // Fetch users from API
-    const fetchUsers = async (page = 1, pageSize = 10) => {
+    // Delete user
+    const deleteUser = async (userId: string, userName: string) => {
+        if (!token) {
+            setError("No authentication token found");
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            await userService.deleteUser(token, userId);
+            // Refresh the user list
+            await fetchUsersData(pagination.page, pagination.pageSize);
+            showSuccess(`User "${userName}" deleted successfully!`, "Success");
+        } catch (err) {
+            console.error('Error deleting user:', err);
+            if (err instanceof APIError) {
+                showError(err.message, "Delete Failed");
+                setError(err.message);
+            } else {
+                showError('Failed to delete user', "Delete Failed");
+                setError('Failed to delete user');
+            }
+        }
+    };
+
+    // Load users on component mount
+    const fetchUsersData = useCallback(async (page = 1, pageSize = 10) => {
         if (!token) {
             setError("No authentication token found");
             setLoading(false);
@@ -43,50 +71,23 @@ export function AccountContent() {
             });
         } catch (err) {
             console.error('Error fetching users:', err);
+            // Don't call showError here to prevent infinite loop
             if (err instanceof APIError) {
-                showError(err.message, "Load Users Failed");
                 setError(err.message);
             } else {
-                showError('Failed to fetch users', "Load Users Failed");
                 setError('Failed to fetch users');
             }
         } finally {
             setLoading(false);
         }
-    };
-
-    // Delete user
-    const deleteUser = async (userId: string, userName: string) => {
-        if (!token) {
-            setError("No authentication token found");
-            return;
-        }
-
-        if (!confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
-            return;
-        }
-
-        try {
-            await userService.deleteUser(token, userId);
-            // Refresh the user list
-            fetchUsers(pagination.page, pagination.pageSize);
-            showSuccess(`User "${userName}" deleted successfully!`, "Success");
-        } catch (err) {
-            console.error('Error deleting user:', err);
-            if (err instanceof APIError) {
-                showError(err.message, "Delete Failed");
-                setError(err.message);
-            } else {
-                showError('Failed to delete user', "Delete Failed");
-                setError('Failed to delete user');
-            }
-        }
-    };
-
-    // Load users on component mount
-    useEffect(() => {
-        fetchUsers();
     }, [token]);
+
+    useEffect(() => {
+        // Only fetch if we have a token
+        if (token) {
+            fetchUsersData();
+        }
+    }, [token, fetchUsersData]);
 
     const getRoleBadge = (role: UserRole) => {
         const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
@@ -126,7 +127,7 @@ export function AccountContent() {
         );
     }
 
-    return (
+  return (
         <Fragment>
             <div className="space-y-6 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center">
@@ -247,14 +248,14 @@ export function AccountContent() {
             <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg">
                 <div className="flex-1 flex justify-between sm:hidden">
                     <button 
-                        onClick={() => fetchUsers(pagination.page - 1, pagination.pageSize)}
+                        onClick={() => fetchUsersData(pagination.page - 1, pagination.pageSize)}
                         disabled={pagination.page <= 1}
                         className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Previous
                     </button>
                     <button 
-                        onClick={() => fetchUsers(pagination.page + 1, pagination.pageSize)}
+                        onClick={() => fetchUsersData(pagination.page + 1, pagination.pageSize)}
                         disabled={pagination.page >= pagination.totalPages}
                         className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -269,12 +270,12 @@ export function AccountContent() {
                                 {Math.min(pagination.page * pagination.pageSize, pagination.total)}
                             </span> of{' '}
                             <span className="font-medium">{pagination.total}</span> results
-                        </p>
-                    </div>
+        </p>
+      </div>
                     <div>
                         <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                             <button 
-                                onClick={() => fetchUsers(pagination.page - 1, pagination.pageSize)}
+                                onClick={() => fetchUsersData(pagination.page - 1, pagination.pageSize)}
                                 disabled={pagination.page <= 1}
                                 className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
@@ -284,7 +285,7 @@ export function AccountContent() {
                                 Page {pagination.page} of {pagination.totalPages}
                             </span>
                             <button 
-                                onClick={() => fetchUsers(pagination.page + 1, pagination.pageSize)}
+                                onClick={() => fetchUsersData(pagination.page + 1, pagination.pageSize)}
                                 disabled={pagination.page >= pagination.totalPages}
                                 className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
@@ -306,5 +307,5 @@ export function AccountContent() {
                 autoHideDuration={6000}
             />
         </Fragment>
-    );
+  );
 }

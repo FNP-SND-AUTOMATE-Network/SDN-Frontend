@@ -1,7 +1,7 @@
 "use client";
 
-import { PageLayout } from "@/components/layout/PageLayout";
-import { useState, useEffect } from "react";
+// import { PageLayout } from "@/components/layout/PageLayout";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { userService, UserProfile, APIError } from "@/services/userService";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -15,7 +15,7 @@ import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 import { useSnackbar } from "@/hooks/useSnackbar";
 
 export default function ProfilePage() {
-    const { user, token } = useAuth();
+    const { token } = useAuth();
     const { snackbar, showSuccess, showError, showWarning, hideSnackbar } =
         useSnackbar();
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -44,38 +44,6 @@ export default function ProfilePage() {
     });
 
     // API functions
-    const fetchUserProfile = async () => {
-        if (!token) {
-            setError("No authentication token found");
-            setLoading(false);
-            return;
-        }
-
-        try {
-            setLoading(true);
-            setError(null);
-
-            const data = await userService.getMyProfile(token);
-            setUserProfile(data);
-            setFormData({
-                name: data.name || "",
-                surname: data.surname || "",
-                email: data.email || "",
-            });
-        } catch (err) {
-            console.error("Error fetching user profile:", err);
-            if (err instanceof APIError) {
-                showError(err.message, "Load Profile Failed");
-                setError(err.message);
-            } else {
-                showError("Failed to fetch user profile", "Load Profile Failed");
-                setError("Failed to fetch user profile");
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const updateUserProfile = async () => {
         if (!token || !userProfile) {
             setError("No authentication token or user profile found");
@@ -173,9 +141,43 @@ export default function ProfilePage() {
     };
 
     // Load user profile on component mount
-    useEffect(() => {
-        fetchUserProfile();
+    const fetchUserProfile = useCallback(async () => {
+        if (!token) {
+            setError("No authentication token found");
+            setLoading(false);
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError(null);
+
+            const data = await userService.getMyProfile(token);
+            setUserProfile(data);
+            setFormData({
+                name: data.name || "",
+                surname: data.surname || "",
+                email: data.email || "",
+            });
+        } catch (err) {
+            console.error("Error fetching user profile:", err);
+            // Don't call showError here to prevent infinite loop
+            if (err instanceof APIError) {
+                setError(err.message);
+            } else {
+                setError("Failed to fetch user profile");
+            }
+        } finally {
+            setLoading(false);
+        }
     }, [token]);
+
+    useEffect(() => {
+        // Only fetch if we have a token
+        if (token) {
+            fetchUserProfile();
+        }
+    }, [token, fetchUserProfile]);
 
     // Handle form input changes
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

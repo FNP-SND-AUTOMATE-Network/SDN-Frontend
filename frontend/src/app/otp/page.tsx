@@ -30,7 +30,7 @@ export default function OTPPage() {
       // If no email found, redirect to register
       router.push("/register");
     }
-  }, [router]);
+  }, []); // Empty dependency array since we only want this to run once
 
   // Countdown timer
   useEffect(() => {
