@@ -37,6 +37,7 @@ EXPOSE 3000/tcp
 
 # Set environment to production
 ENV NODE_ENV=production
+ENV BUN_SILENCE_ASYNC_HOOKS_WARNING=1
 
 # Run the application
 ENTRYPOINT ["bun", "start"]
