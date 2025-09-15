@@ -34,7 +34,7 @@ export default function AuditLogPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Fetch audit logs based on user role
-  const fetchAuditLogs = useCallback(async (offset = 0, reset = true) => {
+  const fetchAuditLogs = useCallback(async (offset = 0, reset = true, currentFilters = filters, currentLimit = 50) => {
     if (!token || !user) {
       setError("No authentication token found");
       setLoading(false);
@@ -49,10 +49,10 @@ export default function AuditLogPage() {
       // For ADMIN and OWNER, show all audit logs
       const auditFilters = {
         ...(user.role === "VIEWER" || user.role === "ENGINEER" ? { actor_user_id: user.id } : {}),
-        ...(filters.action ? { action: filters.action } : {}),
-        ...(filters.startDate ? { start_date: filters.startDate } : {}),
-        ...(filters.endDate ? { end_date: filters.endDate } : {}),
-        limit: pagination.limit,
+        ...(currentFilters.action ? { action: currentFilters.action } : {}),
+        ...(currentFilters.startDate ? { start_date: currentFilters.startDate } : {}),
+        ...(currentFilters.endDate ? { end_date: currentFilters.endDate } : {}),
+        limit: currentLimit,
         offset: offset
       };
 
@@ -80,20 +80,20 @@ export default function AuditLogPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, user, filters, pagination.limit]);
+  }, [token, user]);
 
   useEffect(() => {
     if (token && user) {
-      fetchAuditLogs(0, true);
+      fetchAuditLogs(0, true, filters, pagination.limit);
     }
-  }, [token, user, fetchAuditLogs]);
+  }, [token, user, filters.action, filters.startDate, filters.endDate, fetchAuditLogs]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const applyFilters = () => {
-    fetchAuditLogs(0, true);
+    fetchAuditLogs(0, true, filters, pagination.limit);
     setShowFilters(false);
   };
 
@@ -107,35 +107,42 @@ export default function AuditLogPage() {
 
   const loadMore = () => {
     if (pagination.hasMore && !loading) {
-      fetchAuditLogs(pagination.offset + pagination.limit, false);
+      fetchAuditLogs(pagination.offset + pagination.limit, false, filters, pagination.limit);
     }
   };
 
   const refreshData = () => {
-    fetchAuditLogs(0, true);
+    fetchAuditLogs(0, true, filters, pagination.limit);
   };
 
   // Memoized function to get user name from UUID
   const getUserName = useCallback(async (userId: string): Promise<string> => {
     if (!userId) return "System";
     
-    // Check cache first
-    if (userCache[userId]) {
-      const user = userCache[userId];
-      return `${user.name || ''} ${user.surname || ''}`.trim() || user.email || userId;
-    }
-
     if (!token) return userId;
 
     try {
       const userProfile = await userService.getUserById(token, userId);
+      // Update cache without causing re-renders
       setUserCache(prev => ({ ...prev, [userId]: userProfile }));
       return `${userProfile.name || ''} ${userProfile.surname || ''}`.trim() || userProfile.email || userId;
     } catch (error) {
       console.error('Error fetching user:', error);
       return userId; // Fallback to UUID if user not found
     }
-  }, [token, userCache]);
+  }, [token]);
+
+  // Function to get cached user name
+  const getCachedUserName = useCallback((userId: string): string => {
+    if (!userId) return "System";
+    
+    if (userCache[userId]) {
+      const user = userCache[userId];
+      return `${user.name || ''} ${user.surname || ''}`.trim() || user.email || userId;
+    }
+    
+    return userId; // Return userId if not in cache
+  }, [userCache]);
 
   // Function to show detail modal
   const showDetail = (log: AuditLogResponse) => {
@@ -260,7 +267,7 @@ export default function AuditLogPage() {
 
   return (
     <ProtectedRoute>
-      <PageLayout>
+    <PageLayout>
         <div className="space-y-6 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="flex justify-between items-center">
@@ -420,10 +427,10 @@ export default function AuditLogPage() {
                       {(user?.role === "ADMIN" || user?.role === "OWNER") && (
                         <>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            <UserDisplay userId={log.actor_user_id} userCache={userCache} getUserName={getUserName} />
+                            <UserDisplay userId={log.actor_user_id} userCache={userCache} getCachedUserName={getCachedUserName} getUserName={getUserName} />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            <UserDisplay userId={log.target_user_id} userCache={userCache} getUserName={getUserName} />
+                            <UserDisplay userId={log.target_user_id} userCache={userCache} getCachedUserName={getCachedUserName} getUserName={getUserName} />
                           </td>
                         </>
                       )}
@@ -534,7 +541,7 @@ export default function AuditLogPage() {
                         ผู้กระทำ
                       </label>
                       <p className="text-sm text-gray-900 font-sf-pro-text">
-                        <UserDisplay userId={selectedLog.actor_user_id} userCache={userCache} getUserName={getUserName} />
+                        <UserDisplay userId={selectedLog.actor_user_id} userCache={userCache} getCachedUserName={getCachedUserName} getUserName={getUserName} />
                       </p>
                     </div>
                     <div>
@@ -542,7 +549,7 @@ export default function AuditLogPage() {
                         ผู้ถูกกระทำ
                       </label>
                       <p className="text-sm text-gray-900 font-sf-pro-text">
-                        <UserDisplay userId={selectedLog.target_user_id} userCache={userCache} getUserName={getUserName} />
+                        <UserDisplay userId={selectedLog.target_user_id} userCache={userCache} getCachedUserName={getCachedUserName} getUserName={getUserName} />
                       </p>
                     </div>
                   </div>
@@ -570,9 +577,9 @@ export default function AuditLogPage() {
                 </button>
               </div>
             </div>
-          </div>
+      </div>
         )}
-      </PageLayout>
+    </PageLayout>
     </ProtectedRoute>
   );
 }
@@ -581,10 +588,11 @@ export default function AuditLogPage() {
 interface UserDisplayProps {
   userId?: string;
   userCache: Record<string, UserProfile>;
+  getCachedUserName: (userId: string) => string;
   getUserName: (userId: string) => Promise<string>;
 }
 
-const UserDisplay: React.FC<UserDisplayProps> = memo(({ userId, userCache, getUserName }) => {
+const UserDisplay: React.FC<UserDisplayProps> = memo(({ userId, userCache, getCachedUserName, getUserName }) => {
   const [displayName, setDisplayName] = useState<string>(userId || "System");
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -597,9 +605,8 @@ const UserDisplay: React.FC<UserDisplayProps> = memo(({ userId, userCache, getUs
     }
 
     // Check cache first
-    if (userCache[userId]) {
-      const user = userCache[userId];
-      const cachedName = `${user.name || ''} ${user.surname || ''}`.trim() || user.email || userId;
+    const cachedName = getCachedUserName(userId);
+    if (cachedName !== userId) {
       if (isMounted) {
         setDisplayName(cachedName);
       }
@@ -633,7 +640,7 @@ const UserDisplay: React.FC<UserDisplayProps> = memo(({ userId, userCache, getUs
     return () => {
       isMounted = false;
     };
-  }, [userId, userCache, getUserName]);
+  }, [userId, getCachedUserName, getUserName]);
 
   if (isLoading) {
     return <span className="text-gray-400 animate-pulse">Loading...</span>;
