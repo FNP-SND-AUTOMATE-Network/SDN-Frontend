@@ -148,8 +148,8 @@ export const Navbar: React.FC<NavbarProps> = ({ className = "" }) => {
                 </span>
 
                 {/* Dropdown arrow */}
-                <FontAwesomeIcon 
-                  icon={faChevronDown} 
+                <FontAwesomeIcon
+                  icon={faChevronDown}
                   className={`w-4 h-4 text-gray-500 transition-transform ${
                     showDropdown ? "rotate-180" : ""
                   }`}
@@ -171,11 +171,16 @@ export const Navbar: React.FC<NavbarProps> = ({ className = "" }) => {
                     </p>
                   </div>
 
+                  {/* Settings - Only for ADMIN and OWNER */}
+
                   <div className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <Link href="/setting">
-                      <Button variant="outline" className="w-full text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        className="w-full text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors items-center space-x-2"
+                      >
                         <FontAwesomeIcon icon={faGear} className="w-4 h-4" />
-                        <span>setting</span>
+                        <span>Settings</span>
                       </Button>
                     </Link>
                   </div>
