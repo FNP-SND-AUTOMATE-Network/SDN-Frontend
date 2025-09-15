@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ProtectedRoute } from "@/components/auth/AuthGuard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -115,8 +115,8 @@ export default function AuditLogPage() {
     fetchAuditLogs(0, true);
   };
 
-  // Function to get user name from UUID
-  const getUserName = async (userId: string): Promise<string> => {
+  // Memoized function to get user name from UUID
+  const getUserName = useCallback(async (userId: string): Promise<string> => {
     if (!userId) return "System";
     
     // Check cache first
@@ -125,15 +125,17 @@ export default function AuditLogPage() {
       return `${user.name || ''} ${user.surname || ''}`.trim() || user.email || userId;
     }
 
+    if (!token) return userId;
+
     try {
-      const userProfile = await userService.getUserById(token!, userId);
+      const userProfile = await userService.getUserById(token, userId);
       setUserCache(prev => ({ ...prev, [userId]: userProfile }));
       return `${userProfile.name || ''} ${userProfile.surname || ''}`.trim() || userProfile.email || userId;
     } catch (error) {
       console.error('Error fetching user:', error);
       return userId; // Fallback to UUID if user not found
     }
-  };
+  }, [token, userCache]);
 
   // Function to show detail modal
   const showDetail = (log: AuditLogResponse) => {
@@ -582,17 +584,62 @@ interface UserDisplayProps {
   getUserName: (userId: string) => Promise<string>;
 }
 
-const UserDisplay: React.FC<UserDisplayProps> = ({ userId, userCache, getUserName }) => {
+const UserDisplay: React.FC<UserDisplayProps> = memo(({ userId, userCache, getUserName }) => {
   const [displayName, setDisplayName] = useState<string>(userId || "System");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    if (userId && !userCache[userId]) {
-      getUserName(userId).then(setDisplayName);
-    } else if (userId && userCache[userId]) {
-      const user = userCache[userId];
-      setDisplayName(`${user.name || ''} ${user.surname || ''}`.trim() || user.email || userId);
+    let isMounted = true;
+    
+    if (!userId) {
+      setDisplayName("System");
+      return;
     }
+
+    // Check cache first
+    if (userCache[userId]) {
+      const user = userCache[userId];
+      const cachedName = `${user.name || ''} ${user.surname || ''}`.trim() || user.email || userId;
+      if (isMounted) {
+        setDisplayName(cachedName);
+      }
+      return;
+    }
+
+    // Fetch user data if not in cache
+    const fetchUserName = async () => {
+      if (!isMounted) return;
+      
+      setIsLoading(true);
+      try {
+        const name = await getUserName(userId);
+        if (isMounted) {
+          setDisplayName(name);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setDisplayName(userId); // Fallback to userId
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchUserName();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, [userId, userCache, getUserName]);
 
+  if (isLoading) {
+    return <span className="text-gray-400 animate-pulse">Loading...</span>;
+  }
+
   return <span>{displayName}</span>;
-};
+});
+
+UserDisplay.displayName = 'UserDisplay';
