@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SDN Frontend",
-  description: "SDN Frontend Application พร้อมระบบ Authentication",
+  title: "CMNS-SDN",
+  description: "Control and Management Network System",
 };
 
 export default function RootLayout({
