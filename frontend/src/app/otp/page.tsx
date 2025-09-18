@@ -238,15 +238,6 @@ export default function OTPPage() {
             </button>
           </div>
         </div>
-
-        {/* Demo hint */}
-        <div className="mt-8 p-4 bg-warning-50 rounded-lg border border-warning-200">
-          <p className="text-sm text-warning-800">
-            <strong>Demo:</strong> ใช้รหัส{" "}
-            <code className="bg-warning-200 px-1 rounded">123456</code>{" "}
-            เพื่อทดสอบ
-          </p>
-        </div>
       </div>
     </div>
   );
