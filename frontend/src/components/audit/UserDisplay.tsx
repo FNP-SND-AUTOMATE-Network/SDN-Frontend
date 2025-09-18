@@ -31,7 +31,10 @@ const UserDisplay: React.FC<UserDisplayProps> = memo(
       // Check cache first
       if (userCache[userId]) {
         const user = userCache[userId];
-        const cachedName = `${user.name || ""} ${user.surname || ""}`.trim() || user.email || userId;
+        const cachedName =
+          `${user.name || ""} ${user.surname || ""}`.trim() ||
+          user.email ||
+          userId;
         if (isMounted) {
           setDisplayName(cachedName);
           setIsLoading(false);
@@ -58,7 +61,7 @@ const UserDisplay: React.FC<UserDisplayProps> = memo(
               setHasError(false);
             }
           } catch (error) {
-            console.error('UserDisplay: Error fetching user name:', error);
+            console.error("UserDisplay: Error fetching user name:", error);
             if (isMounted) {
               setDisplayName(userId); // Fallback to userId
               setIsLoading(false);

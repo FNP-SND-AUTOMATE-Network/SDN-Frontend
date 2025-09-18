@@ -65,7 +65,8 @@ export default function AuditLogFilters({
       {/* Filters Modal */}
       {showFilters && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" style={{ marginLeft: "0px" }}
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          style={{ marginLeft: "0px" }}
           onClick={onToggleFilters}
         >
           <div
@@ -123,12 +124,8 @@ export default function AuditLogFilters({
                         <option value="USER_DELETE">ลบผู้ใช้</option>
                       </optgroup>
                       <optgroup label="การจัดการรหัสผ่าน">
-                        <option value="PASSWORD_CHANGE">
-                          เปลี่ยนรหัสผ่าน
-                        </option>
-                        <option value="PASSWORD_RESET">
-                          รีเซ็ตรหัสผ่าน
-                        </option>
+                        <option value="PASSWORD_CHANGE">เปลี่ยนรหัสผ่าน</option>
+                        <option value="PASSWORD_RESET">รีเซ็ตรหัสผ่าน</option>
                       </optgroup>
                       <optgroup label="การจัดการสิทธิ์">
                         <option value="PROMOTE_ROLE">เพิ่มสิทธิ์</option>
