@@ -2,7 +2,7 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-// Types ตาม API schema จริง
+// Types ตาม API schema จริง (อัพเดทตาม API ปัจจุบัน)
 export type AuditAction =
     | "USER_REGISTER"
     | "USER_LOGIN"
@@ -10,8 +10,6 @@ export type AuditAction =
     | "USER_CREATE"
     | "USER_UPDATE"
     | "USER_DELETE"
-    | "USER_VIEW"
-    | "USER_LIST"
     | "ENABLE_TOTP"
     | "DISABLE_TOTP"
     | "REGISTER_PASSKEY"
