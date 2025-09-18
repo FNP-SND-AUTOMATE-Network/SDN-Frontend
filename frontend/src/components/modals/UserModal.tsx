@@ -2,12 +2,22 @@
 
 import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimes, faUserPlus, faUserEdit } from "@fortawesome/free-solid-svg-icons";
+import {
+    faTimes,
+    faUserPlus,
+    faUserEdit,
+} from "@fortawesome/free-solid-svg-icons";
 import { Input } from "@/components/ui/Input";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Button } from "@/components/ui/Button";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
-import { userService, UserProfile, UserCreateRequest, UserUpdateRequest, UserRole } from "@/services/userService";
+import {
+    userService,
+    UserProfile,
+    UserCreateRequest,
+    UserUpdateRequest,
+    UserRole,
+} from "@/services/userService";
 
 interface UserModalProps {
     isOpen: boolean;
@@ -18,7 +28,14 @@ interface UserModalProps {
     token: string;
 }
 
-export function UserModal({ isOpen, onClose, mode, user, onSuccess, token }: UserModalProps) {
+export function UserModal({
+    isOpen,
+    onClose,
+    mode,
+    user,
+    onSuccess,
+    token,
+}: UserModalProps) {
     const [formData, setFormData] = useState({
         name: "",
         surname: "",
@@ -61,7 +78,10 @@ export function UserModal({ isOpen, onClose, mode, user, onSuccess, token }: Use
         }
     }, [isOpen, mode, user]);
 
-    const showSnackbar = (message: string, severity: "success" | "error" | "warning") => {
+    const showSnackbar = (
+        message: string,
+        severity: "success" | "error" | "warning"
+    ) => {
         setSnackbar({ open: true, message, severity });
     };
 
@@ -138,7 +158,8 @@ export function UserModal({ isOpen, onClose, mode, user, onSuccess, token }: Use
         } catch (error: any) {
             console.error("Error:", error);
             showSnackbar(
-                error.message || `เกิดข้อผิดพลาดในการ${mode === "add" ? "เพิ่ม" : "แก้ไข"}ผู้ใช้`,
+                error.message ||
+                `เกิดข้อผิดพลาดในการ${mode === "add" ? "เพิ่ม" : "แก้ไข"}ผู้ใช้`,
                 "error"
             );
         } finally {
@@ -147,10 +168,10 @@ export function UserModal({ isOpen, onClose, mode, user, onSuccess, token }: Use
     };
 
     const handleInputChange = (field: string, value: string) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
+        setFormData((prev) => ({ ...prev, [field]: value }));
         // Clear error when user starts typing
         if (errors[field]) {
-            setErrors(prev => ({ ...prev, [field]: "" }));
+            setErrors((prev) => ({ ...prev, [field]: "" }));
         }
     };
 
@@ -198,7 +219,9 @@ export function UserModal({ isOpen, onClose, mode, user, onSuccess, token }: Use
                                 disabled={isLoading}
                             />
                             {errors.name && (
-                                <p className="mt-1 text-sm text-red-600 font-sf-pro-text">{errors.name}</p>
+                                <p className="mt-1 text-sm text-red-600 font-sf-pro-text">
+                                    {errors.name}
+                                </p>
                             )}
                         </div>
 
@@ -216,7 +239,9 @@ export function UserModal({ isOpen, onClose, mode, user, onSuccess, token }: Use
                                 disabled={isLoading}
                             />
                             {errors.surname && (
-                                <p className="mt-1 text-sm text-red-600 font-sf-pro-text">{errors.surname}</p>
+                                <p className="mt-1 text-sm text-red-600 font-sf-pro-text">
+                                    {errors.surname}
+                                </p>
                             )}
                         </div>
 
@@ -234,7 +259,9 @@ export function UserModal({ isOpen, onClose, mode, user, onSuccess, token }: Use
                                 disabled={isLoading}
                             />
                             {errors.email && (
-                                <p className="mt-1 text-sm text-red-600 font-sf-pro-text">{errors.email}</p>
+                                <p className="mt-1 text-sm text-red-600 font-sf-pro-text">
+                                    {errors.email}
+                                </p>
                             )}
                         </div>
 
@@ -255,7 +282,9 @@ export function UserModal({ isOpen, onClose, mode, user, onSuccess, token }: Use
                                     id="confirmPassword"
                                     label="ยืนยันรหัสผ่าน"
                                     value={formData.confirmPassword}
-                                    onChange={(value) => handleInputChange("confirmPassword", value)}
+                                    onChange={(value) =>
+                                        handleInputChange("confirmPassword", value)
+                                    }
                                     placeholder="ยืนยันรหัสผ่าน"
                                     error={errors.confirmPassword || ""}
                                     required={true}
@@ -263,41 +292,46 @@ export function UserModal({ isOpen, onClose, mode, user, onSuccess, token }: Use
                             </>
                         )}
 
-            {/* Role */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-sf-pro-text">
-                บทบาท
-              </label>
-              <select
-                value={formData.role}
-                onChange={(e) => handleInputChange("role", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 font-sf-pro-text"
-                disabled={isLoading || (mode === "add") || (mode === "edit" && user && !user.email_verified)}
-              >
-                <option value="VIEWER">Viewer</option>
-                {mode === "edit" && user && user.email_verified && (
-                  <>
-                    <option value="ENGINEER">Engineer</option>
-                    <option value="ADMIN">Admin</option>
-                  </>
-                )}
-              </select>
-              {mode === "add" && (
-                <p className="mt-1 text-sm text-gray-500 font-sf-pro-text">
-                  ผู้ใช้ใหม่จะได้รับบทบาท VIEWER เท่านั้น
-                </p>
-              )}
-              {mode === "edit" && user && !user.email_verified && (
-                <p className="mt-1 text-sm text-orange-600 font-sf-pro-text">
-                  ⚠️ ไม่สามารถเปลี่ยนบทบาทได้ เนื่องจากอีเมลยังไม่ได้รับการยืนยัน
-                </p>
-              )}
-              {mode === "edit" && user && user.email_verified && (
-                <p className="mt-1 text-sm text-green-600 font-sf-pro-text">
-                  ✅ สามารถเปลี่ยนบทบาทได้ เนื่องจากอีเมลได้รับการยืนยันแล้ว
-                </p>
-              )}
-            </div>
+                        {/* Role */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2 font-sf-pro-text">
+                                บทบาท
+                            </label>
+                            <select
+                                value={formData.role}
+                                onChange={(e) => handleInputChange("role", e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 font-sf-pro-text"
+                                disabled={
+                                    isLoading ||
+                                    mode === "add" ||
+                                    (mode === "edit" && user && !user.email_verified)
+                                }
+                            >
+                                <option value="VIEWER">Viewer</option>
+                                {mode === "edit" && user && user.email_verified && (
+                                    <>
+                                        <option value="ENGINEER">Engineer</option>
+                                        <option value="ADMIN">Admin</option>
+                                    </>
+                                )}
+                            </select>
+                            {mode === "add" && (
+                                <p className="mt-1 text-sm text-gray-500 font-sf-pro-text">
+                                    ผู้ใช้ใหม่จะได้รับบทบาท VIEWER เท่านั้น
+                                </p>
+                            )}
+                            {mode === "edit" && user && !user.email_verified && (
+                                <p className="mt-1 text-sm text-orange-600 font-sf-pro-text">
+                                    ⚠️ ไม่สามารถเปลี่ยนบทบาทได้
+                                    เนื่องจากอีเมลยังไม่ได้รับการยืนยัน
+                                </p>
+                            )}
+                            {mode === "edit" && user && user.email_verified && (
+                                <p className="mt-1 text-sm text-green-600 font-sf-pro-text">
+                                    ✅ สามารถเปลี่ยนบทบาทได้ เนื่องจากอีเมลได้รับการยืนยันแล้ว
+                                </p>
+                            )}
+                        </div>
 
                         {/* Buttons */}
                         <div className="flex space-x-3 pt-4">
@@ -317,9 +351,12 @@ export function UserModal({ isOpen, onClose, mode, user, onSuccess, token }: Use
                                 className="flex-1"
                             >
                                 {isLoading
-                                    ? (mode === "add" ? "กำลังเพิ่ม..." : "กำลังแก้ไข...")
-                                    : (mode === "add" ? "เพิ่มผู้ใช้" : "บันทึกการเปลี่ยนแปลง")
-                                }
+                                    ? mode === "add"
+                                        ? "กำลังเพิ่ม..."
+                                        : "กำลังแก้ไข..."
+                                    : mode === "add"
+                                        ? "เพิ่มผู้ใช้"
+                                        : "บันทึกการเปลี่ยนแปลง"}
                             </Button>
                         </div>
                     </form>
@@ -331,7 +368,7 @@ export function UserModal({ isOpen, onClose, mode, user, onSuccess, token }: Use
                 open={snackbar.open}
                 message={snackbar.message}
                 severity={snackbar.severity}
-                onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+                onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
             />
         </>
     );
