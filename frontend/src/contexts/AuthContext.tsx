@@ -17,6 +17,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (userData: User, accessToken: string) => void;
   logout: () => void;
+  updateUser: (userData: Partial<User>) => void;
   getUserDisplayName: () => string;
   getUserInitials: () => string;
 }
@@ -55,7 +56,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (storedToken && storedUser) {
           // Check if token is expired
           if (isTokenExpired(storedToken)) {
-            console.log('Token expired, clearing user data');
             localStorage.removeItem('access_token');
             localStorage.removeItem('user');
             localStorage.removeItem('registration_email');
@@ -89,10 +89,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Login function
   const login = (userData: User, accessToken: string) => {
-    console.log("AuthContext.login called with:", {
-      userData,
-      accessToken: accessToken ? "present" : "missing"
-    });
     
     // Validate user data
     if (!userData.id || !userData.email || !userData.name || !userData.surname) {
@@ -110,8 +106,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(false); // Set loading to false immediately
     localStorage.setItem('access_token', accessToken);
     localStorage.setItem('user', JSON.stringify(userData));
+  };
+
+  // Update user data function
+  const updateUser = (userData: Partial<User>) => {
+    if (!user) return;
     
-    console.log("User logged in successfully:", userData);
+    const updatedUser = { ...user, ...userData };
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   // Logout function
@@ -153,6 +156,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated,
     login,
     logout,
+    updateUser,
     getUserDisplayName,
     getUserInitials,
   };
