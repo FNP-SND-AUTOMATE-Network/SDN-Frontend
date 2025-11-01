@@ -16,6 +16,7 @@ import {
   faList,
   faCheckCircle,
   faCog,
+  faComputer,
   faMapMarkerAlt,
   faTags,
   faDownload,
@@ -83,7 +84,7 @@ const menuItems: MenuItem[] = [
   },
   {
     id: "ip-management",
-    label: "IP Management",
+    label: "IPAM",
     icon: faServer,
     href: "/ip-management",
   },
@@ -93,16 +94,28 @@ const menuItems: MenuItem[] = [
     icon: faDesktop,
     children: [
       {
-        id: "site",
-        label: "Site",
-        icon: faMapMarkerAlt,
-        href: "/device/site",
+        id: "device-list",
+        label: "Device List",
+        icon: faList,
+        href: "/device/device-list",
+      },
+      {
+        id: "Operation System",
+        label: "Operation",
+        icon: faComputer,
+        href: "/device/operation",
       },
       {
         id: "tag-group",
         label: "Tag/Group",
         icon: faTags,
         href: "/device/tag-group",
+      },
+      {
+        id: "Site",
+        label: "Site",
+        icon: faMapMarkerAlt,
+        href: "/device/site",
       },
       {
         id: "backup-config",
