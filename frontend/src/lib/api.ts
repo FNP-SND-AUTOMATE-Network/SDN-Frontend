@@ -15,6 +15,9 @@ export interface LoginResponse {
   name: string;
   surname: string;
   role: string;
+  // MFA fields (optional)
+  requires_totp?: boolean;
+  temp_token?: string;
 }
 
 export interface RegisterRequest {
@@ -172,17 +175,102 @@ export const authApi = {
   async healthCheck(): Promise<{ status: string }> {
     return apiRequest<{ status: string }>('/health');
   },
+
+  // MFA Setup (ต้องใช้ access token)
+  async setupMfa(token: string): Promise<TotpSetupResponse> {
+    return apiRequest<TotpSetupResponse>('/auth/mfa/setup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // Verify MFA (ตอน setup ต้องส่ง secret, ถ้า backend อนุญาตอาจใช้ตอน login ได้ด้วย)
+  async verifyMfa(token: string, code: string, secret?: string): Promise<any> {
+    const payload = {
+      otp_code: code,
+      ...(secret && { secret }), // Only include secret if provided
+    };
+
+    return apiRequest<any>('/auth/mfa/verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // Verify MFA for login
+  async verifyMfaLogin(tempToken: string, otpCode: string): Promise<LoginResponse> {
+    return apiRequest<LoginResponse>('/auth/mfa-verify-totp-login', {
+      method: 'POST',
+      body: JSON.stringify({
+        temp_token: tempToken,
+        otp_code: otpCode,
+      }),
+    });
+  },
+
+  // Disable MFA
+  async disableMfa(token: string, password: string): Promise<{ message: string }> {
+    return apiRequest<{ message: string }>('/auth/mfa/disable', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ password }),
+    });
+  },
 };
+
+export interface TotpSetupResponse {
+  secret: string;
+  provisioning_uri: string;
+}
+
+export interface TotpVerifyRequest {
+  secret: string;
+  otp_code: string;
+}
+
+export interface TotpDisableRequest {
+  password: string;
+}
 
 // Error helper
 export function getErrorMessage(error: any): string {
-  if (typeof error === 'string') return error;
-  if (error?.message) return error.message;
-  if (error?.detail) {
-    if (typeof error.detail === 'string') return error.detail;
-    if (Array.isArray(error.detail)) {
-      return error.detail.map((err: any) => err.msg).join(', ');
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  if (error?.message) {
+    if (typeof error.message === 'string') {
+      return error.message;
+    }
+    if (Array.isArray(error.message)) {
+      return error.message.map((err: any) => err?.msg ?? JSON.stringify(err)).join(', ');
+    }
+    if (typeof error.message === 'object') {
+      return JSON.stringify(error.message);
     }
   }
+
+  if (error?.detail) {
+    if (typeof error.detail === 'string') {
+      return error.detail;
+    }
+    if (Array.isArray(error.detail)) {
+      return error.detail.map((err: any) => err?.msg ?? JSON.stringify(err)).join(', ');
+    }
+    if (typeof error.detail === 'object') {
+      return JSON.stringify(error.detail);
+    }
+  }
+
   return 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
 }

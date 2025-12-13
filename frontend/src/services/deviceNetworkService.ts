@@ -1,0 +1,279 @@
+// Device Network Service สำหรับจัดการ API calls เกี่ยวกับอุปกรณ์เครือข่าย
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+import { RelatedTagInfo } from "./operatingSystemService";
+
+export type TypeDevice =
+  | "SWITCH"
+  | "ROUTER"
+  | "FIREWALL"
+  | "ACCESS_POINT"
+  | "OTHER";
+
+export type StatusDevice =
+  | "ONLINE"
+  | "OFFLINE"
+  | "MAINTENANCE"
+  | "OTHER";
+
+// Types ตาม API schema
+export interface DeviceNetwork {
+  id: string;
+  serial_number: string;
+  device_name: string;
+  device_model: string;
+  type: TypeDevice;
+  status: StatusDevice;
+  ip_address?: string | null;
+  mac_address: string;
+  description?: string | null;
+  policy_id?: string | null;
+  os_id?: string | null;
+  backup_id?: string | null;
+  local_site_id?: string | null;
+  configuration_template_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  tags?: RelatedTagInfo[];
+  operatingSystem?: {
+    id: string;
+    os_name: string;
+    os_type: string;
+  } | null;
+  localSite?: {
+    id: string;
+    site_code: string;
+    site_name: string | null;
+  } | null;
+  policy?: {
+    id: string;
+    policy_name: string;
+  } | null;
+  backup?: {
+    id: string;
+    backup_name: string;
+    status: string;
+  } | null;
+  configuration_template?: {
+    id: string;
+    template_name: string;
+    template_type: string;
+  } | null;
+}
+
+export interface DeviceNetworkListResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  devices: DeviceNetwork[];
+}
+
+export interface DeviceNetworkCreateRequest {
+  serial_number: string;
+  device_name: string;
+  device_model: string;
+  type?: TypeDevice;
+  status?: StatusDevice;
+  ip_address?: string | null;
+  mac_address: string;
+  description?: string | null;
+  policy_id?: string | null;
+  os_id?: string | null;
+  backup_id?: string | null;
+  local_site_id?: string | null;
+  configuration_template_id?: string | null;
+}
+
+export interface DeviceNetworkUpdateRequest {
+  serial_number?: string | null;
+  device_name?: string | null;
+  device_model?: string | null;
+  type?: TypeDevice | null;
+  status?: StatusDevice | null;
+  ip_address?: string | null;
+  mac_address?: string | null;
+  description?: string | null;
+  policy_id?: string | null;
+  os_id?: string | null;
+  backup_id?: string | null;
+  local_site_id?: string | null;
+  configuration_template_id?: string | null;
+}
+
+export interface DeviceNetworkCreateResponse {
+  message: string;
+  device: DeviceNetwork;
+}
+
+export interface DeviceNetworkUpdateResponse {
+  message: string;
+  device: DeviceNetwork;
+}
+
+export interface DeviceNetworkDeleteResponse {
+  message: string;
+  device_id: string;
+}
+
+// API Error class (reuse pattern)
+export class APIError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public response?: any
+  ) {
+    super(message);
+    this.name = "APIError";
+  }
+}
+
+// Helper function สำหรับสร้าง headers
+const createHeaders = (token: string) => ({
+  Authorization: `Bearer ${token}`,
+  "Content-Type": "application/json",
+});
+
+// Helper function สำหรับ handle response
+const handleResponse = async (response: Response) => {
+  if (!response.ok) {
+    let errorMessage = `HTTP error! status: ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || errorData.message || errorMessage;
+    } catch {
+      // ignore json parse error
+    }
+    throw new APIError(errorMessage, response.status);
+  }
+  return response.json();
+};
+
+// Device Network API functions
+export const deviceNetworkService = {
+  async getDevices(
+    token: string,
+    page = 1,
+    pageSize = 20,
+    filters?: {
+      search?: string;
+      type?: string;
+      status?: string;
+      site_id?: string;
+      os_id?: string;
+      policy_id?: string;
+      tag_id?: string;
+    }
+  ): Promise<DeviceNetworkListResponse> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      page_size: pageSize.toString(),
+      ...(filters?.search && { search: filters.search }),
+      ...(filters?.type && { type: filters.type }),
+      ...(filters?.status && { status: filters.status }),
+      ...(filters?.site_id && { local_site_id: filters.site_id }),
+      ...(filters?.os_id && { os_id: filters.os_id }),
+      ...(filters?.policy_id && { policy_id: filters.policy_id }),
+      ...(filters?.tag_id && { tag_id: filters.tag_id }),
+    });
+
+    const response = await fetch(
+      `${API_BASE_URL}/device-networks/?${params}`,
+      {
+        method: "GET",
+        headers: createHeaders(token),
+      }
+    );
+    return handleResponse(response);
+  },
+
+  async getDeviceById(
+    token: string,
+    deviceId: string
+  ): Promise<DeviceNetwork> {
+    const response = await fetch(
+      `${API_BASE_URL}/device-networks/${deviceId}`,
+      {
+        method: "GET",
+        headers: createHeaders(token),
+      }
+    );
+    return handleResponse(response);
+  },
+
+  async createDevice(
+    token: string,
+    data: DeviceNetworkCreateRequest
+  ): Promise<DeviceNetworkCreateResponse> {
+    const response = await fetch(`${API_BASE_URL}/device-networks/`, {
+      method: "POST",
+      headers: createHeaders(token),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  },
+
+  async updateDevice(
+    token: string,
+    deviceId: string,
+    data: DeviceNetworkUpdateRequest
+  ): Promise<DeviceNetworkUpdateResponse> {
+    const response = await fetch(
+      `${API_BASE_URL}/device-networks/${deviceId}`,
+      {
+        method: "PUT",
+        headers: createHeaders(token),
+        body: JSON.stringify(data),
+      }
+    );
+    return handleResponse(response);
+  },
+
+  async deleteDevice(
+    token: string,
+    deviceId: string
+  ): Promise<DeviceNetworkDeleteResponse> {
+    const response = await fetch(
+      `${API_BASE_URL}/device-networks/${deviceId}`,
+      {
+        method: "DELETE",
+        headers: createHeaders(token),
+      }
+    );
+    return handleResponse(response);
+  },
+
+  async assignTagsToDevice(
+    token: string,
+    deviceId: string,
+    tagIds: string[]
+  ): Promise<DeviceNetworkUpdateResponse> {
+    const response = await fetch(
+      `${API_BASE_URL}/device-networks/${deviceId}/tags`,
+      {
+        method: "POST",
+        headers: createHeaders(token),
+        body: JSON.stringify({ tag_ids: tagIds }),
+      }
+    );
+    return handleResponse(response);
+  },
+
+  async removeTagsFromDevice(
+    token: string,
+    deviceId: string,
+    tagIds: string[]
+  ): Promise<DeviceNetworkUpdateResponse> {
+    const response = await fetch(
+      `${API_BASE_URL}/device-networks/${deviceId}/tags`,
+      {
+        method: "DELETE",
+        headers: createHeaders(token),
+        body: JSON.stringify({ tag_ids: tagIds }),
+      }
+    );
+    return handleResponse(response);
+  },
+};
+
+

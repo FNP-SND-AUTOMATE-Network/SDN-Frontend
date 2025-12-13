@@ -1,7 +1,7 @@
 "use client";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faCheckCircle, faCircleXmark, faCross, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { UserProfile, UserRole } from "@/services/userService";
 
 interface UserTableProps {
@@ -46,6 +46,18 @@ export default function UserTable({
     return emailVerified
       ? `${baseClasses} bg-green-100 text-green-800`
       : `${baseClasses} bg-red-100 text-red-800`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
   };
 
   return (
@@ -106,11 +118,16 @@ export default function UserTable({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={getMfaBadge(user.has_strong_mfa)}>
-                    {user.has_strong_mfa ? "Enabled" : "Disabled"}
+                    {user.has_strong_mfa ? (
+                      <FontAwesomeIcon icon={faCheckCircle} />
+                    ) : (
+                      <FontAwesomeIcon icon={faCircleXmark} />
+                    )}
+                    {user.has_strong_mfa ? " Enabled" : " Disabled"}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {new Date(user.created_at).toLocaleDateString("en-GB")}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {formatDate(user.created_at)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex space-x-2">
