@@ -21,6 +21,9 @@ FROM base AS prerelease
 COPY --from=install /temp/dev/node_modules node_modules
 COPY . .
 
+# ลบ package-lock.json เพื่อไม่ให้ Next.js เข้าใจผิดว่าใช้ npm ภายใน container
+RUN rm -f package-lock.json
+
 # Build the application
 RUN bun run build
 

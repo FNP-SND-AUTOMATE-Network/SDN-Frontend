@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -136,47 +136,62 @@ const menuItems: MenuItem[] = [
 export const Sidebar: React.FC = () => {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const pathname = usePathname();
+  const hasAutoExpandedRef = React.useRef(false);
 
-  // Auto-expand parent menus that have active children
-  React.useEffect(() => {
-    const activeParents: string[] = [];
-    menuItems.forEach((item) => {
+  const isActive = useCallback(
+    (href: string) => {
+      if (href === "/dashboard") {
+        return pathname === "/dashboard";
+      }
+      return pathname.startsWith(href);
+    },
+    [pathname]
+  );
+
+  const isParentActive = useCallback(
+    (item: MenuItem) => {
+      if (item.href && isActive(item.href)) {
+        return true;
+      }
       if (item.children) {
-        const hasActiveChild = item.children.some(
+        return item.children.some(
           (child) => child.href && isActive(child.href)
         );
-        if (hasActiveChild) {
-          activeParents.push(item.id);
-        }
       }
-    });
-    setExpandedItems(activeParents);
-  }, [pathname]);
+      return false;
+    },
+    [isActive]
+  );
 
-  const toggleExpanded = (itemId: string) => {
+  // Auto-expand parent menus that have active children (only once on mount)
+  React.useEffect(() => {
+    if (!hasAutoExpandedRef.current) {
+      const activeParents: string[] = [];
+      menuItems.forEach((item) => {
+        if (item.children) {
+          const hasActiveChild = item.children.some(
+            (child) => child.href && isActive(child.href)
+          );
+          if (hasActiveChild) {
+            activeParents.push(item.id);
+          }
+        }
+      });
+      if (activeParents.length > 0) {
+        setExpandedItems(activeParents);
+      }
+      hasAutoExpandedRef.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const toggleExpanded = useCallback((itemId: string) => {
     setExpandedItems((prev) =>
       prev.includes(itemId)
         ? prev.filter((id) => id !== itemId)
         : [...prev, itemId]
     );
-  };
-
-  const isActive = (href: string) => {
-    if (href === "/dashboard") {
-      return pathname === "/dashboard";
-    }
-    return pathname.startsWith(href);
-  };
-
-  const isParentActive = (item: MenuItem) => {
-    if (item.href && isActive(item.href)) {
-      return true;
-    }
-    if (item.children) {
-      return item.children.some((child) => child.href && isActive(child.href));
-    }
-    return false;
-  };
+  }, []);
 
   const renderMenuItem = (item: MenuItem, level: number = 0) => {
     const hasChildren = item.children && item.children.length > 0;

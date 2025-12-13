@@ -12,8 +12,10 @@ COPY package.json bun.lock ./
 # Install all dependencies (including devDependencies)
 RUN bun install
 
-# Copy source code
+# Copy source code (แต่ไม่ใช้ package-lock.json ภายใน container)
 COPY . .
+# ลบ package-lock.json เพื่อไม่ให้ Next.js เข้าใจผิดว่าใช้ npm
+RUN rm -f package-lock.json
 
 # Expose port
 EXPOSE 3000

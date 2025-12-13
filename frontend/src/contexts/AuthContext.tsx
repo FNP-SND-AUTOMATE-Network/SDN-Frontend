@@ -8,6 +8,8 @@ export interface User {
   name: string;
   surname: string;
   role: string;
+  has_strong_mfa?: boolean;
+  totp_enabled?: boolean;
 }
 
 interface AuthContextType {

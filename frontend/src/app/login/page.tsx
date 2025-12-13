@@ -7,20 +7,32 @@ import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Button } from "@/components/ui/Button";
 import { authApi, getErrorMessage } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { userService } from "@/services/userService";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleCheck, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
+import { faCircleCheck, faCircleXmark, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
 import { PublicRoute } from "@/components/auth/AuthGuard";
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
+  
+  // Login Form State
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  
+  // MFA State
+  const [showMfaInput, setShowMfaInput] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
+  const [tempAuthData, setTempAuthData] = useState<{
+    user: any;
+    token: string;
+  } | null>(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
@@ -102,10 +114,27 @@ export default function LoginPage() {
         password: formData.password,
       });
 
-      // Login successful
       console.log("Login successful:", response);
 
-      // Use auth hook to store user data
+      // Check if MFA is required from login response
+      if (response.requires_totp && response.temp_token) {
+        // MFA Required - แสดงหน้ากรอก OTP
+        setTempAuthData({
+          user: {
+            id: response.user_id,
+            email: response.email,
+            name: response.name,
+            surname: response.surname,
+            role: response.role,
+          },
+          token: response.temp_token // เก็บ temp_token ไม่ใช่ access_token
+        });
+        setShowMfaInput(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // No MFA required - Login directly
       login(
         {
           id: response.user_id,
@@ -117,10 +146,44 @@ export default function LoginPage() {
         response.access_token
       );
 
-      // Redirect to dashboard
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Login error:", error);
+      setApiError(getErrorMessage(error));
+      setIsLoading(false);
+    }
+  };
+
+  const handleMfaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfaCode || mfaCode.length !== 6) {
+      setApiError("กรุณากรอกรหัส 6 หลัก");
+      return;
+    }
+
+    if (!tempAuthData?.token) {
+      setApiError("ไม่พบข้อมูลการเข้าสู่ระบบชั่วคราว กรุณาลองเข้าสู่ระบบใหม่อีกครั้ง");
+      return;
+    }
+
+    setIsLoading(true);
+    setApiError("");
+
+    try {
+      // ส่ง temp_token และ otp_code ไปยัง /auth/mfa-verify-totp-login
+      const response = await authApi.verifyMfaLogin(tempAuthData.token, mfaCode);
+      
+      console.log("MFA Verify Response:", response);
+      
+      // ใช้ access_token ที่ได้จาก response (ไม่ใช่ temp_token)
+      if (response && response.access_token) {
+        login(tempAuthData.user, response.access_token);
+        router.push("/dashboard");
+      } else {
+        setApiError("ไม่สามารถยืนยันตัวตนได้ กรุณาลองใหม่อีกครั้ง");
+      }
+    } catch (error: any) {
+      console.error("MFA Verify error:", error);
       setApiError(getErrorMessage(error));
     } finally {
       setIsLoading(false);
@@ -133,117 +196,174 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-primary-100">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-primary-600">
-            เข้าสู่ระบบ
+            {showMfaInput ? "ยืนยันตัวตน (2FA)" : "เข้าสู่ระบบ"}
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            หรือ{" "}
-            <Link
-              href="/register"
-              className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-200"
-            >
-              สมัครสมาชิกใหม่
-            </Link>
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4 text-black">
-            <Input
-              label="อีเมล"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="กรอกอีเมลของคุณ"
-              value={formData.email}
-              onChange={handleInputChange}
-              error={errors.email}
-            />
-            <PasswordInput
-              id="password"
-              label="รหัสผ่าน"
-              placeholder="กรอกรหัสผ่านของคุณ"
-              value={formData.password}
-              onChange={(value) => setFormData(prev => ({ ...prev, password: value }))}
-              error={errors.password}
-              required
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="remember-me"
-                className="ml-2 block text-sm text-gray-900"
-              >
-                จดจำการเข้าสู่ระบบ
-              </label>
-            </div>
-
-            <div className="text-sm">
-              <a
-                href="#"
+          {!showMfaInput && (
+            <p className="mt-2 text-center text-sm text-gray-600">
+              หรือ{" "}
+              <Link
+                href="/register"
                 className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-200"
               >
-                ลืมรหัสผ่าน?
-              </a>
-            </div>
-          </div>
+                สมัครสมาชิกใหม่
+              </Link>
+            </p>
+          )}
+        </div>
 
-          {/* Success Message */}
-          {successMessage && (
-            <div className="rounded-md bg-success-50 p-4 border border-success-200">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <FontAwesomeIcon 
-                    icon={faCircleCheck} 
-                    className="h-5 w-5 text-success-400"
-                  />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-success-800 font-sf-pro-text">
-                    {successMessage}
-                  </p>
-                </div>
+        {/* API Error Display */}
+        {apiError && (
+          <div className="rounded-md bg-danger-50 p-4 border border-danger-200">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <FontAwesomeIcon 
+                  icon={faCircleXmark} 
+                  className="h-5 w-5 text-danger-400"
+                />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-danger-800 font-sf-pro-text">
+                  {apiError}
+                </p>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* API Error Display */}
-          {apiError && (
-            <div className="rounded-md bg-danger-50 p-4 border border-danger-200">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <FontAwesomeIcon 
-                    icon={faCircleXmark} 
-                    className="h-5 w-5 text-danger-400"
-                  />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-danger-800 font-sf-pro-text">
-                    {apiError}
-                  </p>
-                </div>
+        {/* Success Message */}
+        {successMessage && !showMfaInput && (
+          <div className="rounded-md bg-success-50 p-4 border border-success-200">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <FontAwesomeIcon 
+                  icon={faCircleCheck} 
+                  className="h-5 w-5 text-success-400"
+                />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-success-800 font-sf-pro-text">
+                  {successMessage}
+                </p>
               </div>
             </div>
-          )}
-
-          <div>
-            <Button
-              type="submit"
-              variant="primary"
-              className="w-full"
-              loading={isLoading}
-              disabled={isLoading}
-            >
-              {isLoading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
-            </Button>
           </div>
-        </form>
+        )}
+
+        {showMfaInput ? (
+          // MFA Form
+          <form className="mt-8 space-y-6" onSubmit={handleMfaSubmit}>
+            <div className="space-y-4 text-black text-center">
+              <div className="flex justify-center mb-4">
+                <div className="p-4 bg-primary-50 rounded-full">
+                  <FontAwesomeIcon icon={faShieldHalved} className="h-8 w-8 text-primary-600" />
+                </div>
+              </div>
+              <p className="text-sm text-gray-600">
+                กรุณากรอกรหัส 6 หลักจากแอป Authenticator ของคุณ
+              </p>
+              <Input
+                label=""
+                name="mfaCode"
+                type="text"
+                autoComplete="one-time-code"
+                placeholder="000000"
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="text-center tracking-widest text-2xl font-mono"
+                maxLength={6}
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full"
+                loading={isLoading}
+                disabled={isLoading || mfaCode.length !== 6}
+              >
+                {isLoading ? "กำลังตรวจสอบ..." : "ยืนยัน"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full mt-3"
+                onClick={() => {
+                  setShowMfaInput(false);
+                  setMfaCode("");
+                  setApiError("");
+                }}
+                disabled={isLoading}
+              >
+                ย้อนกลับ
+              </Button>
+            </div>
+          </form>
+        ) : (
+          // Login Form
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+            <div className="space-y-4 text-black">
+              <Input
+                label="อีเมล"
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="กรอกอีเมลของคุณ"
+                value={formData.email}
+                onChange={handleInputChange}
+                error={errors.email}
+              />
+              <PasswordInput
+                id="password"
+                label="รหัสผ่าน"
+                placeholder="กรอกรหัสผ่านของคุณ"
+                value={formData.password}
+                onChange={(value) => setFormData(prev => ({ ...prev, password: value }))}
+                error={errors.password}
+                required
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label
+                  htmlFor="remember-me"
+                  className="ml-2 block text-sm text-gray-900"
+                >
+                  จดจำการเข้าสู่ระบบ
+                </label>
+              </div>
+
+              <div className="text-sm">
+                <a
+                  href="#"
+                  className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-200"
+                >
+                  ลืมรหัสผ่าน?
+                </a>
+              </div>
+            </div>
+
+            <div>
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full"
+                loading={isLoading}
+                disabled={isLoading}
+              >
+                {isLoading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+              </Button>
+            </div>
+          </form>
+        )}
       </div>
       </div>
     </PublicRoute>
