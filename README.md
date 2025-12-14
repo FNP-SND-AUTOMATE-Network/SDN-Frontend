@@ -1,28 +1,42 @@
 # SDN Frontend
 
-## 🚀 เริ่มต้นใช้งาน
+โปรเจค Frontend สำหรับระบบจัดการเครือข่าย SDN (Software-Defined Networking) พัฒนาด้วย Next.js 15 และ TypeScript
 
-### การติดตั้ง Dependencies
+
+## 🚀 การติดตั้งและเริ่มต้นใช้งาน
+
+### 1. Clone โปรเจค
+
+```bash
+git clone <repository-url>
+cd SDN-Frontend
+```
+
+### 2. ติดตั้ง Dependencies
+
+เข้าไปในโฟลเดอร์ `frontend`:
+
+```bash
+cd frontend
+```
+ใช้ bun :
 
 ```bash
 bun install
 ```
 
-### การรัน Development Server
+### 3. ตั้งค่า Environment Variables
 
-```bash
-bun dev
-```
-
-เปิด [http://localhost:3000](http://localhost:3000) ในเบราว์เซอร์เพื่อดูผลลัพธ์
-
+สร้างไฟล์ `.env.local` ในโฟลเดอร์ `frontend`
 ## 🐳 การใช้งาน Docker
 
 ### Production Mode
 
+รันจาก root directory ของโปรเจค:
+
 ```bash
 # Build และรัน production container
-docker-compose up --build
+docker-compose up --build (Recommand)
 
 # หรือรันเฉพาะ production service
 docker-compose up nextjs-frontend --build
@@ -50,43 +64,85 @@ docker-compose logs nextjs-frontend
 
 # Rebuild without cache
 docker-compose build --no-cache
+
+# Remove all containers and volumes
+docker-compose down -v
 ```
 
+## 📁 โครงสร้างโปรเจค
 
-## 🛠️ เทคโนโลยีที่ใช้
-
-- **Next.js 15** - React Framework พร้อม App Router
-- **TypeScript** - Type Safety
-- **Tailwind CSS** - Utility-first CSS Framework
-- **Bun** - Fast JavaScript Runtime
-- **Docker** - Containerization
-- **Icon** - Frontawsome
-- **Front** - SF PRO
-
-## 📝 Scripts ที่มีให้ใช้
-
-```bash
-bun dev          # รัน development server พร้อม Turbopack
-bun build        # Build สำหรับ production
-bun start        # รัน production server
-bun lint         # ตรวจสอบ code style
-bun type-check   # ตรวจสอบ TypeScript types
+```
+frontend/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── login/             # หน้า Login
+│   │   ├── register/          # หน้า Register
+│   │   ├── dashboard/         # หน้า Dashboard
+│   │   ├── device/            # จัดการอุปกรณ์
+│   │   ├── setting/           # การตั้งค่า
+│   │   │   ├── mfa/          # MFA/2FA Settings
+│   │   │   ├── profile/      # โปรไฟล์ผู้ใช้
+│   │   │   └── account/      # จัดการบัญชี
+│   │   └── ...
+│   ├── components/            # React Components
+│   │   ├── ui/               # UI Components พื้นฐาน
+│   │   ├── auth/             # Authentication Components
+│   │   ├── device/           # Device-related Components
+│   │   └── ...
+│   ├── contexts/             # React Contexts (AuthContext, etc.)
+│   ├── hooks/                # Custom React Hooks
+│   ├── lib/                  # Utilities และ Helpers
+│   │   ├── api.ts           # API Client
+│   │   └── utils.ts         # Helper Functions
+│   └── services/             # API Services
+│       ├── userService.ts
+│       ├── deviceNetworkService.ts
+│       └── ...
+├── public/                   # Static Files
+├── .env.local               # Environment Variables (ไม่ commit)
+├── .env.example             # ตัวอย่าง Environment Variables
+├── package.json
+├── tsconfig.json
+└── tailwind.config.ts
 ```
 
-## 🔧 การ Configuration
+## ✨ ฟีเจอร์หลัก
 
-### Environment Variables
+### 🔐 Authentication & Security
 
-สร้างไฟล์ `.env` สำหรับ environment variables:
+- **Login/Register** - ระบบเข้าสู่ระบบและสมัครสมาชิก
+- **Email OTP Verification** - ยืนยันอีเมลด้วย OTP
+- **TOTP MFA (2FA)** - Two-Factor Authentication ด้วย TOTP (Google Authenticator)
+- **Role-based Access Control** - ระบบสิทธิ์ตาม Role (VIEWER, ENGINEER, ADMIN, OWNER)
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
+### 📊 Dashboard
 
-### Tailwind CSS
+- แสดงภาพรวมของระบบ
+- สถิติและข้อมูลสำคัญ
 
-Configuration อยู่ในไฟล์ `tailwind.config.ts`
+### 🖥️ Device Management
 
-### TypeScript
+- จัดการอุปกรณ์เครือข่าย (Switches, Routers, Firewalls, Access Points)
+- ดูรายละเอียดอุปกรณ์
+- จัดการ Tags และ Categories
+- ดู Network Interfaces
 
-Configuration อยู่ในไฟล์ `tsconfig.json`
+### ⚙️ Settings
+
+- **Profile** - จัดการข้อมูลส่วนตัว
+- **Account** - เปลี่ยนรหัสผ่าน
+- **MFA/2FA** - ตั้งค่า Two-Factor Authentication
+  - Enable/Disable TOTP
+  - QR Code Scanning
+  - Backup Codes (Coming Soon)
+
+### 👥 User Management (Admin)
+
+- จัดการผู้ใช้ในระบบ
+- เปลี่ยน Role
+- รีเซ็ตรหัสผ่าน
+
+### Audit Logs
+
+- ดูประวัติการใช้งานระบบ
+- Filter และ Search
