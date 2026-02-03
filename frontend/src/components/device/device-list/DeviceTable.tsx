@@ -164,21 +164,55 @@ export default function DeviceTable({
                   </td>
 
                   {/* Tags */}
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4">
                     {device.tags && device.tags.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {device.tags.map((tag: RelatedTagInfo) => (
-                          <span
-                            key={tag.tag_id}
-                            className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full font-sf-pro-text"
-                            style={{
-                              backgroundColor: tag.color,
-                              color: getTagTextColor(tag.color),
-                            }}
-                          >
-                            {tag.tag_name}
-                          </span>
-                        ))}
+                      <div className="flex flex-col gap-2">
+                        {/* Group tags by type */}
+                        {(() => {
+                          // Group tags by their type
+                          const tagsByType: Record<string, RelatedTagInfo[]> = {};
+                          device.tags.forEach((tag) => {
+                            if (!tagsByType[tag.type]) {
+                              tagsByType[tag.type] = [];
+                            }
+                            tagsByType[tag.type].push(tag);
+                          });
+
+                          // Only show groups that have tags
+                          return Object.entries(tagsByType).map(([type, tags]) => {
+                            const displayTags = tags.slice(0, 3); // Show max 3 tags
+                            const hasMore = tags.length > 3;
+
+                            return (
+                              <div key={type} className="flex flex-col gap-1">
+                                {/* Group name */}
+                                <span className="text-xs font-medium text-gray-600 uppercase">
+                                  {type}:
+                                </span>
+                                {/* Tags in this group */}
+                                <div className="flex flex-wrap gap-1 items-center">
+                                  {displayTags.map((tag) => (
+                                    <span
+                                      key={tag.tag_id}
+                                      className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full font-sf-pro-text"
+                                      style={{
+                                        backgroundColor: tag.color,
+                                        color: getTagTextColor(tag.color),
+                                      }}
+                                    >
+                                      {tag.tag_name}
+                                    </span>
+                                  ))}
+                                  {hasMore && (
+                                    <span className="text-xs text-gray-500 font-medium">
+                                      +{tags.length - 3} more
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
                       </div>
                     ) : (
                       <span className="text-xs text-gray-400 italic">

@@ -86,7 +86,7 @@ const menuItems: MenuItem[] = [
     id: "ip-management",
     label: "IPAM",
     icon: faServer,
-    href: "/ip-management",
+    href: "/ipam",
   },
   {
     id: "device",
@@ -205,60 +205,53 @@ export const Sidebar: React.FC = () => {
         {/* Parent Item */}
         {hasChildren ? (
           <div
-            className={`flex items-center justify-between py-2 px-4 transition-colors cursor-pointer rounded-lg mx-2 ${
-              parentIsActive
+            className={`flex items-center justify-between py-2 px-4 transition-colors cursor-pointer rounded-lg mx-2 ${parentIsActive
                 ? "bg-primary-100 text-primary-700 border-l-4 border-primary-500"
                 : "hover:bg-primary-50 text-gray-700"
-            }`}
+              }`}
             style={{ paddingLeft: `${paddingLeft}px` }}
             onClick={() => toggleExpanded(item.id)}
           >
             <div className="flex items-center space-x-3">
               <FontAwesomeIcon
                 icon={item.icon}
-                className={`w-4 h-4 ${
-                  parentIsActive ? "text-primary-600" : "text-primary-600"
-                }`}
+                className={`w-4 h-4 ${parentIsActive ? "text-primary-600" : "text-primary-600"
+                  }`}
               />
               <span
-                className={`text-sm font-medium font-sf-pro-text ${
-                  parentIsActive
+                className={`text-sm font-medium font-sf-pro-text ${parentIsActive
                     ? "text-primary-700 font-semibold"
                     : "text-gray-700"
-                }`}
+                  }`}
               >
                 {item.label}
               </span>
             </div>
             <FontAwesomeIcon
               icon={isExpanded ? faChevronDown : faChevronRight}
-              className={`w-3 h-3 transition-transform ${
-                parentIsActive ? "text-primary-500" : "text-gray-500"
-              }`}
+              className={`w-3 h-3 transition-transform ${parentIsActive ? "text-primary-500" : "text-gray-500"
+                }`}
             />
           </div>
         ) : (
           <Link href={item.href || "#"}>
             <div
-              className={`flex items-center space-x-3 py-2 px-4 transition-colors cursor-pointer rounded-lg mx-2 ${
-                itemIsActive
+              className={`flex items-center space-x-3 py-2 px-4 transition-colors cursor-pointer rounded-lg mx-2 ${itemIsActive
                   ? "bg-primary-100 text-primary-700 border-l-4 border-primary-500"
                   : "hover:bg-primary-50 text-gray-700"
-              }`}
+                }`}
               style={{ paddingLeft: `${paddingLeft}px` }}
             >
               <FontAwesomeIcon
                 icon={item.icon}
-                className={`w-4 h-4 ${
-                  itemIsActive ? "text-primary-600" : "text-primary-600"
-                }`}
+                className={`w-4 h-4 ${itemIsActive ? "text-primary-600" : "text-primary-600"
+                  }`}
               />
               <span
-                className={`text-sm font-medium font-sf-pro-text ${
-                  itemIsActive
+                className={`text-sm font-medium font-sf-pro-text ${itemIsActive
                     ? "text-primary-700 font-semibold"
                     : "text-gray-700"
-                }`}
+                  }`}
               >
                 {item.label}
               </span>
@@ -274,24 +267,21 @@ export const Sidebar: React.FC = () => {
               return (
                 <Link key={child.id} href={child.href || "#"}>
                   <div
-                    className={`flex items-center mt-2 space-x-3 py-2 px-4  transition-colors cursor-pointer rounded-lg mx-2 ml-4 ${
-                      childIsActive
+                    className={`flex items-center mt-2 space-x-3 py-2 px-4  transition-colors cursor-pointer rounded-lg mx-2 ml-4 ${childIsActive
                         ? "bg-primary-100 text-primary-700 border-l-4 border-primary-500"
                         : "hover:bg-primary-50 text-gray-600"
-                    }`}
+                      }`}
                   >
                     <FontAwesomeIcon
                       icon={child.icon}
-                      className={`w-3 h-3 ${
-                        childIsActive ? "text-primary-600" : "text-primary-500"
-                      }`}
+                      className={`w-3 h-3 ${childIsActive ? "text-primary-600" : "text-primary-500"
+                        }`}
                     />
                     <span
-                      className={`text-sm font-sf-pro-text ${
-                        childIsActive
+                      className={`text-sm font-sf-pro-text ${childIsActive
                           ? "text-primary-700 font-semibold"
                           : "text-gray-600"
-                      }`}
+                        }`}
                     >
                       {child.label}
                     </span>
