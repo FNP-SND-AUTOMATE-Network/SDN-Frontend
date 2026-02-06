@@ -11,13 +11,23 @@ export type TypeDevice =
   | "ACCESS_POINT"
   | "OTHER";
 
-export type StatusDevice =
-  | "ONLINE"
-  | "OFFLINE"
-  | "MAINTENANCE"
-  | "OTHER";
+export type StatusDevice = "ONLINE" | "OFFLINE" | "MAINTENANCE" | "OTHER";
 
 // Types ตาม API schema
+export type VendorType =
+  | "CISCO"
+  | "JUNIPER"
+  | "ARISTA"
+  | "HUAWEI"
+  | "DELL"
+  | "HP"
+  | "OTHER";
+export type DefaultStrategy =
+  | "OC_FIRST"
+  | "NETCONF_FIRST"
+  | "OC_ONLY"
+  | "NETCONF_ONLY";
+
 export interface DeviceNetwork {
   id: string;
   serial_number: string;
@@ -33,8 +43,20 @@ export interface DeviceNetwork {
   backup_id?: string | null;
   local_site_id?: string | null;
   configuration_template_id?: string | null;
+  node_id?: string | null;
+  vendor?: VendorType;
+  default_strategy?: DefaultStrategy;
+  netconf_host?: string | null;
+  netconf_port?: number;
+  netconf_username?: string | null;
+  netconf_password?: string | null;
   created_at: string;
   updated_at: string;
+  odl_mounted?: boolean;
+  odl_connection_status?: string | null;
+  oc_supported_intents?: Record<string, boolean> | null;
+  last_synced_at?: string | null;
+  ready_for_intent?: boolean;
   tags?: RelatedTagInfo[];
   operatingSystem?: {
     id: string;
@@ -121,7 +143,7 @@ export class APIError extends Error {
   constructor(
     message: string,
     public status: number,
-    public response?: any
+    public response?: any,
   ) {
     super(message);
     this.name = "APIError";
@@ -163,7 +185,7 @@ export const deviceNetworkService = {
       os_id?: string;
       policy_id?: string;
       tag_id?: string;
-    }
+    },
   ): Promise<DeviceNetworkListResponse> {
     const params = new URLSearchParams({
       page: page.toString(),
@@ -177,33 +199,27 @@ export const deviceNetworkService = {
       ...(filters?.tag_id && { tag_id: filters.tag_id }),
     });
 
-    const response = await fetch(
-      `${API_BASE_URL}/device-networks/?${params}`,
-      {
-        method: "GET",
-        headers: createHeaders(token),
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/device-networks/?${params}`, {
+      method: "GET",
+      headers: createHeaders(token),
+    });
     return handleResponse(response);
   },
 
-  async getDeviceById(
-    token: string,
-    deviceId: string
-  ): Promise<DeviceNetwork> {
+  async getDeviceById(token: string, deviceId: string): Promise<DeviceNetwork> {
     const response = await fetch(
       `${API_BASE_URL}/device-networks/${deviceId}`,
       {
         method: "GET",
         headers: createHeaders(token),
-      }
+      },
     );
     return handleResponse(response);
   },
 
   async createDevice(
     token: string,
-    data: DeviceNetworkCreateRequest
+    data: DeviceNetworkCreateRequest,
   ): Promise<DeviceNetworkCreateResponse> {
     const response = await fetch(`${API_BASE_URL}/device-networks/`, {
       method: "POST",
@@ -216,7 +232,7 @@ export const deviceNetworkService = {
   async updateDevice(
     token: string,
     deviceId: string,
-    data: DeviceNetworkUpdateRequest
+    data: DeviceNetworkUpdateRequest,
   ): Promise<DeviceNetworkUpdateResponse> {
     const response = await fetch(
       `${API_BASE_URL}/device-networks/${deviceId}`,
@@ -224,21 +240,21 @@ export const deviceNetworkService = {
         method: "PUT",
         headers: createHeaders(token),
         body: JSON.stringify(data),
-      }
+      },
     );
     return handleResponse(response);
   },
 
   async deleteDevice(
     token: string,
-    deviceId: string
+    deviceId: string,
   ): Promise<DeviceNetworkDeleteResponse> {
     const response = await fetch(
       `${API_BASE_URL}/device-networks/${deviceId}`,
       {
         method: "DELETE",
         headers: createHeaders(token),
-      }
+      },
     );
     return handleResponse(response);
   },
@@ -246,7 +262,7 @@ export const deviceNetworkService = {
   async assignTagsToDevice(
     token: string,
     deviceId: string,
-    tagIds: string[]
+    tagIds: string[],
   ): Promise<DeviceNetworkUpdateResponse> {
     const response = await fetch(
       `${API_BASE_URL}/device-networks/${deviceId}/tags`,
@@ -254,7 +270,7 @@ export const deviceNetworkService = {
         method: "POST",
         headers: createHeaders(token),
         body: JSON.stringify({ tag_ids: tagIds }),
-      }
+      },
     );
     return handleResponse(response);
   },
@@ -262,7 +278,7 @@ export const deviceNetworkService = {
   async removeTagsFromDevice(
     token: string,
     deviceId: string,
-    tagIds: string[]
+    tagIds: string[],
   ): Promise<DeviceNetworkUpdateResponse> {
     const response = await fetch(
       `${API_BASE_URL}/device-networks/${deviceId}/tags`,
@@ -270,10 +286,8 @@ export const deviceNetworkService = {
         method: "DELETE",
         headers: createHeaders(token),
         body: JSON.stringify({ tag_ids: tagIds }),
-      }
+      },
     );
     return handleResponse(response);
   },
 };
-
-

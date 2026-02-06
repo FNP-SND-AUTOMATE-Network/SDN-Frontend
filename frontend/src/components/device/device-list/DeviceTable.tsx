@@ -1,77 +1,137 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faNetworkWired } from "@fortawesome/free-solid-svg-icons";
+import {
+  faNetworkWired,
+  faEllipsisVertical,
+  faEye,
+  faEdit,
+  faSync,
+  faTrash,
+} from "@fortawesome/free-solid-svg-icons";
+import {
+  Network,
+  Router as RouterIcon,
+  Shield,
+  Wifi,
+  Box,
+} from "lucide-react";
 import { DeviceNetwork } from "@/services/deviceNetworkService";
-import { RelatedTagInfo } from "@/services/operatingSystemService";
 
 interface DeviceTableProps {
   devices: DeviceNetwork[];
+  onSync?: (device: DeviceNetwork) => void;
+  onDelete?: (device: DeviceNetwork) => void;
 }
 
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-};
-
-const getStatusBadge = (status: string) => {
-  const base =
-    "px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap font-sf-pro-text";
+const getStatusDot = (status: string) => {
   switch (status) {
     case "ONLINE":
-      return `${base} bg-green-100 text-green-800`;
+      return "bg-green-500";
     case "OFFLINE":
-      return `${base} bg-red-100 text-red-800`;
+      return "bg-red-500";
     case "MAINTENANCE":
-      return `${base} bg-yellow-100 text-yellow-800`;
+      return "bg-blue-500";
+    case "WARNING":
+      return "bg-yellow-500";
     default:
-      return `${base} bg-gray-100 text-gray-800`;
+      return "bg-gray-500";
   }
 };
 
 const getTypeBadge = (type: string) => {
   const base =
-    "px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap font-sf-pro-text";
+    "inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded whitespace-nowrap font-sf-pro-text";
   switch (type) {
     case "SWITCH":
-      return `${base} bg-blue-100 text-blue-800`;
+      return `${base} bg-blue-50 text-blue-700`;
     case "ROUTER":
-      return `${base} bg-purple-100 text-purple-800`;
+      return `${base} bg-purple-50 text-purple-700`;
     case "FIREWALL":
-      return `${base} bg-red-100 text-red-800`;
+      return `${base} bg-red-50 text-red-700`;
     case "ACCESS_POINT":
-      return `${base} bg-indigo-100 text-indigo-800`;
+      return `${base} bg-indigo-50 text-indigo-700`;
     default:
-      return `${base} bg-gray-100 text-gray-800`;
+      return `${base} bg-gray-50 text-gray-700`;
   }
 };
 
-const getColorBrightness = (hexColor: string): number => {
-  const hex = hexColor.replace("#", "");
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000;
+const getTypeIcon = (type: string) => {
+  const iconClass = "w-4 h-4";
+  switch (type) {
+    case "SWITCH":
+      return <Network className={iconClass} />;
+    case "ROUTER":
+      return <RouterIcon className={iconClass} />;
+    case "FIREWALL":
+      return <Shield className={iconClass} />;
+    case "ACCESS_POINT":
+      return <Wifi className={iconClass} />;
+    default:
+      return <Box className={iconClass} />;
+  }
 };
 
-const getTagTextColor = (backgroundColor: string): string => {
-  const brightness = getColorBrightness(backgroundColor);
-  return brightness > 128 ? "#000000" : "#FFFFFF";
-};
+export default function DeviceTable({ devices, onSync, onDelete }: DeviceTableProps) {
+  const router = useRouter();
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [dropdownDirection, setDropdownDirection] = useState<"up" | "down">("down");
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-export default function DeviceTable({
-  devices,
-}: DeviceTableProps) {
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpenDropdownId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggleDropdown = (deviceId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (openDropdownId === deviceId) {
+      setOpenDropdownId(null);
+      return;
+    }
+
+    // Calculate if dropdown should open up or down
+    const button = e.currentTarget as HTMLElement;
+    const rect = button.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const dropdownHeight = 180; // Approximate height of dropdown
+
+    setDropdownDirection(spaceBelow < dropdownHeight ? "up" : "down");
+    setOpenDropdownId(deviceId);
+  };
+
+  const handleViewDetail = (device: DeviceNetwork) => {
+    router.push(`/device/device-list/${device.id}`);
+    setOpenDropdownId(null);
+  };
+
+  const handleEdit = (device: DeviceNetwork) => {
+    router.push(`/device/device-list/${device.id}?edit=true`);
+    setOpenDropdownId(null);
+  };
+
+  const handleSync = (device: DeviceNetwork) => {
+    if (onSync) onSync(device);
+    setOpenDropdownId(null);
+  };
+
+  const handleDelete = (device: DeviceNetwork) => {
+    if (onDelete) onDelete(device);
+    setOpenDropdownId(null);
+  };
+
   return (
-    <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+    <div className="bg-white shadow-sm rounded-lg border border-gray-200">
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -80,22 +140,28 @@ export default function DeviceTable({
                 Device Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Model
+                Serial Number
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Type
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                IP
+                Model
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
+                IP MGMT
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Vendor
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Site
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tags
+                Status
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+
               </th>
             </tr>
           </thead>
@@ -103,7 +169,7 @@ export default function DeviceTable({
             {devices.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={9}
                   className="px-6 py-8 text-center text-gray-500 font-sf-pro-text"
                 >
                   <FontAwesomeIcon
@@ -115,8 +181,8 @@ export default function DeviceTable({
               </tr>
             ) : (
               devices.map((device) => (
-                <tr key={device.id} className="hover:bg-gray-50">
-                  {/* Device Name (link to detail page) */}
+                <tr key={device.id} className="hover:bg-gray-50 transition-colors">
+                  {/* Device Name */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Link
                       href={`/device/device-list/${device.id}`}
@@ -126,99 +192,125 @@ export default function DeviceTable({
                     </Link>
                   </td>
 
-                  {/* Model */}
+                  {/* Serial Number */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 font-sf-pro-text">
-                      {device.device_model}
+                    <div className="text-sm text-gray-500 font-mono">
+                      {device.serial_number || "-"}
                     </div>
                   </td>
 
                   {/* Type */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={getTypeBadge(device.type)}>
-                      {device.type}
+                      <span>{getTypeIcon(device.type)}</span>
+                      {device.type.replace("_", " ")}
                     </span>
                   </td>
 
-                  {/* IP */}
+                  {/* Model */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 font-sf-pro-text">
+                      {device.device_model || "-"}
+                    </div>
+                  </td>
+
+                  {/* IP MGMT */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900 font-mono">
                       {device.ip_address || "-"}
                     </div>
                   </td>
 
-                  {/* Status */}
+                  {/* Vendor */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={getStatusBadge(device.status)}>
-                      {device.status}
-                    </span>
+                    <div className="text-sm text-gray-900 font-sf-pro-text">
+                      {device.vendor || "-"}
+                    </div>
                   </td>
 
                   {/* Site */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 font-sf-pro-text">
                       {device.localSite
-                        ? `${device.localSite.site_code} (${device.localSite.site_name || "-"})`
+                        ? device.localSite.site_name || device.localSite.site_code
                         : "-"}
                     </div>
                   </td>
 
-                  {/* Tags */}
-                  <td className="px-6 py-4">
-                    {device.tags && device.tags.length > 0 ? (
-                      <div className="flex flex-col gap-2">
-                        {/* Group tags by type */}
-                        {(() => {
-                          // Group tags by their type
-                          const tagsByType: Record<string, RelatedTagInfo[]> = {};
-                          device.tags.forEach((tag) => {
-                            if (!tagsByType[tag.type]) {
-                              tagsByType[tag.type] = [];
-                            }
-                            tagsByType[tag.type].push(tag);
-                          });
-
-                          // Only show groups that have tags
-                          return Object.entries(tagsByType).map(([type, tags]) => {
-                            const displayTags = tags.slice(0, 3); // Show max 3 tags
-                            const hasMore = tags.length > 3;
-
-                            return (
-                              <div key={type} className="flex flex-col gap-1">
-                                {/* Group name */}
-                                <span className="text-xs font-medium text-gray-600 uppercase">
-                                  {type}:
-                                </span>
-                                {/* Tags in this group */}
-                                <div className="flex flex-wrap gap-1 items-center">
-                                  {displayTags.map((tag) => (
-                                    <span
-                                      key={tag.tag_id}
-                                      className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full font-sf-pro-text"
-                                      style={{
-                                        backgroundColor: tag.color,
-                                        color: getTagTextColor(tag.color),
-                                      }}
-                                    >
-                                      {tag.tag_name}
-                                    </span>
-                                  ))}
-                                  {hasMore && (
-                                    <span className="text-xs text-gray-500 font-medium">
-                                      +{tags.length - 3} more
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          });
-                        })()}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-400 italic">
-                        No tags
+                  {/* Status */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full ${getStatusDot(device.status)}`} />
+                      <span className="text-sm font-medium text-gray-700">
+                        {device.status}
                       </span>
-                    )}
+                    </span>
+                  </td>
+
+                  {/* Actions - Using same pattern as TopologyDeviceTable */}
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="relative inline-block" ref={openDropdownId === device.id ? dropdownRef : null}>
+                      {/* Ellipsis Button */}
+                      <button
+                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                        onClick={(e) => toggleDropdown(device.id, e)}
+                        title="Actions"
+                      >
+                        <FontAwesomeIcon icon={faEllipsisVertical} className="w-4 h-4" />
+                      </button>
+
+                      {/* Dropdown Menu */}
+                      {openDropdownId === device.id && (
+                        <div
+                          className={`absolute right-full mr-2 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 ${dropdownDirection === "up"
+                              ? "bottom-0"
+                              : "top-0"
+                            }`}
+                        >
+                          <button
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewDetail(device);
+                            }}
+                          >
+                            <FontAwesomeIcon icon={faEye} className="w-4 h-4 text-blue-600" />
+                            View Detail
+                          </button>
+                          <button
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(device);
+                            }}
+                          >
+                            <FontAwesomeIcon icon={faEdit} className="w-4 h-4 text-green-600" />
+                            Edit Device
+                          </button>
+                          <button
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSync(device);
+                            }}
+                          >
+                            <FontAwesomeIcon icon={faSync} className="w-4 h-4 text-purple-600" />
+                            Sync Device
+                          </button>
+                          <hr className="my-1 border-gray-200" />
+                          <button
+                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(device);
+                            }}
+                          >
+                            <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
@@ -229,5 +321,3 @@ export default function DeviceTable({
     </div>
   );
 }
-
-
