@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -13,16 +14,17 @@ import {
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import {
-  Network,
   Router as RouterIcon,
   Shield,
   Wifi,
   Box,
+  Server,
 } from "lucide-react";
 import { DeviceNetwork } from "@/services/deviceNetworkService";
 
 interface DeviceTableProps {
   devices: DeviceNetwork[];
+  onEdit?: (device: DeviceNetwork) => void;
   onSync?: (device: DeviceNetwork) => void;
   onDelete?: (device: DeviceNetwork) => void;
 }
@@ -63,7 +65,7 @@ const getTypeIcon = (type: string) => {
   const iconClass = "w-4 h-4";
   switch (type) {
     case "SWITCH":
-      return <Network className={iconClass} />;
+      return <Server className={iconClass} />;
     case "ROUTER":
       return <RouterIcon className={iconClass} />;
     case "FIREWALL":
@@ -75,17 +77,27 @@ const getTypeIcon = (type: string) => {
   }
 };
 
-export default function DeviceTable({ devices, onSync, onDelete }: DeviceTableProps) {
+export default function DeviceTable({ devices, onEdit, onSync, onDelete }: DeviceTableProps) {
   const router = useRouter();
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [dropdownDirection, setDropdownDirection] = useState<"up" | "down">("down");
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; direction: "up" | "down" }>({ top: 0, left: 0, direction: "down" });
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpenDropdownId(null);
+        // Also check if click was on any button
+        let isButtonClick = false;
+        buttonRefs.current.forEach((btn) => {
+          if (btn && btn.contains(event.target as Node)) {
+            isButtonClick = true;
+          }
+        });
+        if (!isButtonClick) {
+          setOpenDropdownId(null);
+        }
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -100,13 +112,23 @@ export default function DeviceTable({ devices, onSync, onDelete }: DeviceTablePr
       return;
     }
 
-    // Calculate if dropdown should open up or down
+    // Calculate position for fixed dropdown
     const button = e.currentTarget as HTMLElement;
     const rect = button.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const dropdownHeight = 180; // Approximate height of dropdown
+    const dropdownWidth = 176; // w-44 = 11rem = 176px
+    const dropdownHeight = 180;
 
-    setDropdownDirection(spaceBelow < dropdownHeight ? "up" : "down");
+    // Calculate if should open up or down
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const direction = spaceBelow < dropdownHeight ? "up" : "down";
+
+    // Position to the left of the button
+    const left = rect.left - dropdownWidth - 8;
+    const top = direction === "up"
+      ? rect.bottom - dropdownHeight
+      : rect.top;
+
+    setDropdownPosition({ top, left, direction });
     setOpenDropdownId(deviceId);
   };
 
@@ -116,7 +138,11 @@ export default function DeviceTable({ devices, onSync, onDelete }: DeviceTablePr
   };
 
   const handleEdit = (device: DeviceNetwork) => {
-    router.push(`/device/device-list/${device.id}?edit=true`);
+    if (onEdit) {
+      onEdit(device);
+    } else {
+      router.push(`/device/device-list/${device.id}?edit=true`);
+    }
     setOpenDropdownId(null);
   };
 
@@ -194,7 +220,7 @@ export default function DeviceTable({ devices, onSync, onDelete }: DeviceTablePr
 
                   {/* Serial Number */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500 font-mono">
+                    <div className="text-sm text-gray-500 font-sf-pro-text">
                       {device.serial_number || "-"}
                     </div>
                   </td>
@@ -216,7 +242,7 @@ export default function DeviceTable({ devices, onSync, onDelete }: DeviceTablePr
 
                   {/* IP MGMT */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 font-mono">
+                    <div className="text-sm text-gray-900 font-sf-pro-text">
                       {device.ip_address || "-"}
                     </div>
                   </td>
@@ -247,70 +273,19 @@ export default function DeviceTable({ devices, onSync, onDelete }: DeviceTablePr
                     </span>
                   </td>
 
-                  {/* Actions - Using same pattern as TopologyDeviceTable */}
+                  {/* Actions */}
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="relative inline-block" ref={openDropdownId === device.id ? dropdownRef : null}>
-                      {/* Ellipsis Button */}
-                      <button
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-                        onClick={(e) => toggleDropdown(device.id, e)}
-                        title="Actions"
-                      >
-                        <FontAwesomeIcon icon={faEllipsisVertical} className="w-4 h-4" />
-                      </button>
-
-                      {/* Dropdown Menu */}
-                      {openDropdownId === device.id && (
-                        <div
-                          className={`absolute right-full mr-2 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 ${dropdownDirection === "up"
-                              ? "bottom-0"
-                              : "top-0"
-                            }`}
-                        >
-                          <button
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewDetail(device);
-                            }}
-                          >
-                            <FontAwesomeIcon icon={faEye} className="w-4 h-4 text-blue-600" />
-                            View Detail
-                          </button>
-                          <button
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(device);
-                            }}
-                          >
-                            <FontAwesomeIcon icon={faEdit} className="w-4 h-4 text-green-600" />
-                            Edit Device
-                          </button>
-                          <button
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSync(device);
-                            }}
-                          >
-                            <FontAwesomeIcon icon={faSync} className="w-4 h-4 text-purple-600" />
-                            Sync Device
-                          </button>
-                          <hr className="my-1 border-gray-200" />
-                          <button
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(device);
-                            }}
-                          >
-                            <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    {/* Ellipsis Button */}
+                    <button
+                      ref={(el) => {
+                        if (el) buttonRefs.current.set(device.id, el);
+                      }}
+                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                      onClick={(e) => toggleDropdown(device.id, e)}
+                      title="Actions"
+                    >
+                      <FontAwesomeIcon icon={faEllipsisVertical} className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               ))
@@ -318,6 +293,61 @@ export default function DeviceTable({ devices, onSync, onDelete }: DeviceTablePr
           </tbody>
         </table>
       </div>
+
+      {/* Portal Dropdown Menu - Renders outside table DOM */}
+      {openDropdownId && typeof window !== "undefined" && createPortal(
+        <div
+          ref={dropdownRef}
+          className="fixed w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[9999]"
+          style={{
+            top: dropdownPosition.top,
+            left: dropdownPosition.left,
+          }}
+        >
+          <button
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+            onClick={() => {
+              const device = devices.find(d => d.id === openDropdownId);
+              if (device) handleViewDetail(device);
+            }}
+          >
+            <FontAwesomeIcon icon={faEye} className="w-4 h-4 text-blue-600" />
+            View Details
+          </button>
+          <button
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+            onClick={() => {
+              const device = devices.find(d => d.id === openDropdownId);
+              if (device) handleEdit(device);
+            }}
+          >
+            <FontAwesomeIcon icon={faEdit} className="w-4 h-4 text-green-600" />
+            Edit Device
+          </button>
+          <button
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+            onClick={() => {
+              const device = devices.find(d => d.id === openDropdownId);
+              if (device) handleSync(device);
+            }}
+          >
+            <FontAwesomeIcon icon={faSync} className="w-4 h-4 text-purple-600" />
+            Sync Config
+          </button>
+          <hr className="my-1 border-gray-200" />
+          <button
+            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+            onClick={() => {
+              const device = devices.find(d => d.id === openDropdownId);
+              if (device) handleDelete(device);
+            }}
+          >
+            <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
+            Delete
+          </button>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

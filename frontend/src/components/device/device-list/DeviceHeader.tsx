@@ -10,6 +10,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/Button";
 
+interface StatusCounts {
+  online: number;
+  offline: number;
+  other: number;
+  maintenance: number;
+}
+
 interface DeviceHeaderProps {
   onAddDevice: () => void;
   onSearch: (searchTerm: string) => void;
@@ -18,6 +25,46 @@ interface DeviceHeaderProps {
   selectedType: string;
   selectedStatus: string;
   totalDevices: number;
+  statusCounts?: StatusCounts;
+}
+
+// Status Card Component
+function StatusCard({
+  label,
+  count,
+  total,
+  color,
+}: {
+  label: string;
+  count: number;
+  total: number;
+  color: "green" | "red" | "yellow" | "blue";
+}) {
+  const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+
+  const dotColors = {
+    green: "bg-green-500",
+    red: "bg-red-500",
+    yellow: "bg-yellow-500",
+    blue: "bg-blue-500",
+  };
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4 flex-1 min-w-[140px]">
+      <div className="flex items-center gap-2 mb-2">
+        <span className={`w-2 h-2 rounded-full ${dotColors[color]}`} />
+        <span className="text-sm text-gray-600 font-sf-pro-text">{label}</span>
+      </div>
+      <div className="flex items-baseline gap-2">
+        <span className="text-2xl font-bold text-gray-900 font-sf-pro-display">
+          {count}
+        </span>
+        <span className="text-sm text-gray-500 font-sf-pro-text">
+          {percentage}%
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export default function DeviceHeader({
@@ -28,8 +75,8 @@ export default function DeviceHeader({
   selectedType,
   selectedStatus,
   totalDevices,
+  statusCounts,
 }: DeviceHeaderProps) {
-  const [showFilters, setShowFilters] = useState(false);
   const [localSearch, setLocalSearch] = useState(searchTerm);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,172 +98,108 @@ export default function DeviceHeader({
     onFilterChange({ type: selectedType, status: e.target.value });
   };
 
-  const handleClearFilters = () => {
-    onFilterChange({ type: "", status: "" });
-    setLocalSearch("");
-    onSearch("");
-  };
-
-  const hasActiveFilters =
-    selectedType !== "" || selectedStatus !== "" || searchTerm !== "";
-
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-      {/* Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 font-sf-pro-display">
-            Device List
-          </h1>
-          <p className="text-sm text-gray-600 mt-1 font-sf-pro-text">
-            Total Devices: {totalDevices}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2"
-          >
-            <FontAwesomeIcon icon={faFilter} className="w-4 h-4" />
-            <span>Filter</span>
-            {hasActiveFilters && (
-              <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
-                !
-              </span>
-            )}
-          </Button>
-          <Button onClick={onAddDevice} className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-            <span>Add</span>
-          </Button>
-        </div>
+    <div className="mb-6">
+      {/* Page Title */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900 font-sf-pro-display">
+          Devices
+        </h1>
+        <p className="text-sm text-gray-500 font-sf-pro-text">
+          Manage and monitor your network devices
+        </p>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <FontAwesomeIcon icon={faSearch} className="w-5 h-5 text-gray-400" />
-        </div>
-        <input
-          type="text"
-          placeholder="Search by name, model, serial, IP, MAC..."
-          value={localSearch}
-          onChange={handleSearchChange}
-          className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text"
-        />
-        {localSearch && (
-          <button
-            onClick={handleClearSearch}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-          >
-            <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
-      {/* Filters Panel */}
-      {showFilters && (
-        <div className="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-gray-900 font-sf-pro-display">
-              Advanced Filters
-            </h3>
-            {hasActiveFilters && (
-              <button
-                onClick={handleClearFilters}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Clear All Filters
-              </button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Device Type
-              </label>
-              <select
-                value={selectedType}
-                onChange={handleTypeChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text"
-              >
-                <option value="">All</option>
-                <option value="SWITCH">Switch</option>
-                <option value="ROUTER">Router</option>
-                <option value="FIREWALL">Firewall</option>
-                <option value="ACCESS_POINT">Access Point</option>
-                <option value="OTHER">Other</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                value={selectedStatus}
-                onChange={handleStatusChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text"
-              >
-                <option value="">All</option>
-                <option value="ONLINE">Online</option>
-                <option value="OFFLINE">Offline</option>
-                <option value="MAINTENANCE">Maintenance</option>
-                <option value="OTHER">Other</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Active Filters Summary */}
-          {hasActiveFilters && (
-            <div className="mt-3 pt-3 border-t border-gray-200">
-              <div className="flex flex-wrap gap-2">
-                <span className="text-xs text-gray-600 font-medium">
-                  Active Filters:
-                </span>
-                {selectedType && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                    Type: {selectedType}
-                    <button
-                      onClick={() =>
-                        onFilterChange({ type: "", status: selectedStatus })
-                      }
-                      className="ml-1 hover:text-blue-900"
-                    >
-                      <FontAwesomeIcon icon={faTimes} className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-                {selectedStatus && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">
-                    Status: {selectedStatus}
-                    <button
-                      onClick={() =>
-                        onFilterChange({ type: selectedType, status: "" })
-                      }
-                      className="ml-1 hover:text-purple-900"
-                    >
-                      <FontAwesomeIcon icon={faTimes} className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-                {searchTerm && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                    Search: {searchTerm}
-                    <button
-                      onClick={handleClearSearch}
-                      className="ml-1 hover:text-green-900"
-                    >
-                      <FontAwesomeIcon icon={faTimes} className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
+      {/* Status Cards */}
+      {statusCounts && (
+        <div className="flex gap-4 mb-6 overflow-x-auto pb-2">
+          <StatusCard
+            label="Online"
+            count={statusCounts.online}
+            total={totalDevices}
+            color="green"
+          />
+          <StatusCard
+            label="Offline"
+            count={statusCounts.offline}
+            total={totalDevices}
+            color="red"
+          />
+          <StatusCard
+            label="Other"
+            count={statusCounts.other}
+            total={totalDevices}
+            color="yellow"
+          />
+          <StatusCard
+            label="Maintenance"
+            count={statusCounts.maintenance}
+            total={totalDevices}
+            color="blue"
+          />
         </div>
       )}
+
+      {/* Search and Filters Row */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        {/* Search Input */}
+        <div className="relative flex-1 max-w-sm">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FontAwesomeIcon icon={faSearch} className="w-4 h-4 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search devices..."
+            value={localSearch}
+            onChange={handleSearchChange}
+            className="w-full pl-9 pr-9 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text"
+          />
+          {localSearch && (
+            <button
+              onClick={handleClearSearch}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+            >
+              <FontAwesomeIcon icon={faTimes} className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedStatus}
+            onChange={handleStatusChange}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-sf-pro-text bg-white"
+          >
+            <option value="">All Status</option>
+            <option value="ONLINE">Online</option>
+            <option value="OFFLINE">Offline</option>
+            <option value="OTHER">Other</option>
+            <option value="MAINTENANCE">Maintenance</option>
+          </select>
+          <select
+            value={selectedType}
+            onChange={handleTypeChange}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-sf-pro-text bg-white"
+          >
+            <option value="">All Types</option>
+            <option value="SWITCH">Switch</option>
+            <option value="ROUTER">Router</option>
+            <option value="FIREWALL">Firewall</option>
+            <option value="ACCESS_POINT">Access Point</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Add Button & Device Count */}
+        <div className="flex items-center gap-4">
+          <Button onClick={onAddDevice} className="flex items-center gap-2 whitespace-nowrap">
+            <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

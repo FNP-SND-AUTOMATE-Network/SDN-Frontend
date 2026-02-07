@@ -115,6 +115,12 @@ export default function DevicePage() {
       }
       setError(null);
 
+      console.log("[DEBUG] Fetching devices with filters:", {
+        search: debouncedSearch || undefined,
+        type: filters.type || undefined,
+        status: filters.status || undefined,
+      });
+
       const response = await deviceNetworkService.getDevices(
         token,
         pagination.page,
@@ -125,6 +131,8 @@ export default function DevicePage() {
           status: filters.status || undefined,
         }
       );
+
+      console.log("[DEBUG] API Response:", response);
 
       setDevices(response.devices);
       setPagination((prev) => ({
@@ -399,6 +407,12 @@ export default function DevicePage() {
               selectedType={filters.type}
               selectedStatus={filters.status}
               totalDevices={pagination.total}
+              statusCounts={{
+                online: devices.filter(d => d.status === "ONLINE").length,
+                offline: devices.filter(d => d.status === "OFFLINE").length,
+                other: devices.filter(d => d.status === "OTHER").length,
+                maintenance: devices.filter(d => d.status === "MAINTENANCE").length,
+              }}
             />
 
             {error && (
@@ -410,7 +424,15 @@ export default function DevicePage() {
             {isDataLoading ? (
               <DeviceSkeleton />
             ) : (
-              <DeviceTable devices={devices} />
+              <DeviceTable
+                devices={devices}
+                onEdit={openEditModal}
+                onSync={(device) => {
+                  // TODO: Implement sync functionality
+                  console.log("Sync device:", device.device_name);
+                }}
+                onDelete={(device) => openDeleteConfirm(device.id, device.device_name)}
+              />
             )}
 
             {/* Simple pagination (Previous / Next) */}
@@ -431,11 +453,10 @@ export default function DevicePage() {
                 <button
                   disabled={pagination.page === 1}
                   onClick={() => handlePageChange(pagination.page - 1)}
-                  className={`px-3 py-1 rounded border ${
-                    pagination.page === 1
-                      ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                      : "text-gray-700 border-gray-300 hover:bg-gray-50"
-                  }`}
+                  className={`px-3 py-1 rounded border ${pagination.page === 1
+                    ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                    : "text-gray-700 border-gray-300 hover:bg-gray-50"
+                    }`}
                 >
                   Previous
                 </button>
@@ -444,11 +465,10 @@ export default function DevicePage() {
                     pagination.page * pagination.pageSize >= pagination.total
                   }
                   onClick={() => handlePageChange(pagination.page + 1)}
-                  className={`px-3 py-1 rounded border ${
-                    pagination.page * pagination.pageSize >= pagination.total
-                      ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                      : "text-gray-700 border-gray-300 hover:bg-gray-50"
-                  }`}
+                  className={`px-3 py-1 rounded border ${pagination.page * pagination.pageSize >= pagination.total
+                    ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                    : "text-gray-700 border-gray-300 hover:bg-gray-50"
+                    }`}
                 >
                   Next
                 </button>

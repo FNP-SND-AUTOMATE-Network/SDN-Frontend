@@ -191,7 +191,7 @@ export const deviceNetworkService = {
       page: page.toString(),
       page_size: pageSize.toString(),
       ...(filters?.search && { search: filters.search }),
-      ...(filters?.type && { type: filters.type }),
+      ...(filters?.type && { device_type: filters.type }),
       ...(filters?.status && { status: filters.status }),
       ...(filters?.site_id && { local_site_id: filters.site_id }),
       ...(filters?.os_id && { os_id: filters.os_id }),
