@@ -23,12 +23,11 @@ import {
   DeviceDetailBreadcrumb,
   DeviceDetailHeader,
   DeviceDetailTabs,
-  DeviceBasicInfo,
-  DeviceNetworkInfo,
-  DeviceDescriptionTags,
+  DeviceDetailCards,
+  DeviceConfigurationTab,
 } from "@/components/device/device-detail";
 
-type TabKey = "detail" | "interfaces";
+type TabKey = "overview" | "interfaces" | "configuration" | "backup";
 
 export default function DeviceDetailPage() {
   const params = useParams();
@@ -41,7 +40,7 @@ export default function DeviceDetailPage() {
   const [device, setDevice] = useState<DeviceNetwork | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabKey>("detail");
+  const [activeTab, setActiveTab] = useState<TabKey>("overview");
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -190,6 +189,10 @@ export default function DeviceDetailPage() {
             device={device}
             onEdit={handleEditDevice}
             onDelete={openDeleteConfirm}
+            onSync={() => {
+              // TODO: Implement sync
+              console.log("Sync device:", device.device_name);
+            }}
           />
         )}
 
@@ -213,15 +216,19 @@ export default function DeviceDetailPage() {
               <div className="text-sm text-gray-500 font-sf-pro-text">
                 Device not found.
               </div>
-            ) : activeTab === "detail" ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm font-sf-pro-text">
-                <DeviceBasicInfo device={device} />
-                <DeviceNetworkInfo device={device} />
-                <DeviceDescriptionTags device={device} />
-              </div>
+            ) : activeTab === "overview" ? (
+              <DeviceDetailCards device={device} />
+            ) : activeTab === "configuration" ? (
+              <DeviceConfigurationTab
+                device={device}
+                onPreviewTemplate={(templateId) => {
+                  // TODO: Implement template preview modal
+                  console.log("Preview template:", templateId);
+                }}
+              />
             ) : (
               <div className="text-sm text-gray-500 font-sf-pro-text">
-                Interfaces view is under development.
+                This tab is under development.
               </div>
             )}
           </div>

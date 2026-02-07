@@ -5,13 +5,13 @@ export const getStatusBadge = (status: string) => {
     "px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap font-sf-pro-text";
   switch (status) {
     case "ONLINE":
-      return `${base} bg-green-100 text-green-800`;
+      return { dot: "bg-green-500", bg: "bg-green-100" };
     case "OFFLINE":
-      return `${base} bg-red-100 text-red-800`;
+      return { dot: "bg-red-500", bg: "bg-red-100" };
     case "MAINTENANCE":
-      return `${base} bg-yellow-100 text-yellow-800`;
+      return { dot: "bg-blue-500", bg: "bg-blue-100" };
     default:
-      return `${base} bg-gray-100 text-gray-800`;
+      return { dot: "bg-gray-400", bg: "bg-gray-100" };
   }
 };
 

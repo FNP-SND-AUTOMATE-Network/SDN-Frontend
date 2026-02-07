@@ -35,7 +35,8 @@ export default function DeviceBasicInfo({ device }: DeviceBasicInfoProps) {
         <div>
           <dt className="text-gray-500">Status</dt>
           <dd className="text-gray-900">
-            <span className={getStatusBadge(device.status)}>
+            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium text-gray-900 ${getStatusBadge(device.status).bg}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${getStatusBadge(device.status).dot}`} />
               {device.status}
             </span>
           </dd>

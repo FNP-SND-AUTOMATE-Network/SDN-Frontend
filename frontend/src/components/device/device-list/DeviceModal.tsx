@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes } from "@fortawesome/free-solid-svg-icons";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Alert";
 import {
   DeviceNetwork,
   DeviceNetworkCreateRequest,
@@ -56,6 +57,17 @@ export default function DeviceModal({
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Auto-dismiss error alert after 10 seconds
+  useEffect(() => {
+    if (formError) {
+      const timer = setTimeout(() => {
+        setFormError(null);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [formError]);
 
   useEffect(() => {
     if (isOpen) {
@@ -91,6 +103,7 @@ export default function DeviceModal({
         setSelectedTagIds([]);
       }
       setErrors({});
+      setFormError(null);
     }
   }, [isOpen, mode, device]);
 
@@ -137,6 +150,11 @@ export default function DeviceModal({
     }
 
     setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      setFormError("Please fill in all required fields marked with *");
+    } else {
+      setFormError(null);
+    }
     return Object.keys(newErrors).length === 0;
   };
 
@@ -152,8 +170,9 @@ export default function DeviceModal({
       const result = await onSubmit(formData, selectedTagIds);
       onSuccess(result);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error ${mode === "add" ? "creating" : "updating"} device:`, error);
+      setFormError(error?.message || `Failed to ${mode === "add" ? "create" : "update"} device. Please try again.`);
     } finally {
       setIsLoading(false);
     }
@@ -183,6 +202,17 @@ export default function DeviceModal({
           onSubmit={handleSubmit}
           className="p-6 space-y-6 overflow-y-auto flex-1"
         >
+          {/* Error Alert */}
+          {formError && (
+            <Alert
+              variant="error"
+              closable
+              onClose={() => setFormError(null)}
+            >
+              {formError}
+            </Alert>
+          )}
+
           {/* Basic Information */}
           <div>
             <h3 className="text-lg font-medium text-gray-900 mb-4 font-sf-pro-display">
@@ -221,7 +251,7 @@ export default function DeviceModal({
               />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Type
+                  Type <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="type"
@@ -239,7 +269,7 @@ export default function DeviceModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
+                  Status <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="status"
@@ -359,8 +389,8 @@ export default function DeviceModal({
                     typeKey === "tag"
                       ? "Tag"
                       : typeKey === "group"
-                      ? "Group"
-                      : "Other";
+                        ? "Group"
+                        : "Other";
 
                   return (
                     <div key={typeKey}>
@@ -384,11 +414,10 @@ export default function DeviceModal({
                                 )
                               }
                               disabled={isLoading}
-                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border transition-colors font-sf-pro-text ${
-                                isSelected
-                                  ? "border-blue-500 bg-blue-100 text-blue-800"
-                                  : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
-                              }`}
+                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border transition-colors font-sf-pro-text ${isSelected
+                                ? "border-blue-500 bg-blue-100 text-blue-800"
+                                : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                                }`}
                             >
                               <span
                                 className="w-2 h-2 rounded-full mr-2"
@@ -429,5 +458,3 @@ export default function DeviceModal({
     </div>
   );
 }
-
-
