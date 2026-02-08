@@ -134,9 +134,22 @@ const menuItems: MenuItem[] = [
 ];
 
 export const Sidebar: React.FC = () => {
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  // Lazy initialization - loads from localStorage synchronously before first render
+  const [expandedItems, setExpandedItems] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem("sidebar-expanded");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          return [];
+        }
+      }
+    }
+    return [];
+  });
+
   const pathname = usePathname();
-  const hasAutoExpandedRef = React.useRef(false);
 
   const isActive = useCallback(
     (href: string) => {
@@ -163,27 +176,28 @@ export const Sidebar: React.FC = () => {
     [isActive]
   );
 
-  // Auto-expand parent menus that have active children (only once on mount)
+  // Auto-expand parent menus that have active children on pathname change
   React.useEffect(() => {
-    if (!hasAutoExpandedRef.current) {
-      const activeParents: string[] = [];
-      menuItems.forEach((item) => {
-        if (item.children) {
-          const hasActiveChild = item.children.some(
-            (child) => child.href && isActive(child.href)
-          );
-          if (hasActiveChild) {
-            activeParents.push(item.id);
-          }
+    const activeParents: string[] = [];
+    menuItems.forEach((item) => {
+      if (item.children) {
+        const hasActiveChild = item.children.some(
+          (child) => child.href && isActive(child.href)
+        );
+        if (hasActiveChild && !expandedItems.includes(item.id)) {
+          activeParents.push(item.id);
         }
-      });
-      if (activeParents.length > 0) {
-        setExpandedItems(activeParents);
       }
-      hasAutoExpandedRef.current = true;
+    });
+    if (activeParents.length > 0) {
+      setExpandedItems((prev) => [...new Set([...prev, ...activeParents])]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pathname, isActive]);
+
+  // Save expanded state to localStorage whenever it changes
+  React.useEffect(() => {
+    localStorage.setItem("sidebar-expanded", JSON.stringify(expandedItems));
+  }, [expandedItems]);
 
   const toggleExpanded = useCallback((itemId: string) => {
     setExpandedItems((prev) =>
@@ -206,8 +220,8 @@ export const Sidebar: React.FC = () => {
         {hasChildren ? (
           <div
             className={`flex items-center justify-between py-2 px-4 transition-colors cursor-pointer rounded-lg mx-2 ${parentIsActive
-                ? "bg-primary-100 text-primary-700 border-l-4 border-primary-500"
-                : "hover:bg-primary-50 text-gray-700"
+              ? "bg-primary-100 text-primary-700 border-l-4 border-primary-500"
+              : "hover:bg-primary-50 text-gray-700"
               }`}
             style={{ paddingLeft: `${paddingLeft}px` }}
             onClick={() => toggleExpanded(item.id)}
@@ -220,8 +234,8 @@ export const Sidebar: React.FC = () => {
               />
               <span
                 className={`text-sm font-medium font-sf-pro-text ${parentIsActive
-                    ? "text-primary-700 font-semibold"
-                    : "text-gray-700"
+                  ? "text-primary-700 font-semibold"
+                  : "text-gray-700"
                   }`}
               >
                 {item.label}
@@ -237,8 +251,8 @@ export const Sidebar: React.FC = () => {
           <Link href={item.href || "#"}>
             <div
               className={`flex items-center space-x-3 py-2 px-4 transition-colors cursor-pointer rounded-lg mx-2 ${itemIsActive
-                  ? "bg-primary-100 text-primary-700 border-l-4 border-primary-500"
-                  : "hover:bg-primary-50 text-gray-700"
+                ? "bg-primary-100 text-primary-700 border-l-4 border-primary-500"
+                : "hover:bg-primary-50 text-gray-700"
                 }`}
               style={{ paddingLeft: `${paddingLeft}px` }}
             >
@@ -249,8 +263,8 @@ export const Sidebar: React.FC = () => {
               />
               <span
                 className={`text-sm font-medium font-sf-pro-text ${itemIsActive
-                    ? "text-primary-700 font-semibold"
-                    : "text-gray-700"
+                  ? "text-primary-700 font-semibold"
+                  : "text-gray-700"
                   }`}
               >
                 {item.label}
@@ -268,8 +282,8 @@ export const Sidebar: React.FC = () => {
                 <Link key={child.id} href={child.href || "#"}>
                   <div
                     className={`flex items-center mt-2 space-x-3 py-2 px-4  transition-colors cursor-pointer rounded-lg mx-2 ml-4 ${childIsActive
-                        ? "bg-primary-100 text-primary-700 border-l-4 border-primary-500"
-                        : "hover:bg-primary-50 text-gray-600"
+                      ? "bg-primary-100 text-primary-700 border-l-4 border-primary-500"
+                      : "hover:bg-primary-50 text-gray-600"
                       }`}
                   >
                     <FontAwesomeIcon
@@ -279,8 +293,8 @@ export const Sidebar: React.FC = () => {
                     />
                     <span
                       className={`text-sm font-sf-pro-text ${childIsActive
-                          ? "text-primary-700 font-semibold"
-                          : "text-gray-600"
+                        ? "text-primary-700 font-semibold"
+                        : "text-gray-600"
                         }`}
                     >
                       {child.label}
