@@ -106,7 +106,7 @@ export default function DeviceTagGroupPage() {
         ...prev,
         total: response.total,
       }));
-      
+
       // Mark first load as complete
       if (isFirstLoadRef.current) {
         isFirstLoadRef.current = false;
@@ -261,6 +261,9 @@ export default function DeviceTagGroupPage() {
               searchTerm={filters.search}
               selectedType={filters.type}
               totalTags={pagination.total}
+              osTags={tags.reduce((sum, t) => sum + (t.os_count || 0), 0)}
+              deviceTags={tags.reduce((sum, t) => sum + (t.device_count || 0), 0)}
+              totalUsage={tags.reduce((sum, t) => sum + (t.total_usage || 0), 0)}
             />
 
             {isDataLoading ? (
@@ -279,8 +282,8 @@ export default function DeviceTagGroupPage() {
               <>
                 <TagTable
                   tags={filteredTags}
-                  onEditTag={canCreateOrEdit ? openEditModal : () => {}}
-                  onDeleteTag={canDelete ? openDeleteConfirm : () => {}}
+                  onEditTag={canCreateOrEdit ? openEditModal : () => { }}
+                  onDeleteTag={canDelete ? openDeleteConfirm : () => { }}
                 />
 
                 {pagination.total > pagination.pageSize && (
