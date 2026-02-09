@@ -58,11 +58,11 @@ export default function TopologyDeviceTable({
     const getStatusBadge = (status: StatusDevice) => {
         const badges: Record<StatusDevice, { label: string; className: string }> = {
             ONLINE: {
-                label: "Active",
+                label: "Online",
                 className: "bg-green-100 text-green-800",
             },
             OFFLINE: {
-                label: "Inactive",
+                label: "Offline",
                 className: "bg-gray-100 text-gray-800",
             },
             MAINTENANCE: {
@@ -118,7 +118,7 @@ export default function TopologyDeviceTable({
                                     Status
                                 </th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Actions
+                                    
                                 </th>
                             </tr>
                         </thead>
