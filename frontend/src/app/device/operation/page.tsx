@@ -193,14 +193,10 @@ export default function DeviceOperationPage() {
     }));
   };
 
-  const handleFilterChange = (newFilters: {
-    os_type: string;
-    tag_filter: string;
-  }) => {
+  const handleFilterChange = (newFilters: { os_type: string }) => {
     setFilters((prev) => ({
       ...prev,
       os_type: newFilters.os_type,
-      tag_filter: newFilters.tag_filter,
     }));
     setPagination((prev) => ({
       ...prev,
@@ -327,10 +323,10 @@ export default function DeviceOperationPage() {
         );
       }
 
-       // Assign tags if selected
-       if (tagIds && tagIds.length > 0) {
-         await operatingSystemService.assignTagsToOs(token, createdOs.id, tagIds);
-       }
+      // Assign tags if selected
+      if (tagIds && tagIds.length > 0) {
+        await operatingSystemService.assignTagsToOs(token, createdOs.id, tagIds);
+      }
 
       showSuccess("Operating system created successfully");
     } else if (modalState.mode === "edit" && modalState.os) {
@@ -351,26 +347,26 @@ export default function DeviceOperationPage() {
         );
       }
 
-       // Update tags: assign new, remove removed
-       const existingTagIds =
-         modalState.os.tags?.map((t) => t.tag_id) ?? [];
-       const toAdd = tagIds.filter((id) => !existingTagIds.includes(id));
-       const toRemove = existingTagIds.filter((id) => !tagIds.includes(id));
+      // Update tags: assign new, remove removed
+      const existingTagIds =
+        modalState.os.tags?.map((t) => t.tag_id) ?? [];
+      const toAdd = tagIds.filter((id) => !existingTagIds.includes(id));
+      const toRemove = existingTagIds.filter((id) => !tagIds.includes(id));
 
-       if (toAdd.length > 0) {
-         await operatingSystemService.assignTagsToOs(
-           token,
-           modalState.os.id,
-           toAdd
-         );
-       }
-       if (toRemove.length > 0) {
-         await operatingSystemService.removeTagsFromOs(
-           token,
-           modalState.os.id,
-           toRemove
-         );
-       }
+      if (toAdd.length > 0) {
+        await operatingSystemService.assignTagsToOs(
+          token,
+          modalState.os.id,
+          toAdd
+        );
+      }
+      if (toRemove.length > 0) {
+        await operatingSystemService.removeTagsFromOs(
+          token,
+          modalState.os.id,
+          toRemove
+        );
+      }
 
       showSuccess("Operating system updated successfully");
     }
@@ -443,8 +439,10 @@ export default function DeviceOperationPage() {
               onFilterChange={handleFilterChange}
               searchTerm={filters.search}
               selectedOsType={filters.os_type}
-              selectedTagFilter={filters.tag_filter}
-              totalOperatingSystems={pagination.total}
+              totalOs={pagination.total}
+              totalDevices={operatingSystems.reduce((sum, os) => sum + (os.device_count || 0), 0)}
+              totalBackups={operatingSystems.reduce((sum, os) => sum + (os.backup_count || 0), 0)}
+              totalUsage={operatingSystems.reduce((sum, os) => sum + (os.total_usage || 0), 0)}
             />
 
             {error && (
@@ -481,11 +479,10 @@ export default function DeviceOperationPage() {
                 <button
                   disabled={pagination.page === 1}
                   onClick={() => handlePageChange(pagination.page - 1)}
-                  className={`px-3 py-1 rounded border ${
-                    pagination.page === 1
-                      ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                      : "text-gray-700 border-gray-300 hover:bg-gray-50"
-                  }`}
+                  className={`px-3 py-1 rounded border ${pagination.page === 1
+                    ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                    : "text-gray-700 border-gray-300 hover:bg-gray-50"
+                    }`}
                 >
                   Previous
                 </button>
@@ -494,11 +491,10 @@ export default function DeviceOperationPage() {
                     pagination.page * pagination.pageSize >= pagination.total
                   }
                   onClick={() => handlePageChange(pagination.page + 1)}
-                  className={`px-3 py-1 rounded border ${
-                    pagination.page * pagination.pageSize >= pagination.total
-                      ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                      : "text-gray-700 border-gray-300 hover:bg-gray-50"
-                  }`}
+                  className={`px-3 py-1 rounded border ${pagination.page * pagination.pageSize >= pagination.total
+                    ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                    : "text-gray-700 border-gray-300 hover:bg-gray-50"
+                    }`}
                 >
                   Next
                 </button>
