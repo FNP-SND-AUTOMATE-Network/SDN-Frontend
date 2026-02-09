@@ -187,7 +187,6 @@ export default function DeviceTable({ devices, onEdit, onSync, onDelete }: Devic
                 Status
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-
               </th>
             </tr>
           </thead>
