@@ -110,37 +110,6 @@ export default function DeviceHeader({
         </p>
       </div>
 
-      {/* Status Cards */}
-      {statusCounts && (
-        <div className="flex gap-4 mb-6 overflow-x-auto pb-2">
-          <StatusCard
-            label="Online"
-            count={statusCounts.online}
-            total={totalDevices}
-            color="green"
-          />
-          <StatusCard
-            label="Offline"
-            count={statusCounts.offline}
-            total={totalDevices}
-            color="red"
-          />
-          <StatusCard
-            label="Other"
-            count={statusCounts.other}
-            total={totalDevices}
-            color="yellow"
-          />
-          <StatusCard
-            label="Maintenance"
-            count={statusCounts.maintenance}
-            total={totalDevices}
-            color="blue"
-          />
-        </div>
-      )}
-
-      {/* Search and Filters Row */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         {/* Search Input */}
         <div className="relative flex-1 max-w-sm">
@@ -197,9 +166,40 @@ export default function DeviceHeader({
         <div className="flex items-center gap-4">
           <Button onClick={onAddDevice} className="flex items-center gap-2 whitespace-nowrap">
             <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+            Add Device
           </Button>
         </div>
       </div>
+
+      {/* Status Cards */}
+      {statusCounts && (
+        <div className="flex gap-4 mt-6 overflow-x-auto pb-2">
+          <StatusCard
+            label="Online"
+            count={statusCounts.online}
+            total={totalDevices}
+            color="green"
+          />
+          <StatusCard
+            label="Offline"
+            count={statusCounts.offline}
+            total={totalDevices}
+            color="red"
+          />
+          <StatusCard
+            label="Other"
+            count={statusCounts.other}
+            total={totalDevices}
+            color="yellow"
+          />
+          <StatusCard
+            label="Maintenance"
+            count={statusCounts.maintenance}
+            total={totalDevices}
+            color="blue"
+          />
+        </div>
+      )}
     </div>
   );
 }
