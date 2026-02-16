@@ -7,12 +7,27 @@ import {
     faChevronDown,
     faFolder,
     faFolderOpen,
-    faServer,
     faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
+import { Server, Router as RouterIcon, Shield, Wifi, Box } from "lucide-react";
 import { LocalSite, siteService } from "@/services/siteService";
 import { DeviceNetwork, deviceNetworkService } from "@/services/deviceNetworkService";
 import { useAuth } from "@/contexts/AuthContext";
+
+const getDeviceIcon = (type: string, className: string) => {
+    switch (type) {
+        case "SWITCH":
+            return <Server className={className} />;
+        case "ROUTER":
+            return <RouterIcon className={className} />;
+        case "FIREWALL":
+            return <Shield className={className} />;
+        case "ACCESS_POINT":
+            return <Wifi className={className} />;
+        default:
+            return <Box className={className} />;
+    }
+};
 
 interface TopologySiteTreeProps {
     onSiteSelect?: (siteId: string) => void;
@@ -198,10 +213,10 @@ export default function TopologySiteTree({
                                                                 onDeviceSelect?.(device.id);
                                                             }}
                                                         >
-                                                            <FontAwesomeIcon
-                                                                icon={faServer}
-                                                                className={`w-3 h-3 ${isDeviceSelected ? "text-primary-600" : "text-gray-400"}`}
-                                                            />
+                                                            {getDeviceIcon(
+                                                                device.type,
+                                                                `w-3.5 h-3.5 ${isDeviceSelected ? "text-primary-600" : "text-gray-400"}`
+                                                            )}
                                                             <span className="text-sm truncate flex-1">
                                                                 {device.device_name}
                                                             </span>

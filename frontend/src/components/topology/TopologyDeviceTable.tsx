@@ -9,8 +9,16 @@ import {
     faEllipsisVertical,
     faFile,
 } from "@fortawesome/free-solid-svg-icons";
+import {
+    Router as RouterIcon,
+    Shield,
+    Wifi,
+    Box,
+    Server,
+} from "lucide-react";
 import { DeviceNetwork, TypeDevice, StatusDevice } from "@/services/deviceNetworkService";
 import ConfigPreviewModal from "./ConfigPreviewModal";
+import TopologyConfigModal from "./TopologyConfigModal";
 
 interface TopologyDeviceTableProps {
     devices: DeviceNetwork[];
@@ -25,6 +33,7 @@ export default function TopologyDeviceTable({
 }: TopologyDeviceTableProps) {
     const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
     const [configModalDevice, setConfigModalDevice] = useState<DeviceNetwork | null>(null);
+    const [configEditorDevice, setConfigEditorDevice] = useState<DeviceNetwork | null>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Close dropdown when clicking outside
@@ -44,15 +53,37 @@ export default function TopologyDeviceTable({
         setOpenDropdownId(openDropdownId === deviceId ? null : deviceId);
     };
 
-    const getDeviceTypeLabel = (type: TypeDevice): string => {
-        const labels: Record<TypeDevice, string> = {
-            SWITCH: "Switch",
-            ROUTER: "Router",
-            FIREWALL: "Firewall",
-            ACCESS_POINT: "Access Point",
-            OTHER: "Other",
-        };
-        return labels[type] || type;
+    const getTypeBadge = (type: string) => {
+        const base =
+            "inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded whitespace-nowrap font-sf-pro-text";
+        switch (type) {
+            case "SWITCH":
+                return `${base} bg-blue-50 text-blue-700`;
+            case "ROUTER":
+                return `${base} bg-purple-50 text-purple-700`;
+            case "FIREWALL":
+                return `${base} bg-red-50 text-red-700`;
+            case "ACCESS_POINT":
+                return `${base} bg-indigo-50 text-indigo-700`;
+            default:
+                return `${base} bg-gray-50 text-gray-700`;
+        }
+    };
+
+    const getTypeIcon = (type: string) => {
+        const iconClass = "w-4 h-4";
+        switch (type) {
+            case "SWITCH":
+                return <Server className={iconClass} />;
+            case "ROUTER":
+                return <RouterIcon className={iconClass} />;
+            case "FIREWALL":
+                return <Shield className={iconClass} />;
+            case "ACCESS_POINT":
+                return <Wifi className={iconClass} />;
+            default:
+                return <Box className={iconClass} />;
+        }
     };
 
     const getStatusBadge = (status: StatusDevice) => {
@@ -118,7 +149,7 @@ export default function TopologyDeviceTable({
                                     Status
                                 </th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    
+
                                 </th>
                             </tr>
                         </thead>
@@ -144,7 +175,10 @@ export default function TopologyDeviceTable({
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm text-gray-900">
-                                                {getDeviceTypeLabel(device.type)}
+                                                <span className={getTypeBadge(device.type)}>
+                                                    <span>{getTypeIcon(device.type)}</span>
+                                                    {device.type.replace("_", " ")}
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
@@ -174,7 +208,7 @@ export default function TopologyDeviceTable({
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 setOpenDropdownId(null);
-                                                                // TODO: Implement config
+                                                                setConfigEditorDevice(device);
                                                             }}
                                                         >
                                                             <FontAwesomeIcon icon={faCog} className="w-4 h-4 text-green-600" />
@@ -219,6 +253,13 @@ export default function TopologyDeviceTable({
                 isOpen={!!configModalDevice}
                 onClose={() => setConfigModalDevice(null)}
                 device={configModalDevice}
+            />
+
+            {/* Config Editor Modal */}
+            <TopologyConfigModal
+                isOpen={!!configEditorDevice}
+                onClose={() => setConfigEditorDevice(null)}
+                device={configEditorDevice}
             />
         </div>
     );
