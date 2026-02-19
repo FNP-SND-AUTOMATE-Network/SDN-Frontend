@@ -80,7 +80,7 @@ function StatusBadge({ status, label }: { status: boolean | string | null | unde
 
     return (
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium`}>
-            <FontAwesomeIcon icon={faCircleCheck} className={`${isActive ? "text-green-500" : "text-gray-400"}`}  />
+            <FontAwesomeIcon icon={faCircleCheck} className={`${isActive ? "text-green-500" : "text-gray-400"}`} />
             {displayLabel}
         </span>
     );
@@ -145,7 +145,7 @@ export default function DeviceDetailCards({ device }: DeviceDetailCardsProps) {
                 <div className="bg-white rounded-lg border border-gray-200 p-5">
                     <CardHeader icon={faServer} title="Operating System" />
                     <div className="text-sm font-sf-pro-text space-y-1">
-                        <InfoRow label="OS Name" value={device.operatingSystem?.os_name} />
+
                         <InfoRow label="OS Type" value={device.operatingSystem?.os_type} />
                         <InfoRow label="Default Strategy" value={device.default_strategy} />
                     </div>

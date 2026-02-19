@@ -73,7 +73,7 @@ export default function ConfigPreviewModal({
                             <div>
                                 <span className="text-gray-500">OS:</span>
                                 <span className="ml-2 font-medium text-gray-900">
-                                    {device.operatingSystem?.os_name || "N/A"}
+                                    {device.operatingSystem?.os_type || "N/A"}
                                 </span>
                             </div>
                         </div>

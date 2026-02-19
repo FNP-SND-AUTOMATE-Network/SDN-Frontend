@@ -988,7 +988,7 @@ export default function TopologyConfigModal({
                             <h2 className="text-xl font-bold text-gray-900">{device.device_name}</h2>
                             {device.operatingSystem && (
                                 <span className="text-sm text-blue-600 underline cursor-pointer">
-                                    OS : {device.operatingSystem.os_name}
+                                    OS : {device.operatingSystem.os_type}
                                 </span>
                             )}
                             {nodeId && (

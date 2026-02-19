@@ -34,7 +34,7 @@ interface OperationModalProps {
 }
 
 interface FormErrors {
-  os_name?: string;
+
   os_type?: string;
   description?: string;
   file?: string;
@@ -55,7 +55,6 @@ export default function OperationModal({
   onDownloadFile,
 }: OperationModalProps) {
   const [formData, setFormData] = useState<OperatingSystemCreateRequest>({
-    os_name: "",
     os_type: "OTHER" as OsType,
     description: "",
   });
@@ -72,7 +71,6 @@ export default function OperationModal({
     if (isOpen) {
       if (mode === "edit" && os) {
         setFormData({
-          os_name: os.os_name,
           os_type: os.os_type,
           description: os.description || "",
         });
@@ -81,7 +79,6 @@ export default function OperationModal({
         );
       } else {
         setFormData({
-          os_name: "",
           os_type: "OTHER" as OsType,
           description: "",
         });
@@ -160,12 +157,6 @@ export default function OperationModal({
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    if (!formData.os_name?.trim()) {
-      newErrors.os_name = "Please enter OS name";
-    } else if (formData.os_name.length > 100) {
-      newErrors.os_name = "OS name must not exceed 100 characters";
-    }
-
     if (formData.description && formData.description.length > 500) {
       newErrors.description = "Description must not exceed 500 characters";
     }
@@ -238,18 +229,7 @@ export default function OperationModal({
               Basic Information
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Input
-                  label="OS Name"
-                  name="os_name"
-                  value={formData.os_name || ""}
-                  onChange={handleChange}
-                  error={errors.os_name || ""}
-                  required
-                  disabled={isLoading}
-                  placeholder="e.g. Cisco IOS XE 17.3"
-                />
-              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   OS Type
@@ -325,11 +305,10 @@ export default function OperationModal({
                                 key={tag.tag_id}
                                 type="button"
                                 onClick={() => toggleTagSelection(tag.tag_id)}
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border transition-colors font-sf-pro-text ${
-                                  isSelected
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border transition-colors font-sf-pro-text ${isSelected
                                     ? "border-blue-500 bg-blue-100 text-blue-800"
                                     : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
-                                }`}
+                                  }`}
                               >
                                 <span
                                   className="w-2 h-2 rounded-full mr-2"
@@ -362,11 +341,10 @@ export default function OperationModal({
                   onDrop={handleDrop}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
-                  className={`flex flex-col items-center justify-center px-4 py-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
-                    isDragging
+                  className={`flex flex-col items-center justify-center px-4 py-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isDragging
                       ? "border-blue-400 bg-blue-50"
                       : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50"
-                  } ${isLoading ? "opacity-60 cursor-not-allowed" : ""}`}
+                    } ${isLoading ? "opacity-60 cursor-not-allowed" : ""}`}
                   onClick={handleBrowseClick}
                 >
                   <div className="text-sm font-medium text-gray-800 font-sf-pro-text">
@@ -381,7 +359,7 @@ export default function OperationModal({
                         {file.name}
                       </span>
                       <span className="ml-2 whitespace-nowrap">
-                        { (file.size / (1024 * 1024)).toFixed(2) } MB
+                        {(file.size / (1024 * 1024)).toFixed(2)} MB
                       </span>
                     </div>
                   )}
