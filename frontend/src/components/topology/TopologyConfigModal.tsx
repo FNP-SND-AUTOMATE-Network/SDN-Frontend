@@ -25,14 +25,30 @@ interface TopologyConfigModalProps {
 
 type MainTab = "config" | "template";
 
-// Sidebar menu items matching NBI intent categories
-const SIDEBAR_ITEMS = [
+// Sidebar menu items — filtered per device type
+type SidebarItem = { key: string; label: string; expandable: boolean };
+
+const ALL_SIDEBAR_ITEMS: SidebarItem[] = [
     { key: "setting", label: "SETTING", expandable: false },
     { key: "routing", label: "ROUTING", expandable: true },
     { key: "interface", label: "INTERFACE", expandable: false },
     { key: "vlan", label: "VLAN", expandable: false },
     { key: "dhcp", label: "DHCP", expandable: false },
-] as const;
+];
+
+function getSidebarItems(deviceType?: string): SidebarItem[] {
+    switch (deviceType) {
+        case "ROUTER":
+            // Router: Setting, Routing, Interface, DHCP (ไม่มี VLAN)
+            return ALL_SIDEBAR_ITEMS.filter((i) => i.key !== "vlan");
+        case "SWITCH":
+            // Switch: Setting, Interface, VLAN (ไม่มี Routing, DHCP)
+            return ALL_SIDEBAR_ITEMS.filter((i) => i.key !== "routing" && i.key !== "dhcp");
+        default:
+            // Other types: show all
+            return ALL_SIDEBAR_ITEMS;
+    }
+}
 
 // Sub-items for expandable sections
 const SUB_ITEMS: Record<string, { key: string; label: string }[]> = {
@@ -1017,8 +1033,8 @@ export default function TopologyConfigModal({
                         {mainTab === "config" ? (
                             <div className="flex h-full" style={{ minHeight: "480px" }}>
                                 {/* Sidebar */}
-                                <div className="w-48 border-r border-gray-200 bg-gray-50 overflow-y-auto shrink-0">
-                                    {SIDEBAR_ITEMS.map((item) => {
+                                <div className="w-48 border-r border-gray-200 bg-gray-50 overflow-y-auto shrink-0 rounded-bl-xl">
+                                    {getSidebarItems(device.type).map((item) => {
                                         const isActive = activeSection === item.key ||
                                             (item.key === "routing" && activeSection.startsWith("routing"));
                                         const isExpanded = expandedSections.has(item.key);

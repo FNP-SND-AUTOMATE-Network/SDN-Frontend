@@ -26,7 +26,8 @@ export type DefaultStrategy =
   | "OC_FIRST"
   | "NETCONF_FIRST"
   | "OC_ONLY"
-  | "NETCONF_ONLY";
+  | "NETCONF_ONLY"
+  | "OPERATION_BASED";
 
 export interface DeviceNetwork {
   id: string;
@@ -105,6 +106,13 @@ export interface DeviceNetworkCreateRequest {
   backup_id?: string | null;
   local_site_id?: string | null;
   configuration_template_id?: string | null;
+  node_id?: string | null;
+  vendor?: VendorType;
+  default_strategy?: DefaultStrategy;
+  netconf_host?: string | null;
+  netconf_port?: number;
+  netconf_username?: string | null;
+  netconf_password?: string | null;
 }
 
 export interface DeviceNetworkUpdateRequest {
@@ -121,6 +129,13 @@ export interface DeviceNetworkUpdateRequest {
   backup_id?: string | null;
   local_site_id?: string | null;
   configuration_template_id?: string | null;
+  node_id?: string | null;
+  vendor?: VendorType | null;
+  default_strategy?: DefaultStrategy | null;
+  netconf_host?: string | null;
+  netconf_port?: number | null;
+  netconf_username?: string | null;
+  netconf_password?: string | null;
 }
 
 export interface DeviceNetworkCreateResponse {
