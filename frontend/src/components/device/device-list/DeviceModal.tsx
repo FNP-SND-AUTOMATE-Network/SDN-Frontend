@@ -84,6 +84,8 @@ export default function DeviceModal({
           description: device.description || "",
           local_site_id: device.local_site_id || null,
           os_id: device.os_id || null,
+          node_id: device.node_id || "",
+          netconf_host: device.netconf_host || "",
         });
         setSelectedTagIds(device.tags ? device.tags.map((t) => t.tag_id) : []);
       } else {
@@ -99,6 +101,8 @@ export default function DeviceModal({
           description: "",
           local_site_id: null,
           os_id: null,
+          node_id: "",
+          netconf_host: "",
         });
         setSelectedTagIds([]);
       }
@@ -216,7 +220,7 @@ export default function DeviceModal({
           {/* Basic Information */}
           <div>
             <h3 className="text-lg font-medium text-gray-900 mb-4 font-sf-pro-display">
-              Basic Information
+              Basic Info.
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
@@ -346,11 +350,36 @@ export default function DeviceModal({
                   <option value="">No OS</option>
                   {allOperatingSystems.map((os) => (
                     <option key={os.id} value={os.id}>
-                      {os.os_name} ({os.os_type})
+                      {os.os_type}{os.description ? ` - ${os.description}` : ''}
                     </option>
                   ))}
                 </select>
               </div>
+            </div>
+          </div>
+
+          {/* Opendaylight Info. */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 font-sf-pro-display">
+              Opendaylight Info.
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Node ID"
+                name="node_id"
+                value={formData.node_id || ""}
+                onChange={handleChange}
+                disabled={isLoading}
+                placeholder="e.g. CSR1000vT"
+              />
+              <Input
+                label="IP Address (ODL)"
+                name="netconf_host"
+                value={formData.netconf_host || ""}
+                onChange={handleChange}
+                disabled={isLoading}
+                placeholder="e.g. 192.168.1.1"
+              />
             </div>
           </div>
 

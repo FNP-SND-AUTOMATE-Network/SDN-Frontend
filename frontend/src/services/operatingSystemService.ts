@@ -23,7 +23,7 @@ export interface RelatedTagInfo {
 // OperatingSystemResponse ตาม schema หลัก (ตัด field ที่เป็น optional object/usage มาให้)
 export interface OperatingSystem {
   id: string;
-  os_name: string;
+
   os_type: OsType;
   description?: string | null;
   created_at: string;
@@ -42,13 +42,11 @@ export interface OperatingSystemListResponse {
 }
 
 export interface OperatingSystemCreateRequest {
-  os_name: string;
   os_type?: OsType;
   description?: string | null;
 }
 
 export interface OperatingSystemUpdateRequest {
-  os_name?: string | null;
   os_type?: OsType | null;
   description?: string | null;
 }
@@ -97,7 +95,7 @@ export class APIError extends Error {
   constructor(
     message: string,
     public status: number,
-    public response?: any
+    public response?: any,
   ) {
     super(message);
     this.name = "APIError";
@@ -137,7 +135,7 @@ export const operatingSystemService = {
       search?: string;
       tag_id?: string;
       include_usage?: boolean;
-    }
+    },
   ): Promise<OperatingSystemListResponse> {
     const params = new URLSearchParams({
       page: page.toString(),
@@ -155,7 +153,7 @@ export const operatingSystemService = {
       {
         method: "GET",
         headers: createHeaders(token),
-      }
+      },
     );
     return handleResponse(response);
   },
@@ -164,7 +162,7 @@ export const operatingSystemService = {
   async getOperatingSystemById(
     token: string,
     osId: string,
-    includeUsage = false
+    includeUsage = false,
   ): Promise<OperatingSystem> {
     const params = new URLSearchParams({
       ...(includeUsage ? { include_usage: "true" } : {}),
@@ -184,7 +182,7 @@ export const operatingSystemService = {
   // สร้าง Operating System ใหม่
   async createOperatingSystem(
     token: string,
-    osData: OperatingSystemCreateRequest
+    osData: OperatingSystemCreateRequest,
   ): Promise<OperatingSystemCreateResponse> {
     const response = await fetch(`${API_BASE_URL}/operating-systems/`, {
       method: "POST",
@@ -198,7 +196,7 @@ export const operatingSystemService = {
   async updateOperatingSystem(
     token: string,
     osId: string,
-    osData: OperatingSystemUpdateRequest
+    osData: OperatingSystemUpdateRequest,
   ): Promise<OperatingSystemUpdateResponse> {
     const response = await fetch(`${API_BASE_URL}/operating-systems/${osId}`, {
       method: "PUT",
@@ -212,7 +210,7 @@ export const operatingSystemService = {
   async deleteOperatingSystem(
     token: string,
     osId: string,
-    force = false
+    force = false,
   ): Promise<OperatingSystemDeleteResponse> {
     const params = new URLSearchParams({
       ...(force ? { force: "true" } : {}),
@@ -234,7 +232,7 @@ export const operatingSystemService = {
     token: string,
     osId: string,
     file: File,
-    version?: string | null
+    version?: string | null,
   ): Promise<OSFileUploadResponse> {
     const formData = new FormData();
     formData.append("file", file);
@@ -251,7 +249,7 @@ export const operatingSystemService = {
           // ไม่กำหนด Content-Type ให้ browser จัดการ boundary เอง
         } as HeadersInit,
         body: formData,
-      }
+      },
     );
     return handleResponse(response);
   },
@@ -263,7 +261,7 @@ export const operatingSystemService = {
       {
         method: "GET",
         headers: createHeaders(token),
-      }
+      },
     );
     return handleResponse(response);
   },
@@ -272,14 +270,14 @@ export const operatingSystemService = {
   async deleteOsFile(
     token: string,
     osId: string,
-    fileId: string
+    fileId: string,
   ): Promise<{ message: string }> {
     const response = await fetch(
       `${API_BASE_URL}/operating-systems/${osId}/files/${fileId}`,
       {
         method: "DELETE",
         headers: createHeaders(token),
-      }
+      },
     );
     return handleResponse(response);
   },
@@ -288,7 +286,7 @@ export const operatingSystemService = {
   async downloadOsFile(
     token: string,
     osId: string,
-    fileId: string
+    fileId: string,
   ): Promise<Blob> {
     const response = await fetch(
       `${API_BASE_URL}/operating-systems/${osId}/files/${fileId}/download`,
@@ -297,7 +295,7 @@ export const operatingSystemService = {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -318,7 +316,7 @@ export const operatingSystemService = {
   async assignTagsToOs(
     token: string,
     osId: string,
-    tagIds: string[]
+    tagIds: string[],
   ): Promise<OperatingSystemUpdateResponse> {
     const response = await fetch(
       `${API_BASE_URL}/operating-systems/${osId}/tags`,
@@ -326,7 +324,7 @@ export const operatingSystemService = {
         method: "POST",
         headers: createHeaders(token),
         body: JSON.stringify(tagIds),
-      }
+      },
     );
     return handleResponse(response);
   },
@@ -335,7 +333,7 @@ export const operatingSystemService = {
   async removeTagsFromOs(
     token: string,
     osId: string,
-    tagIds: string[]
+    tagIds: string[],
   ): Promise<OperatingSystemUpdateResponse> {
     const response = await fetch(
       `${API_BASE_URL}/operating-systems/${osId}/tags`,
@@ -343,7 +341,7 @@ export const operatingSystemService = {
         method: "DELETE",
         headers: createHeaders(token),
         body: JSON.stringify(tagIds),
-      }
+      },
     );
     return handleResponse(response);
   },

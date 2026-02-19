@@ -111,7 +111,7 @@ export default function DeviceSitePage() {
         ...prev,
         total: response.total,
       }));
-      
+
       // Mark first load as complete
       if (isFirstLoadRef.current) {
         isFirstLoadRef.current = false;
@@ -265,6 +265,9 @@ export default function DeviceSitePage() {
               searchTerm={filters.search}
               selectedSiteType={filters.site_type}
               totalSites={pagination.total}
+              dataCenters={sites.filter(s => s.site_type === "DataCenter").length}
+              branches={sites.filter(s => s.site_type === "BRANCH").length}
+              totalDevices={sites.reduce((sum, s) => sum + (s.device_count || 0), 0)}
             />
 
             {isDataLoading ? (
@@ -290,8 +293,8 @@ export default function DeviceSitePage() {
               <>
                 <SiteTable
                   sites={sites}
-                  onEditSite={canCreateOrEdit ? openEditModal : () => {}}
-                  onDeleteSite={canDelete ? openDeleteConfirm : () => {}}
+                  onEditSite={canCreateOrEdit ? openEditModal : () => { }}
+                  onDeleteSite={canDelete ? openDeleteConfirm : () => { }}
                 />
 
                 {pagination.total > pagination.pageSize && (

@@ -103,7 +103,7 @@ export default function OperationTable({
   };
 
   const handleDelete = (os: OperatingSystem) => {
-    onDeleteOs(os.id, os.os_name);
+    onDeleteOs(os.id, os.os_type);
     setOpenDropdownId(null);
   };
 
@@ -121,7 +121,7 @@ export default function OperationTable({
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider first:rounded-tl-lg">
-                Name
+                Type
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Type
@@ -166,7 +166,7 @@ export default function OperationTable({
                     <td className="px-6 py-4">
                       <div>
                         <div className="text-sm font-medium text-gray-900 font-sf-pro-text">
-                          {os.os_name}
+                          {os.os_type}
                         </div>
                         {os.description && (
                           <div className="text-xs text-gray-500 font-sf-pro-text truncate max-w-xs">

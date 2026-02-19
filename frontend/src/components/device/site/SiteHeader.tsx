@@ -1,16 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus,
   faSearch,
-  faFilter,
   faTimes,
+  faBuilding,
+  faServer,
+  faCodeBranch,
+  faNetworkWired,
 } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { SiteType } from "@/services/siteService";
+
+interface StatusCardProps {
+  label: string;
+  count: number;
+  icon: any;
+  color: "blue" | "green" | "purple" | "orange";
+}
+
+function StatusCard({ label, count, icon, color }: StatusCardProps) {
+  const iconColorClasses = {
+    blue: "text-blue-500",
+    green: "text-green-500",
+    purple: "text-purple-500",
+    orange: "text-orange-500",
+  };
+
+  return (
+    <div className="flex-1 min-w-[140px] p-4 rounded-lg border border-gray-200 bg-white">
+      <div className="flex items-center gap-2 mb-1">
+        <FontAwesomeIcon icon={icon} className={`w-4 h-4 ${iconColorClasses[color]}`} />
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          {label}
+        </span>
+      </div>
+      <div className="text-2xl font-bold text-gray-900 font-sf-pro-display">
+        {count.toLocaleString()}
+      </div>
+    </div>
+  );
+}
 
 interface SiteHeaderProps {
   onAddSite: () => void;
@@ -19,6 +50,9 @@ interface SiteHeaderProps {
   searchTerm: string;
   selectedSiteType: string;
   totalSites: number;
+  dataCenters: number;
+  branches: number;
+  totalDevices: number;
 }
 
 export default function SiteHeader({
@@ -28,9 +62,15 @@ export default function SiteHeader({
   searchTerm,
   selectedSiteType,
   totalSites,
+  dataCenters,
+  branches,
+  totalDevices,
 }: SiteHeaderProps) {
-  const [showFilters, setShowFilters] = useState(false);
   const [localSearch, setLocalSearch] = useState(searchTerm);
+
+  useEffect(() => {
+    setLocalSearch(searchTerm);
+  }, [searchTerm]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -47,147 +87,93 @@ export default function SiteHeader({
     onFilterChange(e.target.value);
   };
 
-  const handleClearFilters = () => {
-    onFilterChange("");
-    setLocalSearch("");
-    onSearch("");
-  };
-
-  const hasActiveFilters = selectedSiteType !== "" || searchTerm !== "";
-
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-      {/* Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+    <div className="mb-6">
+      {/* Header Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 font-sf-pro-display">
-            Site Management
+          <h1 className="text-2xl font-bold text-gray-900 font-sf-pro-display">
+            Sites
           </h1>
-          <p className="text-sm text-gray-600 mt-1 font-sf-pro-text">
-            Total Sites: {totalSites}
+          <p className="text-sm text-gray-500 font-sf-pro-text">
+            Manage site locations and infrastructure for your network
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2"
-          >
-            <FontAwesomeIcon icon={faFilter} className="w-4 h-4" />
-            <span>Filter</span>
-            {hasActiveFilters && (
-              <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
-                !
-              </span>
-            )}
-          </Button>
-          <Button onClick={onAddSite} className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-            <span>Add Site</span>
-          </Button>
-        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <FontAwesomeIcon
-            icon={faSearch}
-            className="w-5 h-5 text-gray-400"
+      {/* Search, Filter, and Add Button - All in one row */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center mb-6">
+        {/* Search Input */}
+        <div className="relative flex-1 max-w-md">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FontAwesomeIcon icon={faSearch} className="w-4 h-4 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search sites..."
+            value={localSearch}
+            onChange={handleSearchChange}
+            className="w-full pl-9 pr-9 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text"
           />
-        </div>
-        <input
-          type="text"
-          placeholder="Search by site code, name, address, city..."
-          value={localSearch}
-          onChange={handleSearchChange}
-          className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text"
-        />
-        {localSearch && (
-          <button
-            onClick={handleClearSearch}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-          >
-            <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
-      {/* Filters Panel */}
-      {showFilters && (
-        <div className="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-gray-900 font-sf-pro-display">
-              Advanced Filters
-            </h3>
-            {hasActiveFilters && (
-              <button
-                onClick={handleClearFilters}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Clear All Filters
-              </button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Site Type
-              </label>
-              <select
-                value={selectedSiteType}
-                onChange={handleFilterChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text"
-              >
-                <option value="">All</option>
-                <option value="DataCenter">Data Center</option>
-                <option value="BRANCH">Branch</option>
-                <option value="OTHER">Other</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Active Filters Summary */}
-          {hasActiveFilters && (
-            <div className="mt-3 pt-3 border-t border-gray-200">
-              <div className="flex flex-wrap gap-2">
-                <span className="text-xs text-gray-600 font-medium">
-                  Active Filters:
-                </span>
-                {selectedSiteType && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                    Type:{" "}
-                    {selectedSiteType === "DataCenter"
-                      ? "Data Center"
-                      : selectedSiteType === "BRANCH"
-                        ? "Branch"
-                        : "Other"}
-                    <button
-                      onClick={() => onFilterChange("")}
-                      className="ml-1 hover:text-blue-900"
-                    >
-                      <FontAwesomeIcon icon={faTimes} className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-                {searchTerm && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                    Search: {searchTerm}
-                    <button
-                      onClick={handleClearSearch}
-                      className="ml-1 hover:text-green-900"
-                    >
-                      <FontAwesomeIcon icon={faTimes} className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-              </div>
-            </div>
+          {localSearch && (
+            <button
+              onClick={handleClearSearch}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+            >
+              <FontAwesomeIcon icon={faTimes} className="w-3 h-3" />
+            </button>
           )}
         </div>
-      )}
+
+        {/* Type Filter */}
+        <select
+          value={selectedSiteType}
+          onChange={handleFilterChange}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-sf-pro-text bg-white min-w-[140px]"
+        >
+          <option value="">All Types</option>
+          <option value="DataCenter">Data Center</option>
+          <option value="BRANCH">Branch</option>
+          <option value="OTHER">Other</option>
+        </select>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Add Site Button */}
+        <Button onClick={onAddSite} className="flex items-center gap-2 whitespace-nowrap">
+          <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+          Add Site
+        </Button>
+      </div>
+
+      {/* Status Cards */}
+      <div className="flex gap-4 overflow-x-auto pb-2">
+        <StatusCard
+          label="Total Sites"
+          count={totalSites}
+          icon={faBuilding}
+          color="blue"
+        />
+        <StatusCard
+          label="Data Centers"
+          count={dataCenters}
+          icon={faServer}
+          color="green"
+        />
+        <StatusCard
+          label="Branches"
+          count={branches}
+          icon={faCodeBranch}
+          color="purple"
+        />
+        <StatusCard
+          label="Total Devices"
+          count={totalDevices}
+          icon={faNetworkWired}
+          color="orange"
+        />
+      </div>
     </div>
   );
 }
-
