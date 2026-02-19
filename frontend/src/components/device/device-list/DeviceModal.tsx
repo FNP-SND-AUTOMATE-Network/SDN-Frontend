@@ -350,7 +350,7 @@ export default function DeviceModal({
                   <option value="">No OS</option>
                   {allOperatingSystems.map((os) => (
                     <option key={os.id} value={os.id}>
-                      {os.os_name} ({os.os_type})
+                      {os.os_type}{os.description ? ` - ${os.description}` : ''}
                     </option>
                   ))}
                 </select>

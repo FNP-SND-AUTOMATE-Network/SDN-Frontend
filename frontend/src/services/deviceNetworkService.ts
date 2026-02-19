@@ -61,7 +61,6 @@ export interface DeviceNetwork {
   tags?: RelatedTagInfo[];
   operatingSystem?: {
     id: string;
-    os_name: string;
     os_type: string;
   } | null;
   localSite?: {

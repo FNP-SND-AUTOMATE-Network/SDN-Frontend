@@ -32,7 +32,7 @@ export default function DeviceNetworkInfo({ device }: DeviceNetworkInfoProps) {
         <div>
           <dt className="text-gray-500">Operating System</dt>
           <dd className="text-gray-900">
-            {device.operatingSystem ? device.operatingSystem.os_name : "-"}
+            {device.operatingSystem ? device.operatingSystem.os_type : "-"}
           </dd>
         </div>
       </dl>
