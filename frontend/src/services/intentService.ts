@@ -50,7 +50,7 @@ export const intentService = {
    * Get all supported intents grouped by category
    */
   async getIntents(token: string): Promise<IntentListResponse> {
-    const response = await fetch(`${API_BASE_URL}/nbi/intents`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/nbi/intents`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!response.ok) {
@@ -67,9 +67,12 @@ export const intentService = {
     token: string,
     intentName: string,
   ): Promise<IntentDetailResponse> {
-    const response = await fetch(`${API_BASE_URL}/nbi/intents/${intentName}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/nbi/intents/${intentName}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
       throw new Error(err.message || `Failed to fetch intent: ${intentName}`);
@@ -84,7 +87,7 @@ export const intentService = {
     token: string,
     request: IntentExecuteRequest,
   ): Promise<IntentExecuteResponse> {
-    const response = await fetch(`${API_BASE_URL}/nbi/intents`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/nbi/intent`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
