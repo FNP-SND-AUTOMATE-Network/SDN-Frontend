@@ -304,4 +304,26 @@ export const deviceNetworkService = {
     );
     return handleResponse(response);
   },
+
+  async mountDevice(token: string, nodeId: string): Promise<any> {
+    const response = await fetch(
+      `${API_BASE_URL}/nbi/devices/${nodeId}/mount`,
+      {
+        method: "POST",
+        headers: createHeaders(token),
+      },
+    );
+    return handleResponse(response);
+  },
+
+  async unmountDevice(token: string, nodeId: string): Promise<any> {
+    const response = await fetch(
+      `${API_BASE_URL}/nbi/devices/${nodeId}/unmount`,
+      {
+        method: "POST",
+        headers: createHeaders(token),
+      },
+    );
+    return handleResponse(response);
+  },
 };

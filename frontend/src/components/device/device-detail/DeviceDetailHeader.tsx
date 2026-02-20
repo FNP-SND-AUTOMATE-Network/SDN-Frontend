@@ -9,7 +9,9 @@ import {
   faEllipsisH,
   faTrash,
   faEdit,
-  faDownload
+  faDownload,
+  faLink,
+  faBoxOpen
 } from "@fortawesome/free-solid-svg-icons";
 import { DeviceNetwork } from "@/services/deviceNetworkService";
 import { getStatusBadge } from "./helpers";
@@ -25,7 +27,10 @@ interface DeviceDetailHeaderProps {
   device: DeviceNetwork;
   onEdit: () => void;
   onDelete: () => void;
-  onSync?: () => void;
+  onMount?: () => void;
+  onUnmount?: () => void;
+  isMounting?: boolean;
+  isUnmounting?: boolean;
 }
 
 const getTypeIcon = (type: string) => {
@@ -48,7 +53,10 @@ export default function DeviceDetailHeader({
   device,
   onEdit,
   onDelete,
-  onSync
+  onMount,
+  onUnmount,
+  isMounting,
+  isUnmounting,
 }: DeviceDetailHeaderProps) {
   const tags = device.tags || [];
   const statusColors = getStatusBadge(device.status);
@@ -121,14 +129,25 @@ export default function DeviceDetailHeader({
 
         {/* Right side - Actions */}
         <div className="flex items-center gap-2">
-          {/* Sync Config */}
+          {/* Mount / Unmount */}
           <button
             type="button"
-            onClick={onSync}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            onClick={onUnmount}
+            disabled={isUnmounting || isMounting}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <FontAwesomeIcon icon={faSync} className="w-4 h-4" />
-            <span>Sync Mount</span>
+            <FontAwesomeIcon icon={faBoxOpen} className={`w-4 h-4 ${isUnmounting ? "animate-bounce" : ""}`} />
+            <span>{isUnmounting ? "Unmounting..." : "Unmount"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onMount}
+            disabled={isMounting || isUnmounting}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <FontAwesomeIcon icon={faLink} className={`w-4 h-4 ${isMounting ? "animate-pulse" : ""}`} />
+            <span>{isMounting ? "Mounting..." : "Mount"}</span>
           </button>
 
           {/* More Options Dropdown */}

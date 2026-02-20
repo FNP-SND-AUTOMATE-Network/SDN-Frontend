@@ -41,6 +41,8 @@ export default function DeviceDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [isMounting, setIsMounting] = useState(false);
+  const [isUnmounting, setIsUnmounting] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -175,6 +177,48 @@ export default function DeviceDetailPage() {
     setIsEditModalOpen(true);
   };
 
+  const handleMount = async () => {
+    if (!token || !device?.node_id) {
+      showError("Device does not have a valid Node ID to mount.");
+      return;
+    }
+    try {
+      setIsMounting(true);
+      const response = await deviceNetworkService.mountDevice(token, device.node_id);
+      const msg = response?.message || response?.detail || "Device mounted successfully";
+      showSuccess(msg);
+      // Optionally refresh the device data
+      const data = await deviceNetworkService.getDeviceById(token, device.id);
+      setDevice(data);
+    } catch (err: any) {
+      const message = err?.message || "Unknown error";
+      showError(`Mount failed: ${message}`);
+    } finally {
+      setIsMounting(false);
+    }
+  };
+
+  const handleUnmount = async () => {
+    if (!token || !device?.node_id) {
+      showError("Device does not have a valid Node ID to unmount.");
+      return;
+    }
+    try {
+      setIsUnmounting(true);
+      const response = await deviceNetworkService.unmountDevice(token, device.node_id);
+      const msg = response?.message || response?.detail || "Device unmounted successfully";
+      showSuccess(msg);
+      // Optionally refresh the device data
+      const data = await deviceNetworkService.getDeviceById(token, device.id);
+      setDevice(data);
+    } catch (err: any) {
+      const message = err?.message || "Unknown error";
+      showError(`Unmount failed: ${message}`);
+    } finally {
+      setIsUnmounting(false);
+    }
+  };
+
   return (
     <ProtectedRoute>
       <PageLayout>
@@ -189,10 +233,10 @@ export default function DeviceDetailPage() {
             device={device}
             onEdit={handleEditDevice}
             onDelete={openDeleteConfirm}
-            onSync={() => {
-              // TODO: Implement sync
-              console.log("Sync device:", device.device_name);
-            }}
+            onMount={handleMount}
+            onUnmount={handleUnmount}
+            isMounting={isMounting}
+            isUnmounting={isUnmounting}
           />
         )}
 
