@@ -148,22 +148,30 @@ export interface DeviceNetworkUpdateResponse {
 }
 
 export interface InterfaceDiscoveryResponse {
-  message: string;
+  success: boolean;
+  node_id: string;
+  vendor: string;
+  count: number;
   interfaces: Array<{
     name: string;
     type: string;
-    description: string;
-    ipv4_address: string;
-    subnet_mask: string;
+    number: string;
+    description: string | null;
+    admin_status: string;
+    ipv4: string | null;
+    ipv4_address: string | null;
+    subnet_mask: string | null;
+    ipv6: string | null;
+    mtu: number | null;
     has_ospf: boolean;
-    mtu: number;
-    enabled: boolean;
+    ospf: any;
+    oper_status: string;
     mac_address: string;
     speed: string;
     duplex: string;
-    auto_negotiation: boolean;
+    auto_negotiate: boolean;
     media_type: string;
-    ipv6: string;
+    last_change: string;
   }>;
 }
 

@@ -44,7 +44,8 @@ export function DeviceInterfacesTab({ device, token }: DeviceInterfacesTabProps)
         };
 
         fetchInterfaces();
-    }, [device.node_id, token, showError]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [device.node_id, token]);
 
     if (isLoading) {
         return (
@@ -95,11 +96,11 @@ export function DeviceInterfacesTab({ device, token }: DeviceInterfacesTabProps)
                             <td className="px-6 py-4 font-medium text-gray-900">
                                 <div className="flex items-center gap-2">
                                     {iface.name}
-                                    {!iface.enabled && (
+                                    {!iface.admin_status || iface.admin_status.toLowerCase() !== "up" ? (
                                         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-800">
                                             Down
                                         </span>
-                                    )}
+                                    ) : null}
                                 </div>
                             </td>
                             <td className="px-6 py-4 text-gray-600">{iface.ipv4_address || "-"}</td>
