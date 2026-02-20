@@ -178,6 +178,10 @@ export default function DeviceDetailPage() {
   };
 
   const handleMount = async () => {
+    console.log("=== handleMount called ===");
+    console.log("Device Node ID:", device?.node_id);
+    console.log("Full Device Object:", device);
+
     if (!token || !device?.node_id) {
       showError("Device does not have a valid Node ID to mount.");
       return;
@@ -185,12 +189,14 @@ export default function DeviceDetailPage() {
     try {
       setIsMounting(true);
       const response = await deviceNetworkService.mountDevice(token, device.node_id);
+      console.log("Mount Response:", response);
       const msg = response?.message || response?.detail || "Device mounted successfully";
       showSuccess(msg);
       // Optionally refresh the device data
       const data = await deviceNetworkService.getDeviceById(token, device.id);
       setDevice(data);
     } catch (err: any) {
+      console.error("Mount Error:", err);
       const message = err?.message || "Unknown error";
       showError(`Mount failed: ${message}`);
     } finally {
@@ -199,6 +205,10 @@ export default function DeviceDetailPage() {
   };
 
   const handleUnmount = async () => {
+    console.log("=== handleUnmount called ===");
+    console.log("Device Node ID:", device?.node_id);
+    console.log("Full Device Object:", device);
+
     if (!token || !device?.node_id) {
       showError("Device does not have a valid Node ID to unmount.");
       return;
@@ -206,12 +216,14 @@ export default function DeviceDetailPage() {
     try {
       setIsUnmounting(true);
       const response = await deviceNetworkService.unmountDevice(token, device.node_id);
+      console.log("Unmount Response:", response);
       const msg = response?.message || response?.detail || "Device unmounted successfully";
       showSuccess(msg);
       // Optionally refresh the device data
       const data = await deviceNetworkService.getDeviceById(token, device.id);
       setDevice(data);
     } catch (err: any) {
+      console.error("Unmount Error:", err);
       const message = err?.message || "Unknown error";
       showError(`Unmount failed: ${message}`);
     } finally {

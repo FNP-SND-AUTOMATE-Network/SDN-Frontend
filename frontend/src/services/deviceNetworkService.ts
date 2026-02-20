@@ -306,24 +306,21 @@ export const deviceNetworkService = {
   },
 
   async mountDevice(token: string, nodeId: string): Promise<any> {
-    const response = await fetch(
-      `${API_BASE_URL}/nbi/devices/${nodeId}/mount`,
-      {
-        method: "POST",
-        headers: createHeaders(token),
-      },
-    );
+    const url = `${API_BASE_URL}/api/v1/nbi/devices/${nodeId}/mount`;
+    console.log("Calling POST:", url);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: createHeaders(token),
+    });
     return handleResponse(response);
   },
-
   async unmountDevice(token: string, nodeId: string): Promise<any> {
-    const response = await fetch(
-      `${API_BASE_URL}/nbi/devices/${nodeId}/unmount`,
-      {
-        method: "POST",
-        headers: createHeaders(token),
-      },
-    );
+    const url = `${API_BASE_URL}/api/v1/nbi/devices/${nodeId}/unmount`;
+    console.log("Calling POST:", url);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: createHeaders(token),
+    });
     return handleResponse(response);
   },
 };
