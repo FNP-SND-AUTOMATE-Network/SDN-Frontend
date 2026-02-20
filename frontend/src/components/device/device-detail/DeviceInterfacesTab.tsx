@@ -83,6 +83,7 @@ export function DeviceInterfacesTab({ device, token }: DeviceInterfacesTabProps)
             <table className="w-full text-sm text-left">
                 <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
                     <tr>
+                        <th className="px-6 py-4 font-semibold w-16 text-center">Status</th>
                         <th className="px-6 py-4 font-semibold">Interface name</th>
                         <th className="px-6 py-4 font-semibold">IP Address</th>
                         <th className="px-6 py-4 font-semibold">Subnet Mask</th>
@@ -93,12 +94,20 @@ export function DeviceInterfacesTab({ device, token }: DeviceInterfacesTabProps)
                 <tbody className="divide-y divide-gray-100">
                     {interfaces.map((iface, index) => (
                         <tr key={`${iface.name}-${index}`} className="hover:bg-gray-50 transition-colors group">
+                            <td className="px-6 py-4 text-center">
+                                <div className="flex justify-center">
+                                    <span
+                                        className={`w-2 h-2 rounded-full ${iface.oper_status && iface.oper_status.toLowerCase() === "up" ? "bg-green-500" : "bg-red-500"}`}
+                                        title={iface.oper_status ? iface.oper_status.toUpperCase() : "DOWN"}
+                                    ></span>
+                                </div>
+                            </td>
                             <td className="px-6 py-4 font-medium text-gray-900">
                                 <div className="flex items-center gap-2">
                                     {iface.name}
                                     {!iface.admin_status || iface.admin_status.toLowerCase() !== "up" ? (
                                         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-800">
-                                            Down
+                                            Admin Down
                                         </span>
                                     ) : null}
                                 </div>
