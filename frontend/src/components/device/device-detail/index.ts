@@ -6,4 +6,5 @@ export { default as DeviceNetworkInfo } from "./DeviceNetworkInfo";
 export { default as DeviceDescriptionTags } from "./DeviceDescriptionTags";
 export { default as DeviceDetailCards } from "./DeviceDetailCards";
 export { default as DeviceConfigurationTab } from "./DeviceConfigurationTab";
+export { DeviceInterfacesTab } from "./DeviceInterfacesTab";
 export * from "./helpers";

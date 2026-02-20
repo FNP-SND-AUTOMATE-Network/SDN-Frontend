@@ -25,6 +25,7 @@ import {
   DeviceDetailTabs,
   DeviceDetailCards,
   DeviceConfigurationTab,
+  DeviceInterfacesTab,
 } from "@/components/device/device-detail";
 
 type TabKey = "overview" | "interfaces" | "configuration" | "backup";
@@ -274,6 +275,8 @@ export default function DeviceDetailPage() {
               </div>
             ) : activeTab === "overview" ? (
               <DeviceDetailCards device={device} />
+            ) : activeTab === "interfaces" ? (
+              <DeviceInterfacesTab device={device} token={token} />
             ) : activeTab === "configuration" ? (
               <DeviceConfigurationTab
                 device={device}

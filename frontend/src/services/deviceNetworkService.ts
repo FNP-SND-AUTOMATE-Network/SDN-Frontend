@@ -147,6 +147,26 @@ export interface DeviceNetworkUpdateResponse {
   device: DeviceNetwork;
 }
 
+export interface InterfaceDiscoveryResponse {
+  message: string;
+  interfaces: Array<{
+    name: string;
+    type: string;
+    description: string;
+    ipv4_address: string;
+    subnet_mask: string;
+    has_ospf: boolean;
+    mtu: number;
+    enabled: boolean;
+    mac_address: string;
+    speed: string;
+    duplex: string;
+    auto_negotiation: boolean;
+    media_type: string;
+    ipv6: string;
+  }>;
+}
+
 export interface DeviceNetworkDeleteResponse {
   message: string;
   device_id: string;
@@ -319,6 +339,18 @@ export const deviceNetworkService = {
     console.log("Calling POST:", url);
     const response = await fetch(url, {
       method: "POST",
+      headers: createHeaders(token),
+    });
+    return handleResponse(response);
+  },
+
+  async discoverInterfaces(
+    token: string,
+    nodeId: string,
+  ): Promise<InterfaceDiscoveryResponse> {
+    const url = `${API_BASE_URL}/api/v1/nbi/devices/${nodeId}/interfaces/discover`;
+    const response = await fetch(url, {
+      method: "GET",
       headers: createHeaders(token),
     });
     return handleResponse(response);
