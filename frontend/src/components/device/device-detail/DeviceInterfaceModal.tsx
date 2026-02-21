@@ -94,14 +94,9 @@ export function DeviceInterfaceModal({
                 });
             }
 
-            // 2. Handle IP & Description (interface.set_ipv4)
+            // 2. Handle IP (interface.set_ipv4)
             const ipChanged = ipv4Address !== (interfaceData.ipv4_address || "") || subnetMask !== (interfaceData.subnet_mask || "");
-            const descChanged = description !== (interfaceData.description || "");
-
-            console.log(`➡️ [Changes detected] IP Changed: ${ipChanged} | Desc Changed: ${descChanged}`);
-            console.log(`➡️ [Payload Prep] IP: ${ipv4Address}, Mask: ${subnetMask}, Desc: ${description}`);
-
-            if (ipChanged || descChanged) {
+            if (ipChanged) {
                 if (ipv4Address && subnetMask) {
                     console.log(`🚀 [INTENT] Sending interface.set_ipv4 for ${interfaceData.name}`);
                     const payload = {
@@ -110,31 +105,33 @@ export function DeviceInterfaceModal({
                         params: {
                             interface: interfaceData.name,
                             ip: ipv4Address,
-                            mask: subnetMask,
-                            description: description || undefined
+                            mask: subnetMask
                         }
                     };
-                    console.log(`📦 [Payload]`, JSON.stringify(payload, null, 2));
-
-                    await intentService.executeIntent(token, payload);
-                } else if (descChanged && !ipChanged) {
-                    // Only description changed
-                    console.log(`🚀 [INTENT] Sending interface.set_description for ${interfaceData.name}`);
-                    const payload = {
-                        intent: "interface.set_description",
-                        node_id: deviceId,
-                        params: {
-                            interface: interfaceData.name,
-                            description: description
-                        }
-                    };
-                    console.log(`📦 [Payload]`, JSON.stringify(payload, null, 2));
-
+                    console.log(`📦 [Payload IP]`, JSON.stringify(payload, null, 2));
                     await intentService.executeIntent(token, payload);
                 } else {
                     console.log("⚠️ [WARNING] IP changed but either IP or Subnet Mask is empty! Skipping set_ipv4 intent.");
                 }
-            } else {
+            }
+
+            // 3. Handle Description (interface.set_description)
+            const descChanged = description !== (interfaceData.description || "");
+            if (descChanged) {
+                console.log(`🚀 [INTENT] Sending interface.set_description for ${interfaceData.name}`);
+                const payload = {
+                    intent: "interface.set_description",
+                    node_id: deviceId,
+                    params: {
+                        interface: interfaceData.name,
+                        description: description
+                    }
+                };
+                console.log(`📦 [Payload Desc]`, JSON.stringify(payload, null, 2));
+                await intentService.executeIntent(token, payload);
+            }
+
+            if (!ipChanged && !descChanged) {
                 console.log("✅ [INFO] No IP or Description changes detected.");
             }
 
