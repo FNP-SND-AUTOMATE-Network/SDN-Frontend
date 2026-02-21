@@ -95,7 +95,7 @@ export default function DeviceModal({
           serial_number: "",
           device_model: "",
           type: "SWITCH",
-          status: "ONLINE",
+          status: "OFFLINE",
           ip_address: "",
           mac_address: "",
           description: "",
@@ -275,18 +275,14 @@ export default function DeviceModal({
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Status <span className="text-red-500">*</span>
                 </label>
-                <select
+                <Input
+                  type="text"
                   name="status"
-                  value={formData.status || "ONLINE"}
+                  value={formData.status || "OFFLINE"}
                   onChange={handleChange}
                   disabled={isLoading}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed font-sf-pro-text"
-                >
-                  <option value="ONLINE">Online</option>
-                  <option value="OFFLINE">Offline</option>
-                  <option value="MAINTENANCE">Maintenance</option>
-                  <option value="OTHER">Other</option>
-                </select>
+                />
               </div>
             </div>
           </div>

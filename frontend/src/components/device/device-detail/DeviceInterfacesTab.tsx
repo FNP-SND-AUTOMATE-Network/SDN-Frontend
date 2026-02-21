@@ -103,12 +103,12 @@ export function DeviceInterfacesTab({ device, token }: DeviceInterfacesTabProps)
             <table className="w-full text-sm text-left">
                 <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
                     <tr>
-                        <th className="px-6 py-4 font-semibold w-16 text-center">Status</th>
-                        <th className="px-6 py-4 font-semibold">Interface name</th>
-                        <th className="px-6 py-4 font-semibold">IP Address</th>
-                        <th className="px-6 py-4 font-semibold">Subnet Mask</th>
-                        <th className="px-6 py-4 font-semibold">Description</th>
-                        <th className="px-6 py-4 text-center w-16">Action</th>
+                        <th className="px-6 py-4 font-sf-pro-text w-16 text-center">Status</th>
+                        <th className="px-6 py-4 font-sf-pro-text">Interface name</th>
+                        <th className="px-6 py-4 font-sf-pro-text">IP Address</th>
+                        <th className="px-6 py-4 font-sf-pro-text">Subnet Mask</th>
+                        <th className="px-6 py-4 font-sf-pro-text">Description</th>
+                        <th className="px-6 py-4 text-center w-16"></th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
