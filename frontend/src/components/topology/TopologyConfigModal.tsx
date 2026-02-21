@@ -114,6 +114,9 @@ export default function TopologyConfigModal({
     const [pushResult, setPushResult] = useState<{ success: boolean; message: string } | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
+    const interfaceSaveRef = React.useRef<(() => Promise<void>) | null>(null);
+    const [isInterfaceSaving, setIsInterfaceSaving] = useState(false);
+
 
 
     // ===== Show data state =====
@@ -254,6 +257,19 @@ export default function TopologyConfigModal({
         }
     };
 
+    const handleGlobalPush = async () => {
+        if (activeSection.startsWith("interface-") && interfaceSaveRef.current) {
+            setIsInterfaceSaving(true);
+            try {
+                await interfaceSaveRef.current();
+            } finally {
+                setIsInterfaceSaving(false);
+            }
+        } else {
+            handlePush("system.save_config", {});
+        }
+    };
+
     // ==================== Section Renderers ====================
 
     // ==================== Main Content Router ====================
@@ -265,7 +281,7 @@ export default function TopologyConfigModal({
             const ifaceData = discoveredInterfaces.find((i) => i.name === ifaceName);
             if (ifaceData) {
                 return (
-                    <div className="h-full overflow-y-auto w-full">
+                    <div className="w-full">
                         <DeviceInterfaceForm
                             interfaceData={ifaceData}
                             mode="edit"
@@ -273,6 +289,8 @@ export default function TopologyConfigModal({
                             token={token}
                             onSuccess={() => loadSectionData("interface")} // Refresh on success
                             onCancel={() => { }}
+                            hideFooter={true}
+                            onSaveRef={interfaceSaveRef}
                         />
                     </div>
                 );
@@ -383,12 +401,12 @@ export default function TopologyConfigModal({
                             </button>
                         </div>
                         <button
-                            onClick={() => handlePush("system.save_config", {})}
-                            disabled={isPushing}
+                            onClick={handleGlobalPush}
+                            disabled={isPushing || isInterfaceSaving}
                             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 disabled:bg-gray-400 transition-colors shadow-sm"
                         >
-                            <FontAwesomeIcon icon={isPushing ? faSpinner : faPlusCircle} className={`w-4 h-4 ${isPushing ? "animate-spin" : ""}`} />
-                            Push
+                            <FontAwesomeIcon icon={(isPushing || isInterfaceSaving) ? faSpinner : faPlusCircle} className={`w-4 h-4 ${(isPushing || isInterfaceSaving) ? "animate-spin" : ""}`} />
+                            {activeSection.startsWith("interface-") ? "Save Interface" : "Push"}
                         </button>
                     </div>
 
@@ -452,7 +470,7 @@ export default function TopologyConfigModal({
                                 </div>
 
                                 {/* Content */}
-                                <div className="flex-1 overflow-y-auto">
+                                <div className="flex-1 overflow-y-auto rounded-br-xl">
                                     <div className="border-b border-gray-200 px-6 py-3">
                                         <h3 className="text-base font-semibold text-gray-900 text-center">
                                             {getContentTitle()}

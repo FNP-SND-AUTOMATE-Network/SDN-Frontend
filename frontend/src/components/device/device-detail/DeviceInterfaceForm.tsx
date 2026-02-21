@@ -18,6 +18,8 @@ interface DeviceInterfaceFormProps {
     token: string | null;
     onSuccess: () => void;
     onCancel: () => void;
+    hideFooter?: boolean;
+    onSaveRef?: React.MutableRefObject<(() => Promise<void>) | null>;
 }
 
 export function DeviceInterfaceForm({
@@ -27,6 +29,8 @@ export function DeviceInterfaceForm({
     token,
     onSuccess,
     onCancel,
+    hideFooter,
+    onSaveRef,
 }: DeviceInterfaceFormProps) {
     const { showSuccess, showError } = useSnackbar();
 
@@ -214,9 +218,14 @@ export function DeviceInterfaceForm({
         );
     }
 
+    // Expose handleSave to parent
+    if (onSaveRef) {
+        onSaveRef.current = handleSave;
+    }
+
     return (
-        <div className="flex flex-col h-full">
-            <div className="p-6 overflow-y-auto font-sf-pro-text space-y-8 flex-1">
+        <div className={`flex flex-col ${hideFooter ? "" : "h-full"}`}>
+            <div className={`font-sf-pro-text space-y-8 flex-1 ${hideFooter ? "" : "p-6 overflow-y-auto"}`}>
                 {/* Section 1: Hardware & Status */}
                 <div className="space-y-4">
                     <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 border-b pb-2">
@@ -305,16 +314,18 @@ export function DeviceInterfaceForm({
             </div>
 
             {/* Footer */}
-            <div className="p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 rounded-b-xl">
-                <Button variant="outline" onClick={onCancel} disabled={isSaving}>
-                    {isEdit ? "Cancel" : "Close"}
-                </Button>
-                {isEdit && (
-                    <Button variant="primary" onClick={handleSave} disabled={isSaving}>
-                        Save Changes
+            {!hideFooter && (
+                <div className="p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 rounded-b-xl shrink-0">
+                    <Button variant="outline" onClick={onCancel} disabled={isSaving}>
+                        {isEdit ? "Cancel" : "Close"}
                     </Button>
-                )}
-            </div>
+                    {isEdit && (
+                        <Button variant="primary" onClick={handleSave} disabled={isSaving}>
+                            Save Changes
+                        </Button>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
