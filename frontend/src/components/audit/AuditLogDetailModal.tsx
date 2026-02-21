@@ -60,26 +60,26 @@ export default function AuditLogDetailModal({
 
   const formatActionText = (action: AuditAction) => {
     const actionMap: Record<AuditAction, string> = {
-      USER_REGISTER: "สมัครสมาชิก",
-      USER_LOGIN: "เข้าสู่ระบบ",
-      USER_LOGOUT: "ออกจากระบบ",
-      USER_CREATE: "สร้างผู้ใช้",
-      USER_UPDATE: "อัพเดทผู้ใช้",
-      USER_DELETE: "ลบผู้ใช้",
-      ENABLE_TOTP: "เปิดใช้งาน TOTP",
-      DISABLE_TOTP: "ปิดใช้งาน TOTP",
-      REGISTER_PASSKEY: "ลงทะเบียน Passkey",
-      REMOVE_PASSKEY: "ลบ Passkey",
-      PROMOTE_ROLE: "เพิ่มสิทธิ์",
-      DEMOTE_ROLE: "ลดสิทธิ์",
-      PASSWORD_CHANGE: "เปลี่ยนรหัสผ่าน",
-      PASSWORD_RESET: "รีเซ็ตรหัสผ่าน",
+      USER_REGISTER: "Register",
+      USER_LOGIN: "Login",
+      USER_LOGOUT: "Logout",
+      USER_CREATE: "Create User",
+      USER_UPDATE: "Update User",
+      USER_DELETE: "Delete User",
+      ENABLE_TOTP: "Enable TOTP",
+      DISABLE_TOTP: "Disable TOTP",
+      REGISTER_PASSKEY: "Register Passkey",
+      REMOVE_PASSKEY: "Remove Passkey",
+      PROMOTE_ROLE: "Promote Role",
+      DEMOTE_ROLE: "Demote Role",
+      PASSWORD_CHANGE: "Password Change",
+      PASSWORD_RESET: "Password Reset",
     };
     return actionMap[action] || action;
   };
 
   const formatDetails = (details: Record<string, any> | null): string => {
-    if (!details) return "ไม่มีรายละเอียดเพิ่มเติม";
+    if (!details) return "No additional details";
 
     const formattedDetails: string[] = [];
 
@@ -94,27 +94,27 @@ export default function AuditLogDetailModal({
 
   const formatKey = (key: string): string => {
     const keyMap: Record<string, string> = {
-      user_id: "ID ผู้ใช้",
-      email: "อีเมล",
-      name: "ชื่อ",
-      surname: "นามสกุล",
-      role: "บทบาท",
-      old_role: "บทบาทเดิม",
-      new_role: "บทบาทใหม่",
+      user_id: "User ID",
+      email: "Email",
+      name: "Name",
+      surname: "Surname",
+      role: "Role",
+      old_role: "Old Role",
+      new_role: "New Role",
       ip_address: "IP Address",
       user_agent: "User Agent",
-      timestamp: "เวลา",
-      success: "สถานะ",
-      reason: "เหตุผล",
-      device_info: "ข้อมูลอุปกรณ์",
-      location: "ตำแหน่ง",
+      timestamp: "Time",
+      success: "Status",
+      reason: "Reason",
+      device_info: "Device Info",
+      location: "Location",
     };
     return keyMap[key] || key;
   };
 
   const formatValue = (value: any): string => {
     if (typeof value === "boolean") {
-      return value ? "สำเร็จ" : "ไม่สำเร็จ";
+      return value ? "Success" : "Failed";
     }
     if (typeof value === "object") {
       return JSON.stringify(value, null, 2);

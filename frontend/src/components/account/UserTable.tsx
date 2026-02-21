@@ -1,7 +1,7 @@
 "use client";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheckCircle, faCircleXmark, faCross, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faCheckCircle, faCircleXmark, faEllipsisV, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { UserProfile, UserRole } from "@/services/userService";
 
 interface UserTableProps {
@@ -54,8 +54,6 @@ export default function UserTable({
       year: "numeric",
       month: "short",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
       hour12: false,
     });
   };

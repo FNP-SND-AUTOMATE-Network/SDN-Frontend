@@ -56,20 +56,20 @@ export default function AuditLogTable({
 
   const formatActionText = (action: AuditAction) => {
     const actionMap: Record<AuditAction, string> = {
-      USER_REGISTER: "สมัครสมาชิก",
-      USER_LOGIN: "เข้าสู่ระบบ",
-      USER_LOGOUT: "ออกจากระบบ",
-      USER_CREATE: "สร้างผู้ใช้",
-      USER_UPDATE: "อัพเดทผู้ใช้",
-      USER_DELETE: "ลบผู้ใช้",
-      ENABLE_TOTP: "เปิดใช้งาน TOTP",
-      DISABLE_TOTP: "ปิดใช้งาน TOTP",
-      REGISTER_PASSKEY: "ลงทะเบียน Passkey",
-      REMOVE_PASSKEY: "ลบ Passkey",
-      PROMOTE_ROLE: "เพิ่มสิทธิ์",
-      DEMOTE_ROLE: "ลดสิทธิ์",
-      PASSWORD_CHANGE: "เปลี่ยนรหัสผ่าน",
-      PASSWORD_RESET: "รีเซ็ตรหัสผ่าน",
+      USER_REGISTER: "Register",
+      USER_LOGIN: "Login",
+      USER_LOGOUT: "Logout",
+      USER_CREATE: "Create User",
+      USER_UPDATE: "Update User",
+      USER_DELETE: "Delete User",
+      ENABLE_TOTP: "Enable TOTP",
+      DISABLE_TOTP: "Disable TOTP",
+      REGISTER_PASSKEY: "Register Passkey",
+      REMOVE_PASSKEY: "Remove Passkey",
+      PROMOTE_ROLE: "Promote Role",
+      DEMOTE_ROLE: "Demote Role",
+      PASSWORD_CHANGE: "Password Change",
+      PASSWORD_RESET: "Password Reset",
     };
     return actionMap[action] || action;
   };
@@ -81,23 +81,23 @@ export default function AuditLogTable({
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                เวลา
+                Time
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                การกระทำ
+                Action
               </th>
               {(userRole === "ADMIN" || userRole === "OWNER") && (
                 <>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ผู้กระทำ
+                    Actor
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ผู้ถูกกระทำ
+                    Target
                   </th>
                 </>
               )}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                รายละเอียด
+                Details
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions

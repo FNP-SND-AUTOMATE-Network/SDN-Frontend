@@ -50,10 +50,10 @@ export default function LoginPage() {
 
       if (isRegistrationComplete) {
         setSuccessMessage(
-          "🎉 สมัครสมาชิกสำเร็จ! ยืนยันอีเมล OTP เรียบร้อยแล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่านที่สมัครไว้"
+          "🎉 Register Success! Please login with your password"
         );
       } else {
-        setSuccessMessage("✅ ยืนยัน OTP เรียบร้อยแล้ว กรุณาเข้าสู่ระบบ");
+        setSuccessMessage("✅ Verify OTP Success! Please login");
       }
 
       // Cleanup
@@ -85,15 +85,15 @@ export default function LoginPage() {
     const newErrors: { [key: string]: string } = {};
 
     if (!formData.email) {
-      newErrors.email = "กรุณากรอกอีเมล";
+      newErrors.email = "Please enter your email";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "รูปแบบอีเมลไม่ถูกต้อง";
+      newErrors.email = "Invalid email format";
     }
 
     if (!formData.password) {
-      newErrors.password = "กรุณากรอกรหัสผ่าน";
+      newErrors.password = "Please enter your password";
     } else if (formData.password.length < 6) {
-      newErrors.password = "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร";
+      newErrors.password = "Password must be at least 6 characters long";
     }
 
     setErrors(newErrors);
@@ -113,9 +113,6 @@ export default function LoginPage() {
         email: formData.email,
         password: formData.password,
       });
-
-      console.log("Login successful:", response);
-
       // Check if MFA is required from login response
       if (response.requires_totp && response.temp_token) {
         // MFA Required - แสดงหน้ากรอก OTP
@@ -157,12 +154,12 @@ export default function LoginPage() {
   const handleMfaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mfaCode || mfaCode.length !== 6) {
-      setApiError("กรุณากรอกรหัส 6 หลัก");
+      setApiError("Please enter your 6 digit OTP code");
       return;
     }
 
     if (!tempAuthData?.token) {
-      setApiError("ไม่พบข้อมูลการเข้าสู่ระบบชั่วคราว กรุณาลองเข้าสู่ระบบใหม่อีกครั้ง");
+      setApiError("No temporary login data found. Please try logging in again.");
       return;
     }
 
@@ -180,7 +177,7 @@ export default function LoginPage() {
         login(tempAuthData.user, response.access_token);
         router.push("/dashboard");
       } else {
-        setApiError("ไม่สามารถยืนยันตัวตนได้ กรุณาลองใหม่อีกครั้ง");
+        setApiError("Failed to verify identity. Please try again.");
       }
     } catch (error: any) {
       console.error("MFA Verify error:", error);
@@ -196,16 +193,16 @@ export default function LoginPage() {
         <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-primary-100">
           <div>
             <h2 className="mt-6 text-center text-3xl font-extrabold text-primary-600">
-              {showMfaInput ? "ยืนยันตัวตน (2FA)" : "เข้าสู่ระบบ"}
+              {showMfaInput ? "Verify Identity (2FA)" : "Login"}
             </h2>
             {!showMfaInput && (
               <p className="mt-2 text-center text-sm text-gray-600">
-                หรือ{" "}
+                or{" "}
                 <Link
                   href="/register"
                   className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-200"
                 >
-                  สมัครสมาชิกใหม่
+                  Register
                 </Link>
               </p>
             )}
@@ -259,7 +256,7 @@ export default function LoginPage() {
                   </div>
                 </div>
                 <p className="text-sm text-gray-600">
-                  กรุณากรอกรหัส 6 หลักจากแอป Authenticator ของคุณ
+                  Please enter your 6 digit OTP code from your Authenticator app
                 </p>
                 <Input
                   label=""
@@ -283,7 +280,7 @@ export default function LoginPage() {
                   loading={isLoading}
                   disabled={isLoading || mfaCode.length !== 6}
                 >
-                  {isLoading ? "กำลังตรวจสอบ..." : "ยืนยัน"}
+                  {isLoading ? "Verifying..." : "Verify"}
                 </Button>
                 <Button
                   type="button"
@@ -296,7 +293,7 @@ export default function LoginPage() {
                   }}
                   disabled={isLoading}
                 >
-                  ย้อนกลับ
+                  Back
                 </Button>
               </div>
             </form>
@@ -305,19 +302,19 @@ export default function LoginPage() {
             <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
               <div className="space-y-4 text-black">
                 <Input
-                  label="อีเมล"
+                  label="Email"
                   name="email"
                   type="email"
                   autoComplete="email"
-                  placeholder="กรอกอีเมลของคุณ"
+                  placeholder="Enter your email"
                   value={formData.email}
                   onChange={handleInputChange}
                   error={errors.email}
                 />
                 <PasswordInput
                   id="password"
-                  label="รหัสผ่าน"
-                  placeholder="กรอกรหัสผ่านของคุณ"
+                  label="Password"
+                  placeholder="Enter your password"
                   value={formData.password}
                   onChange={(value) => setFormData(prev => ({ ...prev, password: value }))}
                   error={errors.password}
@@ -337,7 +334,7 @@ export default function LoginPage() {
                     htmlFor="remember-me"
                     className="ml-2 block text-sm text-gray-900"
                   >
-                    จดจำการเข้าสู่ระบบ
+                    Remember me
                   </label>
                 </div>
 
@@ -346,7 +343,7 @@ export default function LoginPage() {
                     href="/forgot-password"
                     className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-200"
                   >
-                    ลืมรหัสผ่าน?
+                    Forgot Password?
                   </Link>
                 </div>
               </div>
@@ -359,7 +356,7 @@ export default function LoginPage() {
                   loading={isLoading}
                   disabled={isLoading}
                 >
-                  {isLoading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+                  {isLoading ? "Logging in..." : "Login"}
                 </Button>
               </div>
             </form>

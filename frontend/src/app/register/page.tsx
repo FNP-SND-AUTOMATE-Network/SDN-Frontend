@@ -47,29 +47,29 @@ export default function RegisterPage() {
     const newErrors: { [key: string]: string } = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = "กรุณากรอกชื่อ";
+      newErrors.name = "Please enter your name";
     }
 
     if (!formData.surname.trim()) {
-      newErrors.surname = "กรุณากรอกนามสกุล";
+      newErrors.surname = "Please enter your surname";
     }
 
     if (!formData.email) {
-      newErrors.email = "กรุณากรอกอีเมล";
+      newErrors.email = "Please enter your email";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "รูปแบบอีเมลไม่ถูกต้อง";
+      newErrors.email = "Invalid email format";
     }
 
     if (!formData.password) {
-      newErrors.password = "กรุณากรอกรหัสผ่าน";
+      newErrors.password = "Please enter your password";
     } else if (formData.password.length < 6) {
-      newErrors.password = "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร";
+      newErrors.password = "Password must be at least 6 characters long";
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "กรุณายืนยันรหัสผ่าน";
+      newErrors.confirmPassword = "Please confirm your password";
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "รหัสผ่านไม่ตรงกัน";
+      newErrors.confirmPassword = "Passwords do not match";
     }
 
     setErrors(newErrors);
@@ -85,14 +85,6 @@ export default function RegisterPage() {
     setApiError("");
 
     try {
-      console.log("Starting registration with data:", {
-        email: formData.email,
-        name: formData.name,
-        surname: formData.surname,
-        password: "***hidden***",
-        confirm_password: "***hidden***"
-      });
-
       const response = await authApi.register({
         email: formData.email,
         name: formData.name,
@@ -100,9 +92,6 @@ export default function RegisterPage() {
         password: formData.password,
         confirm_password: formData.confirmPassword,
       });
-
-      // Registration successful
-      console.log("Registration successful:", response);
       
       // Store email for OTP verification
       localStorage.setItem('registration_email', formData.email);
@@ -124,15 +113,15 @@ export default function RegisterPage() {
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-primary-100">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-primary-600">
-            สมัครสมาชิก
+            Register
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            หรือ{" "}
+            or{" "}
             <Link
               href="/login"
               className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-200"
             >
-              เข้าสู่ระบบ
+              Login
             </Link>
           </p>
         </div>
@@ -140,21 +129,21 @@ export default function RegisterPage() {
           <div className="space-y-4 text-black">
             <div className="grid grid-cols-2 gap-4 ">
               <Input
-                label="ชื่อ"
+                label="Name"
                 name="name"
                 type="text"
                 autoComplete="given-name"
-                placeholder="กรอกชื่อของคุณ"
+                placeholder="Enter your name"
                 value={formData.name}
                 onChange={handleInputChange}
                 error={errors.name}
               />
               <Input
-                label="นามสกุล"
+                label="Surname"
                 name="surname"
                 type="text"
                 autoComplete="family-name"
-                placeholder="กรอกนามสกุลของคุณ"
+                placeholder="Enter your surname"
                 value={formData.surname}
                 onChange={handleInputChange}
                 error={errors.surname}
@@ -162,11 +151,11 @@ export default function RegisterPage() {
             </div>
             
             <Input
-              label="อีเมล"
+              label="Email"
               name="email"
               type="email"
               autoComplete="email"
-              placeholder="กรอกอีเมลของคุณ"
+              placeholder="Enter your email"
               value={formData.email}
               onChange={handleInputChange}
               error={errors.email}
@@ -174,8 +163,8 @@ export default function RegisterPage() {
             
             <PasswordInput
               id="password"
-              label="รหัสผ่าน"
-              placeholder="กรอกรหัสผ่านของคุณ"
+              label="Password"
+              placeholder="Enter your password"
               value={formData.password}
               onChange={(value) => setFormData(prev => ({ ...prev, password: value }))}
               error={errors.password}
@@ -184,8 +173,8 @@ export default function RegisterPage() {
             
             <PasswordInput
               id="confirmPassword"
-              label="ยืนยันรหัสผ่าน"
-              placeholder="กรอกรหัสผ่านอีกครั้ง"
+              label="Confirm Password"
+              placeholder="Enter your password again"
               value={formData.confirmPassword}
               onChange={(value) => setFormData(prev => ({ ...prev, confirmPassword: value }))}
               error={errors.confirmPassword}
@@ -202,13 +191,13 @@ export default function RegisterPage() {
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
             <label htmlFor="agree-terms" className="ml-2 block text-sm text-gray-900">
-              ยอมรับ{" "}
+              Accept{" "}
               <a href="#" className="text-primary-600 hover:text-primary-500 transition-colors duration-200">
-                ข้อกำหนดการใช้งาน
+                Terms of Use
               </a>{" "}
-              และ{" "}
+              and{" "}
               <a href="#" className="text-primary-600 hover:text-primary-500 transition-colors duration-200">
-                นโยบายความเป็นส่วนตัว
+                Privacy Policy
               </a>
             </label>
           </div>
@@ -237,7 +226,7 @@ export default function RegisterPage() {
               loading={isLoading}
               disabled={isLoading}
             >
-              {isLoading ? "กำลังสมัครสมาชิก..." : "สมัครสมาชิก"}
+              {isLoading ? "Registering..." : "Register"}
             </Button>
           </div>
         </form>

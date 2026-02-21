@@ -192,7 +192,7 @@ export function UserModal({
                 />
               </div>
               <h2 className="text-xl font-semibold text-gray-900 font-sf-pro-display">
-                {mode === "add" ? "เพิ่มผู้ใช้ใหม่" : "แก้ไขข้อมูลผู้ใช้"}
+                {mode === "add" ? "Add New User" : "Edit User"}
               </h2>
             </div>
             <button
@@ -208,13 +208,13 @@ export function UserModal({
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 font-sf-pro-text">
-                ชื่อ *
+                Name
               </label>
               <Input
                 type="text"
                 value={formData.name}
                 onChange={(e) => handleInputChange("name", e.target.value)}
-                placeholder="กรอกชื่อ"
+                placeholder="Enter your name"
                 error={errors.name || ""}
                 disabled={isLoading}
               />
@@ -228,13 +228,13 @@ export function UserModal({
             {/* Surname */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 font-sf-pro-text">
-                นามสกุล *
+                Surname
               </label>
               <Input
                 type="text"
                 value={formData.surname}
                 onChange={(e) => handleInputChange("surname", e.target.value)}
-                placeholder="กรอกนามสกุล"
+                placeholder="Enter your surname"
                 error={errors.surname || ""}
                 disabled={isLoading}
               />
@@ -248,13 +248,13 @@ export function UserModal({
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 font-sf-pro-text">
-                อีเมล *
+                Email
               </label>
               <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
-                placeholder="กรอกอีเมล"
+                placeholder="Enter your email"
                 error={errors.email || ""}
                 disabled={isLoading}
               />
@@ -270,22 +270,22 @@ export function UserModal({
               <>
                 <PasswordInput
                   id="password"
-                  label="รหัสผ่าน"
+                  label="Password"
                   value={formData.password}
                   onChange={(value) => handleInputChange("password", value)}
-                  placeholder="กรอกรหัสผ่าน (ขั้นต่ำ 8 ตัวอักษร)"
+                  placeholder="Enter your password (minimum 8 characters)"
                   error={errors.password || ""}
                   required={true}
                 />
 
                 <PasswordInput
                   id="confirmPassword"
-                  label="ยืนยันรหัสผ่าน"
+                  label="Confirm Password"
                   value={formData.confirmPassword}
                   onChange={(value) =>
                     handleInputChange("confirmPassword", value)
                   }
-                  placeholder="ยืนยันรหัสผ่าน"
+                  placeholder="Confirm your password"
                   error={errors.confirmPassword || ""}
                   required={true}
                 />
@@ -295,7 +295,7 @@ export function UserModal({
             {/* Role */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 font-sf-pro-text">
-                บทบาท
+                Role
               </label>
               <select
                 value={formData.role}
@@ -317,18 +317,18 @@ export function UserModal({
               </select>
               {mode === "add" && (
                 <p className="mt-1 text-sm text-gray-500 font-sf-pro-text">
-                  ผู้ใช้ใหม่จะได้รับบทบาท VIEWER เท่านั้น
+                  New users will be assigned the VIEWER role only
                 </p>
               )}
               {mode === "edit" && user && !user.email_verified && (
                 <p className="mt-1 text-sm text-orange-600 font-sf-pro-text">
-                  ⚠️ ไม่สามารถเปลี่ยนบทบาทได้
-                  เนื่องจากอีเมลยังไม่ได้รับการยืนยัน
+                  ⚠️ Cannot change role
+                  because email has not been verified
                 </p>
               )}
               {mode === "edit" && user && user.email_verified && (
                 <p className="mt-1 text-sm text-green-600 font-sf-pro-text">
-                  สามารถเปลี่ยนบทบาทได้ เนื่องจากอีเมลได้รับการยืนยันแล้ว
+                  Can change role because email has been verified
                 </p>
               )}
             </div>
@@ -342,7 +342,7 @@ export function UserModal({
                 disabled={isLoading}
                 className="flex-1"
               >
-                ยกเลิก
+                Cancel
               </Button>
               <Button
                 type="submit"
@@ -352,11 +352,11 @@ export function UserModal({
               >
                 {isLoading
                   ? mode === "add"
-                    ? "กำลังเพิ่ม..."
-                    : "กำลังแก้ไข..."
+                    ? "Adding..."
+                    : "Editing..."
                   : mode === "add"
-                  ? "เพิ่มผู้ใช้"
-                  : "บันทึกการเปลี่ยนแปลง"}
+                  ? "Add User"
+                  : "Save Changes"}
               </Button>
             </div>
           </form>

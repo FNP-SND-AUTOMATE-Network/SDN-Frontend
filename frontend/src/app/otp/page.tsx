@@ -55,12 +55,12 @@ export default function OTPPage() {
 
   const handleVerify = async () => {
     if (otp.length !== 6) {
-      setError("กรุณากรอก OTP ให้ครบ 6 หลัก");
+      setError("Please enter a 6-digit OTP");
       return;
     }
 
     if (!email) {
-      setError("ไม่พบอีเมลที่ลงทะเบียน กรุณาลงทะเบียนใหม่");
+      setError("No email found. Please register again.");
       return;
     }
 
@@ -73,23 +73,8 @@ export default function OTPPage() {
         otp_code: otp,
       });
 
-      // OTP verification successful
-      console.log("OTP verification successful:", response);
-
-      // Debug: Check response structure
-      console.log("OTP Response data check:", {
-        user_id: response.user_id,
-        email: response.email,
-        email_verified: response.email_verified,
-        has_access_token: !!response.access_token,
-        has_name: !!response.name,
-        has_surname: !!response.surname,
-      });
-
       // OTP verification successful - email is now verified
       if (response.email_verified) {
-        console.log("✅ Email verified successfully. Redirecting to login...");
-
         // Clear registration email
         localStorage.removeItem("registration_email");
 
@@ -100,7 +85,7 @@ export default function OTPPage() {
         // Show success message briefly before redirect
         setOtp("");
         setError("");
-        setSuccess("🎉 ยืนยัน OTP สำเร็จ! กำลังนำคุณไปหน้าเข้าสู่ระบบ...");
+        setSuccess("OTP verification successful! Redirecting to login... ");
 
         // Redirect to login page with success parameters
         setTimeout(() => {
@@ -110,8 +95,7 @@ export default function OTPPage() {
         // Show success state in OTP page
         return;
       } else {
-        console.error("❌ Email verification failed");
-        setError("การยืนยัน OTP ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+        setError("Email verification failed");
       }
     } catch (error: any) {
       console.error("OTP verification error:", error);
@@ -132,8 +116,6 @@ export default function OTPPage() {
         email: email,
       });
 
-      console.log("OTP resent successfully:", response);
-
       setTimeLeft(600); // Reset timer
       setCanResend(false);
       setOtp("");
@@ -151,10 +133,10 @@ export default function OTPPage() {
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-primary-100">
         <div className="text-center">
           <h2 className="mt-6 text-3xl font-extrabold text-primary-600">
-            ยืนยัน OTP
+            Verify OTP
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            กรุณากรอกรหัส OTP 6 หลักที่ส่งไปยังอีเมล
+            Please enter the 6-digit OTP sent to your email
           </p>
           {email && (
             <p className="mt-1 text-sm font-medium text-primary-600 font-sf-pro-text">
@@ -177,13 +159,13 @@ export default function OTPPage() {
             <p className="text-sm text-gray-600">
               {timeLeft > 0 ? (
                 <>
-                  รหัส OTP จะหมดอายุใน{" "}
+                  OTP will expire in{" "}
                   <span className="font-semibold text-red-600">
                     {formatTime(timeLeft)}
                   </span>
                 </>
               ) : (
-                <span className="text-red-600">รหัส OTP หมดอายุแล้ว</span>
+                <span className="text-red-600">OTP has expired</span>
               )}
             </p>
           </div>
@@ -211,7 +193,7 @@ export default function OTPPage() {
               loading={isLoading}
               disabled={isLoading || otp.length !== 6}
             >
-              {isLoading ? "กำลังยืนยัน..." : "ยืนยัน OTP"}
+              {isLoading ? "Verifying..." : "Verify OTP"}
             </Button>
 
             <Button
@@ -222,10 +204,10 @@ export default function OTPPage() {
               loading={isResending}
             >
               {isResending
-                ? "กำลังส่ง..."
+                ? "Sending..."
                 : canResend
-                ? "ส่ง OTP ใหม่"
-                : `ส่งใหม่ได้ใน ${formatTime(timeLeft)}`}
+                ? "Send OTP again"
+                : `Send again in ${formatTime(timeLeft)}`}
             </Button>
           </div>
 
@@ -234,7 +216,7 @@ export default function OTPPage() {
               onClick={() => router.push("/register")}
               className="text-sm text-primary-600 hover:text-primary-500 transition-colors duration-200"
             >
-              กลับไปหน้าสมัครสมาชิก
+              Back to registration page
             </button>
           </div>
         </div>

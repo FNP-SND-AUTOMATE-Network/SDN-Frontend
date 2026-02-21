@@ -63,7 +63,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
           tabIndex={-1}
         >
           <FontAwesomeIcon
-            icon={showPassword ? faEyeSlash : faEye}
+            icon={showPassword ? faEye : faEyeSlash}
             className="h-4 w-4"
           />
         </button>

@@ -113,31 +113,29 @@ export default function AuditLogFilters({
                       onChange={(e) => onFilterChange("action", e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-sf-pro-text bg-white hover:border-gray-400 transition-colors"
                     >
-                      <option value="">เลือกประเภทการกระทำ</option>
-                      <optgroup label="การเข้าสู่ระบบ">
-                        <option value="USER_LOGIN">เข้าสู่ระบบ</option>
-                        <option value="USER_LOGOUT">ออกจากระบบ</option>
+                      <option value="">Select Action</option>
+                      <optgroup label="Login">
+                        <option value="USER_LOGIN">Login</option>
+                        <option value="USER_LOGOUT">Logout</option>
                       </optgroup>
-                      <optgroup label="การจัดการผู้ใช้">
-                        <option value="USER_CREATE">สร้างผู้ใช้</option>
-                        <option value="USER_UPDATE">อัพเดทผู้ใช้</option>
-                        <option value="USER_DELETE">ลบผู้ใช้</option>
+                      <optgroup label="User Management">
+                        <option value="USER_CREATE">Create User</option>
+                        <option value="USER_UPDATE">Update User</option>
+                        <option value="USER_DELETE">Delete User</option>
                       </optgroup>
-                      <optgroup label="การจัดการรหัสผ่าน">
-                        <option value="PASSWORD_CHANGE">เปลี่ยนรหัสผ่าน</option>
-                        <option value="PASSWORD_RESET">รีเซ็ตรหัสผ่าน</option>
+                      <optgroup label="Password Management">
+                        <option value="PASSWORD_CHANGE">Password Change</option>
+                        <option value="PASSWORD_RESET">Password Reset</option>
                       </optgroup>
-                      <optgroup label="การจัดการสิทธิ์">
-                        <option value="PROMOTE_ROLE">เพิ่มสิทธิ์</option>
-                        <option value="DEMOTE_ROLE">ลดสิทธิ์</option>
+                      <optgroup label="Role Management">
+                        <option value="PROMOTE_ROLE">Promote Role</option>
+                        <option value="DEMOTE_ROLE">Demote Role</option>
                       </optgroup>
-                      <optgroup label="การยืนยันตัวตน">
-                        <option value="ENABLE_TOTP">เปิดใช้งาน TOTP</option>
-                        <option value="DISABLE_TOTP">ปิดใช้งาน TOTP</option>
-                        <option value="REGISTER_PASSKEY">
-                          ลงทะเบียน Passkey
-                        </option>
-                        <option value="REMOVE_PASSKEY">ลบ Passkey</option>
+                      <optgroup label="Authentication">
+                        <option value="ENABLE_TOTP">Enable TOTP</option>
+                        <option value="DISABLE_TOTP">Disable TOTP</option>
+                        <option value="REGISTER_PASSKEY">Register Passkey</option>
+                        <option value="REMOVE_PASSKEY">Remove Passkey</option>
                       </optgroup>
                     </select>
                   </div>

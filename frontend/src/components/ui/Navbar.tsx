@@ -196,7 +196,7 @@ export const Navbar: React.FC<NavbarProps> = ({ className = "" }) => {
                       icon={faRightFromBracket}
                       className="w-4 h-4"
                     />
-                    <span>ออกจากระบบ</span>
+                    <span>Logout</span>
                   </button>
                 </div>
               )}
