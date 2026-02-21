@@ -411,9 +411,9 @@ export default function TopologyConfigModal({
                     </div>
 
                     {/* Body */}
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                         {mainTab === "config" ? (
-                            <div className="flex h-full" style={{ minHeight: "480px" }}>
+                            <div className="flex flex-1 overflow-hidden" style={{ minHeight: "480px" }}>
                                 {/* Sidebar */}
                                 <div className="w-48 border-r border-gray-200 bg-gray-50 overflow-y-auto shrink-0 rounded-bl-xl">
                                     {getSidebarItems(device.type).map((item) => {
@@ -470,13 +470,13 @@ export default function TopologyConfigModal({
                                 </div>
 
                                 {/* Content */}
-                                <div className="flex-1 overflow-y-auto rounded-br-xl">
-                                    <div className="border-b border-gray-200 px-6 py-3">
+                                <div className="flex-1 overflow-hidden flex flex-col rounded-br-xl bg-white">
+                                    <div className="border-b border-gray-200 px-6 py-3 shrink-0">
                                         <h3 className="text-base font-semibold text-gray-900 text-center">
                                             {getContentTitle()}
                                         </h3>
                                     </div>
-                                    <div className="p-6">
+                                    <div className="flex-1 overflow-y-auto p-6">
                                         <ResultBanner result={pushResult} onDismiss={() => setPushResult(null)} />
                                         {isLoading ? (
                                             <div className="flex items-center justify-center py-12">
