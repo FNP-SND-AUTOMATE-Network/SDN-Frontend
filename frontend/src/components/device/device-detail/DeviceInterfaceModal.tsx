@@ -70,18 +70,23 @@ export function DeviceInterfaceModal({
     if (!isOpen || !interfaceData) return null;
 
     const handleSave = async () => {
+        console.log("🔥 [handleSave] TRIGGERED. Token:", !!token, "DeviceId:", deviceId);
         if (!token) return;
         setIsSaving(true);
         try {
             // 1. Handle Admin Status (Enable / Disable)
             const currentAdminUp = interfaceData.admin_status?.toLowerCase() === "up";
+            console.log(`➡️ [Admin Status] Current: ${currentAdminUp} | Desired: ${adminStatus}`);
+
             if (adminStatus && !currentAdminUp) {
+                console.log(`🚀 [INTENT] Sending interface.enable for ${interfaceData.name}`);
                 await intentService.executeIntent(token, {
                     intent: "interface.enable",
                     node_id: deviceId,
                     params: { interface: interfaceData.name }
                 });
             } else if (!adminStatus && currentAdminUp) {
+                console.log(`🚀 [INTENT] Sending interface.disable for ${interfaceData.name}`);
                 await intentService.executeIntent(token, {
                     intent: "interface.disable",
                     node_id: deviceId,
@@ -93,9 +98,13 @@ export function DeviceInterfaceModal({
             const ipChanged = ipv4Address !== (interfaceData.ipv4_address || "") || subnetMask !== (interfaceData.subnet_mask || "");
             const descChanged = description !== (interfaceData.description || "");
 
+            console.log(`➡️ [Changes detected] IP Changed: ${ipChanged} | Desc Changed: ${descChanged}`);
+            console.log(`➡️ [Payload Prep] IP: ${ipv4Address}, Mask: ${subnetMask}, Desc: ${description}`);
+
             if (ipChanged || descChanged) {
                 if (ipv4Address && subnetMask) {
-                    await intentService.executeIntent(token, {
+                    console.log(`🚀 [INTENT] Sending interface.set_ipv4 for ${interfaceData.name}`);
+                    const payload = {
                         intent: "interface.set_ipv4",
                         node_id: deviceId,
                         params: {
@@ -104,26 +113,40 @@ export function DeviceInterfaceModal({
                             mask: subnetMask,
                             description: description || undefined
                         }
-                    });
+                    };
+                    console.log(`📦 [Payload]`, JSON.stringify(payload, null, 2));
+
+                    await intentService.executeIntent(token, payload);
                 } else if (descChanged && !ipChanged) {
                     // Only description changed
-                    await intentService.executeIntent(token, {
+                    console.log(`🚀 [INTENT] Sending interface.set_description for ${interfaceData.name}`);
+                    const payload = {
                         intent: "interface.set_description",
                         node_id: deviceId,
                         params: {
                             interface: interfaceData.name,
                             description: description
                         }
-                    });
+                    };
+                    console.log(`📦 [Payload]`, JSON.stringify(payload, null, 2));
+
+                    await intentService.executeIntent(token, payload);
+                } else {
+                    console.log("⚠️ [WARNING] IP changed but either IP or Subnet Mask is empty! Skipping set_ipv4 intent.");
                 }
+            } else {
+                console.log("✅ [INFO] No IP or Description changes detected.");
             }
 
+            console.log("🎉 [handleSave] SUCCESSFULLY COMPLETED");
             showSuccess(`Interface ${interfaceData.name} updated successfully`);
             onSuccess();
             onClose();
         } catch (error: any) {
+            console.error("❌ [handleSave] ERROR:", error);
             showError(`Failed to save config: ${error?.message || "Unknown error"}`);
         } finally {
+            console.log("🏁 [handleSave] FINALLY BLOCK EXECUTED");
             setIsSaving(false);
         }
     };
