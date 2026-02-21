@@ -11,17 +11,20 @@ import {
     faExclamationTriangle,
     faTrash,
     faSave,
+    faNetworkWired,
 } from "@fortawesome/free-solid-svg-icons";
-import { DeviceNetwork } from "@/services/deviceNetworkService";
+import { DeviceNetwork, deviceNetworkService, InterfaceDiscoveryResponse } from "@/services/deviceNetworkService";
 import { intentService, IntentExecuteResponse } from "@/services/intentService";
 import { useAuth } from "@/contexts/AuthContext";
 import { SettingPanel } from "./config-panels/SettingPanel";
 import { StaticRoutePanel } from "./config-panels/StaticRoutePanel";
 import { OspfPanel } from "./config-panels/OspfPanel";
 import { DefaultRoutePanel } from "./config-panels/DefaultRoutePanel";
-import { InterfacePanel } from "./config-panels/InterfacePanel";
 import { VlanPanel } from "./config-panels/VlanPanel";
 import { DhcpPanel } from "./config-panels/DhcpPanel";
+import { DeviceInterfaceForm } from "../device/device-detail/DeviceInterfaceForm";
+
+type NetworkInterface = InterfaceDiscoveryResponse["interfaces"][0];
 
 interface TopologyConfigModalProps {
     isOpen: boolean;
@@ -38,7 +41,7 @@ type SidebarItem = { key: string; label: string; expandable: boolean };
 const ALL_SIDEBAR_ITEMS: SidebarItem[] = [
     { key: "setting", label: "SETTING", expandable: false },
     { key: "routing", label: "ROUTING", expandable: true },
-    { key: "interface", label: "INTERFACE", expandable: false },
+    { key: "interface", label: "INTERFACE", expandable: true },
     { key: "vlan", label: "VLAN", expandable: false },
     { key: "dhcp", label: "DHCP", expandable: false },
 ];
@@ -115,6 +118,7 @@ export default function TopologyConfigModal({
 
     // ===== Show data state =====
     const [showData, setShowData] = useState<Record<string, any> | null>(null);
+    const [discoveredInterfaces, setDiscoveredInterfaces] = useState<NetworkInterface[]>([]);
 
     const nodeId = device?.node_id || "";
 
@@ -123,6 +127,7 @@ export default function TopologyConfigModal({
         if (device) {
             setPushResult(null);
             setShowData(null);
+            setDiscoveredInterfaces([]);
             setActiveSection("setting");
             setMainTab("config");
         }
@@ -141,8 +146,9 @@ export default function TopologyConfigModal({
                         response = await intentService.showRunningConfig(token, nodeId);
                         break;
                     case "interface":
-                        response = await intentService.showIpInterfaceBrief(token, nodeId);
-                        // showData will be set below
+                        const uiInterfaces = await deviceNetworkService.discoverInterfaces(token, nodeId);
+                        setDiscoveredInterfaces(uiInterfaces.interfaces || []);
+                        response = { success: true, intent: "", node_id: nodeId, strategy_used: "", driver_used: "", result: null, error: null };
                         break;
                     case "routing-static":
                     case "routing-ospf":
@@ -202,6 +208,7 @@ export default function TopologyConfigModal({
     const getContentTitle = () => {
         if (activeSection === "setting") return "System Settings";
         if (activeSection === "interface") return "Interfaces";
+        if (activeSection.startsWith("interface-")) return `Interface: ${activeSection.replace("interface-", "")}`;
         if (activeSection === "vlan") return "VLANs";
         if (activeSection === "dhcp") return "DHCP Pools";
         for (const [, items] of Object.entries(SUB_ITEMS)) {
@@ -252,13 +259,48 @@ export default function TopologyConfigModal({
     // ==================== Main Content Router ====================
     const renderContent = () => {
         const commonProps = { device, showData, isPushing, handlePush };
+
+        if (activeSection.startsWith("interface-")) {
+            const ifaceName = activeSection.replace("interface-", "");
+            const ifaceData = discoveredInterfaces.find((i) => i.name === ifaceName);
+            if (ifaceData) {
+                return (
+                    <div className="h-full overflow-y-auto w-full">
+                        <DeviceInterfaceForm
+                            interfaceData={ifaceData}
+                            mode="edit"
+                            deviceId={nodeId}
+                            token={token}
+                            onSuccess={() => loadSectionData("interface")} // Refresh on success
+                            onCancel={() => { }}
+                        />
+                    </div>
+                );
+            }
+        }
+
         switch (activeSection) {
             case "setting": return <SettingPanel {...commonProps} />;
             case "routing-static": return <StaticRoutePanel {...commonProps} />;
             case "routing-ospf": return <OspfPanel {...commonProps} />;
             case "routing-default": return <DefaultRoutePanel {...commonProps} />;
             case "routing": return <StaticRoutePanel {...commonProps} />;
-            case "interface": return <InterfacePanel {...commonProps} />;
+            case "interface":
+                return (
+                    <div className="flex flex-col items-center justify-center h-full text-gray-500 font-sf-pro-text p-8 w-full border-2 border-dashed border-gray-200 mt-8 rounded-xl max-w-lg mx-auto">
+                        <FontAwesomeIcon icon={faNetworkWired} className="w-12 h-12 text-gray-300 mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">Interface Configuration</h3>
+                        <p className="text-sm text-center">
+                            Please select an interface from the sidebar menu on the left to view and edit its configuration.
+                        </p>
+                        {isLoading && (
+                            <div className="mt-4 text-blue-500 flex items-center gap-2">
+                                <FontAwesomeIcon icon={faSpinner} className="animate-spin w-4 h-4" />
+                                <span className="text-sm">Discovering interfaces...</span>
+                            </div>
+                        )}
+                    </div>
+                );
             case "vlan": return <VlanPanel {...commonProps} />;
             case "dhcp": return <DhcpPanel {...commonProps} />;
             default:
@@ -358,9 +400,17 @@ export default function TopologyConfigModal({
                                 <div className="w-48 border-r border-gray-200 bg-gray-50 overflow-y-auto shrink-0 rounded-bl-xl">
                                     {getSidebarItems(device.type).map((item) => {
                                         const isActive = activeSection === item.key ||
-                                            (item.key === "routing" && activeSection.startsWith("routing"));
+                                            (item.key === "routing" && activeSection.startsWith("routing-")) ||
+                                            (item.key === "interface" && activeSection.startsWith("interface-"));
                                         const isExpanded = expandedSections.has(item.key);
-                                        const subItems = SUB_ITEMS[item.key];
+
+                                        let subItems = SUB_ITEMS[item.key];
+                                        if (item.key === "interface") {
+                                            subItems = discoveredInterfaces.map(iface => ({
+                                                key: `interface-${iface.name}`,
+                                                label: iface.name
+                                            }));
+                                        }
 
                                         return (
                                             <div key={item.key}>
