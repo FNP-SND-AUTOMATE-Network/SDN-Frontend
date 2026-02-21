@@ -178,6 +178,44 @@ export function DeviceInterfaceModal({
                 await intentService.executeIntent(token, payload);
             }
 
+            // 5. Handle OSPF Routing
+            const oldProcessId = interfaceData.ospf?.process_id?.toString() || "";
+            const oldArea = interfaceData.ospf?.area?.toString() || "";
+            const newProcessId = ospfProcessId.trim();
+            const newArea = ospfArea.trim();
+
+            if (newProcessId !== oldProcessId || newArea !== oldArea) {
+                if (newProcessId && newArea) {
+                    console.log(`🚀 [INTENT] Sending routing.ospf.add_network_interface for ${interfaceData.name}`);
+                    const payload = {
+                        intent: "routing.ospf.add_network_interface",
+                        node_id: deviceId,
+                        params: {
+                            process_id: parseInt(newProcessId, 10),
+                            interface: interfaceData.name,
+                            area: parseInt(newArea, 10)
+                        }
+                    };
+                    console.log(`📦 [Payload OSPF Add]`, JSON.stringify(payload, null, 2));
+                    await intentService.executeIntent(token, payload);
+                } else if (!newProcessId && !newArea && oldProcessId && oldArea) {
+                    console.log(`🚀 [INTENT] Sending routing.ospf.remove_network_interface for ${interfaceData.name}`);
+                    const payload = {
+                        intent: "routing.ospf.remove_network_interface",
+                        node_id: deviceId,
+                        params: {
+                            process_id: parseInt(oldProcessId, 10),
+                            interface: interfaceData.name,
+                            area: parseInt(oldArea, 10)
+                        }
+                    };
+                    console.log(`📦 [Payload OSPF Remove]`, JSON.stringify(payload, null, 2));
+                    await intentService.executeIntent(token, payload);
+                } else {
+                    console.log("⚠️ [WARNING] Both Process ID and Area are required to configure OSPF. Skipping.");
+                }
+            }
+
             console.log("🎉 [handleSave] SUCCESSFULLY COMPLETED");
             showSuccess(`Interface ${interfaceData.name} updated successfully`);
             onSuccess();
@@ -306,7 +344,7 @@ export function DeviceInterfaceModal({
                     </div>
 
                     {/* Section 3: Routing (Optional) */}
-                    {interfaceData.has_ospf && (
+                    {(interfaceData.has_ospf || isEdit) && (
                         <div className="space-y-4">
                             <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 border-b pb-2">
                                 <FontAwesomeIcon icon={faRoute} className="text-gray-400 w-4 h-4" /> OSPF Routing

@@ -349,6 +349,38 @@ export const intentService = {
     });
   },
 
+  async addOspfNetworkInterface(
+    token: string,
+    nodeId: string,
+    params: {
+      process_id: number;
+      interface: string;
+      area: number;
+    },
+  ) {
+    return this.executeIntent(token, {
+      intent: "routing.ospf.add_network_interface",
+      node_id: nodeId,
+      params,
+    });
+  },
+
+  async removeOspfNetworkInterface(
+    token: string,
+    nodeId: string,
+    params: {
+      process_id: number;
+      interface: string;
+      area: number;
+    },
+  ) {
+    return this.executeIntent(token, {
+      intent: "routing.ospf.remove_network_interface",
+      node_id: nodeId,
+      params,
+    });
+  },
+
   async removeOspfNetwork(
     token: string,
     nodeId: string,
