@@ -138,6 +138,49 @@ export function DeviceInterfaceModal({
                 console.log("✅ [INFO] No IP or Description changes detected.");
             }
 
+            // 3. Handle MTU (interface.set_mtu)
+            const mtuChanged = mtu !== (interfaceData.mtu || "");
+            if (mtuChanged && mtu) {
+                console.log(`🚀 [INTENT] Sending interface.set_mtu for ${interfaceData.name}`);
+                const payload = {
+                    intent: "interface.set_mtu",
+                    node_id: deviceId,
+                    params: {
+                        interface: interfaceData.name,
+                        mtu: parseInt(mtu.toString(), 10)
+                    }
+                };
+                console.log(`📦 [Payload]`, JSON.stringify(payload, null, 2));
+                await intentService.executeIntent(token, payload);
+            }
+
+            // 4. Handle IPv6 (interface.set_ipv6)
+            const ipv6Changed = ipv6Address !== (interfaceData.ipv6 || "");
+            if (ipv6Changed && ipv6Address) {
+                console.log(`🚀 [INTENT] Sending interface.set_ipv6 for ${interfaceData.name}`);
+                // Simple placeholder logic for prefix if user didn't provide one format like IP/Prefix. 
+                // Since our current UI just has 'IPv6 Address' field, we'll try to split if it has a slash, otherwise default to 64
+                let ip = ipv6Address;
+                let prefix = "64";
+                if (ipv6Address.includes("/")) {
+                    const parts = ipv6Address.split("/");
+                    ip = parts[0];
+                    prefix = parts[1];
+                }
+
+                const payload = {
+                    intent: "interface.set_ipv6",
+                    node_id: deviceId,
+                    params: {
+                        interface: interfaceData.name,
+                        ip: ip,
+                        prefix: prefix
+                    }
+                };
+                console.log(`📦 [Payload]`, JSON.stringify(payload, null, 2));
+                await intentService.executeIntent(token, payload);
+            }
+
             console.log("🎉 [handleSave] SUCCESSFULLY COMPLETED");
             showSuccess(`Interface ${interfaceData.name} updated successfully`);
             onSuccess();
