@@ -90,6 +90,18 @@ export default function OperationModal({
     }
   }, [isOpen, mode, os]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -202,8 +214,14 @@ export default function OperationModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-lg">
           <h2 className="text-xl font-semibold text-gray-900 font-sf-pro-display">
@@ -307,8 +325,8 @@ export default function OperationModal({
                                 type="button"
                                 onClick={() => toggleTagSelection(tag.tag_id)}
                                 className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border transition-colors font-sf-pro-text ${isSelected
-                                    ? "border-blue-500 bg-blue-100 text-blue-800"
-                                    : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                                  ? "border-blue-500 bg-blue-100 text-blue-800"
+                                  : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
                                   }`}
                               >
                                 <span
@@ -343,8 +361,8 @@ export default function OperationModal({
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   className={`flex flex-col items-center justify-center px-4 py-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isDragging
-                      ? "border-blue-400 bg-blue-50"
-                      : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50"
+                    ? "border-blue-400 bg-blue-50"
+                    : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50"
                     } ${isLoading ? "opacity-60 cursor-not-allowed" : ""}`}
                   onClick={handleBrowseClick}
                 >

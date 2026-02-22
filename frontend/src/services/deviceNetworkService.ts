@@ -46,6 +46,8 @@ export interface DeviceNetwork {
   configuration_template_id?: string | null;
   node_id?: string | null;
   vendor?: VendorType;
+  management_protocol?: "NETCONF" | "OPENFLOW" | null;
+  datapath_id?: string | null;
   default_strategy?: DefaultStrategy;
   netconf_host?: string | null;
   netconf_port?: number;
@@ -107,6 +109,8 @@ export interface DeviceNetworkCreateRequest {
   configuration_template_id?: string | null;
   node_id?: string | null;
   vendor?: VendorType;
+  management_protocol?: "NETCONF" | "OPENFLOW" | null;
+  datapath_id?: string | null;
   default_strategy?: DefaultStrategy;
   netconf_host?: string | null;
   netconf_port?: number;
@@ -130,6 +134,8 @@ export interface DeviceNetworkUpdateRequest {
   configuration_template_id?: string | null;
   node_id?: string | null;
   vendor?: VendorType | null;
+  management_protocol?: "NETCONF" | "OPENFLOW" | null;
+  datapath_id?: string | null;
   default_strategy?: DefaultStrategy | null;
   netconf_host?: string | null;
   netconf_port?: number | null;

@@ -106,6 +106,18 @@ export default function SiteModal({
     }
   }, [isOpen, mode, site]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -206,8 +218,14 @@ export default function SiteModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-lg">
           <h2 className="text-xl font-semibold text-gray-900 font-sf-pro-display">
@@ -296,7 +314,7 @@ export default function SiteModal({
                   type="number"
                   value={
                     formData.floor_number !== undefined &&
-                    formData.floor_number !== null
+                      formData.floor_number !== null
                       ? formData.floor_number
                       : ""
                   }
@@ -314,7 +332,7 @@ export default function SiteModal({
                   type="number"
                   value={
                     formData.rack_number !== undefined &&
-                    formData.rack_number !== null
+                      formData.rack_number !== null
                       ? formData.rack_number
                       : ""
                   }
