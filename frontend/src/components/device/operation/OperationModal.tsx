@@ -55,7 +55,7 @@ export default function OperationModal({
   onDownloadFile,
 }: OperationModalProps) {
   const [formData, setFormData] = useState<OperatingSystemCreateRequest>({
-    os_type: "OTHER" as OsType,
+    os_type: "CISCO_IOS_XE" as OsType,
     description: "",
   });
   const [file, setFile] = useState<File | null>(null);
@@ -79,7 +79,7 @@ export default function OperationModal({
         );
       } else {
         setFormData({
-          os_type: "OTHER" as OsType,
+          os_type: "CISCO_IOS_XE" as OsType,
           description: "",
         });
         setSelectedTagIds([]);
@@ -241,12 +241,13 @@ export default function OperationModal({
                   disabled={isLoading}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed font-sf-pro-text"
                 >
-                  <option value="CISCO_IOS">Cisco IOS</option>
+                  {/* <option value="CISCO_IOS">Cisco IOS</option>
                   <option value="CISCO_NXOS">Cisco NX-OS</option>
                   <option value="CISCO_ASA">Cisco ASA</option>
                   <option value="CISCO_Nexus">Cisco Nexus</option>
-                  <option value="CISCO_IOS_XR">Cisco IOS-XR</option>
+                  <option value="CISCO_IOS_XR">Cisco IOS-XR</option> */}
                   <option value="CISCO_IOS_XE">Cisco IOS-XE</option>
+                  <option value="HUAWEI_VRP">Huawei VRP</option>
                   <option value="OTHER">Other</option>
                 </select>
               </div>

@@ -132,12 +132,13 @@ export default function OperationHeader({
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-sf-pro-text bg-white min-w-[140px]"
         >
           <option value="">All Types</option>
-          <option value="CISCO_IOS">Cisco IOS</option>
+          {/* <option value="CISCO_IOS">Cisco IOS</option>
           <option value="CISCO_NXOS">Cisco NX-OS</option>
           <option value="CISCO_ASA">Cisco ASA</option>
           <option value="CISCO_Nexus">Cisco Nexus</option>
-          <option value="CISCO_IOS_XR">Cisco IOS-XR</option>
+          <option value="CISCO_IOS_XR">Cisco IOS-XR</option> */}
           <option value="CISCO_IOS_XE">Cisco IOS-XE</option>
+          <option value="HUAWEI_VRP">Huawei VRP</option>
         </select>
 
         {/* Spacer */}
