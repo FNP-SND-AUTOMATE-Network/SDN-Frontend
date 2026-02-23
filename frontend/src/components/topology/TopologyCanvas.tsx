@@ -157,30 +157,83 @@ function DeviceNodeComponent({ data }: NodeProps) {
     );
 }
 
-// --- Layout helper: arrange nodes in a grid ---
-function layoutNodes(topoNodes: TopologyNode[]): Node[] {
-    const COLS = Math.max(3, Math.ceil(Math.sqrt(topoNodes.length)));
+// --- Layout helper: place connected nodes near each other using BFS ---
+function layoutNodes(topoNodes: TopologyNode[], links: TopologyLink[]): Node[] {
+    if (topoNodes.length === 0) return [];
+
+    // Build adjacency list for device nodes only
+    const adj: Record<string, Set<string>> = {};
+    topoNodes.forEach((n) => (adj[n.id] = new Set()));
+
+    // Deduplicate links for adjacency
+    const seen = new Set<string>();
+    links.forEach((link) => {
+        const key = [link.source, link.target].sort().join(":::");
+        if (seen.has(key)) return;
+        seen.add(key);
+        if (adj[link.source] && adj[link.target]) {
+            adj[link.source].add(link.target);
+            adj[link.target].add(link.source);
+        }
+    });
+
+    // Find the node with the most connections as the root
+    const sorted = [...topoNodes].sort(
+        (a, b) => (adj[b.id]?.size || 0) - (adj[a.id]?.size || 0)
+    );
+
     const X_GAP = 300;
     const Y_GAP = 260;
-    const X_OFFSET = 80;
-    const Y_OFFSET = 80;
+    const positions: Record<string, { x: number; y: number }> = {};
+    const placed = new Set<string>();
 
-    return topoNodes.map((node, index) => {
-        const col = index % COLS;
-        const row = Math.floor(index / COLS);
-        return {
-            id: node.id,
-            type: "deviceNode",
-            position: {
-                x: X_OFFSET + col * X_GAP,
-                y: Y_OFFSET + row * Y_GAP,
-            },
-            data: {
-                label: node.label || node.id,
-                deviceType: node.type || "other",
-            },
-        };
+    // BFS to place connected nodes near each other
+    const queue: string[] = [sorted[0].id];
+    positions[sorted[0].id] = { x: 400, y: 300 };
+    placed.add(sorted[0].id);
+
+    while (queue.length > 0) {
+        const current = queue.shift()!;
+        const neighbors = Array.from(adj[current] || []).filter(
+            (n) => !placed.has(n)
+        );
+        const cx = positions[current].x;
+        const cy = positions[current].y;
+
+        neighbors.forEach((neighbor, i) => {
+            // Spread neighbors evenly around the current node
+            const total = neighbors.length;
+            const angle = (2 * Math.PI * i) / total - Math.PI / 2;
+            positions[neighbor] = {
+                x: cx + Math.cos(angle) * X_GAP,
+                y: cy + Math.sin(angle) * Y_GAP,
+            };
+            placed.add(neighbor);
+            queue.push(neighbor);
+        });
+    }
+
+    // Place any disconnected nodes in remaining grid positions
+    let disconnectedIndex = 0;
+    topoNodes.forEach((node) => {
+        if (!placed.has(node.id)) {
+            positions[node.id] = {
+                x: 80 + disconnectedIndex * X_GAP,
+                y: 80,
+            };
+            disconnectedIndex++;
+        }
     });
+
+    return topoNodes.map((node) => ({
+        id: node.id,
+        type: "deviceNode",
+        position: positions[node.id],
+        data: {
+            label: node.label || node.id,
+            deviceType: node.type || "other",
+        },
+    }));
 }
 
 // --- Custom Edge: shows interface labels near source and target ---
@@ -210,14 +263,24 @@ function InterfaceLabelEdge({
     const srcPort = (data?.srcPort as string) || "";
     const tgtPort = (data?.tgtPort as string) || "";
 
-    // Position labels ~20% and ~80% along the line
-    const srcLabelX = sourceX + (targetX - sourceX) * 0.2;
-    const srcLabelY = sourceY + (targetY - sourceY) * 0.2;
-    const tgtLabelX = sourceX + (targetX - sourceX) * 0.8;
-    const tgtLabelY = sourceY + (targetY - sourceY) * 0.8;
+    // Position labels near the actual connection points with a small inward offset
+    const LABEL_OFFSET = 50;
+
+    // For source label: offset from source point toward target
+    const dx = targetX - sourceX;
+    const dy = targetY - sourceY;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+    // Source label: near source, offset toward target
+    const srcLabelX = sourceX + (dx / dist) * LABEL_OFFSET;
+    const srcLabelY = sourceY + (dy / dist) * LABEL_OFFSET;
+
+    // Target label: near target, offset toward source
+    const tgtLabelX = targetX - (dx / dist) * LABEL_OFFSET;
+    const tgtLabelY = targetY - (dy / dist) * LABEL_OFFSET;
 
     const labelClass =
-        "text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100/90 text-slate-600 pointer-events-none whitespace-nowrap";
+        "text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100/90 text-slate-600 border border-slate-200 pointer-events-none whitespace-nowrap";
 
     return (
         <>
@@ -347,8 +410,9 @@ export default function TopologyCanvas({
             );
             // Filter: only actual devices (parent === null), exclude interface/termination-point nodes
             const deviceNodes = (data.nodes || []).filter(n => n.parent === null);
-            const flowNodes = layoutNodes(deviceNodes);
-            const flowEdges = buildEdges(data.links || []);
+            const dataLinks = data.links || [];
+            const flowNodes = layoutNodes(deviceNodes, dataLinks);
+            const flowEdges = buildEdges(dataLinks);
             setNodes(flowNodes);
             setEdges(flowEdges);
         } catch (err: any) {
