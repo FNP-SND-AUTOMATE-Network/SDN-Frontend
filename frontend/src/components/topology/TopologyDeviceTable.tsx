@@ -202,7 +202,7 @@ export default function TopologyDeviceTable({
 
                                                 {/* Dropdown Menu */}
                                                 {openDropdownId === device.id && (
-                                                    <div className="fixed transform -translate-x-full -translate-y-1/2 ml-[-8px] w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-[100]" style={{ top: 'auto', left: 'auto' }}>
+                                                    <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-[100]">
                                                         <button
                                                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                                             onClick={(e) => {
