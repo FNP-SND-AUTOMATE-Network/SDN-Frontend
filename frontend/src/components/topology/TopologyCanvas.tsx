@@ -156,8 +156,8 @@ function DeviceNodeComponent({ data }: NodeProps) {
 // --- Layout helper: arrange nodes in a grid ---
 function layoutNodes(topoNodes: TopologyNode[]): Node[] {
     const COLS = Math.max(3, Math.ceil(Math.sqrt(topoNodes.length)));
-    const X_GAP = 240;
-    const Y_GAP = 200;
+    const X_GAP = 300;
+    const Y_GAP = 260;
     const X_OFFSET = 80;
     const Y_OFFSET = 80;
 
@@ -181,7 +181,29 @@ function layoutNodes(topoNodes: TopologyNode[]): Node[] {
 
 // --- Build edges from topology links ---
 function buildEdges(links: TopologyLink[]): Edge[] {
+    // Detect parallel edges (same source↔target pair) and assign offsets
+    const pairCount: Record<string, number> = {};
+    const pairIndex: Record<string, number> = {};
+
+    links.forEach((link) => {
+        // Normalize pair key so A→B and B→A are the same pair
+        const pairKey = [link.source, link.target].sort().join(":::");
+        pairCount[pairKey] = (pairCount[pairKey] || 0) + 1;
+    });
+
     return links.map((link) => {
+        const pairKey = [link.source, link.target].sort().join(":::");
+        const totalInPair = pairCount[pairKey] || 1;
+        const currentIndex = pairIndex[pairKey] || 0;
+        pairIndex[pairKey] = currentIndex + 1;
+
+        // Calculate offset for parallel edges so they fan out
+        let offset = 0;
+        if (totalInPair > 1) {
+            const spread = 30; // px between parallel edges
+            offset = (currentIndex - (totalInPair - 1) / 2) * spread;
+        }
+
         // Build label showing interface names
         const sourceTp = link.source_tp || "";
         const targetTp = link.target_tp || "";
@@ -199,8 +221,9 @@ function buildEdges(links: TopologyLink[]): Edge[] {
             source: link.source,
             target: link.target,
             label: label || undefined,
-            type: "default",
+            type: "smoothstep",
             animated: false,
+            pathOptions: { offset },
             style: { stroke: "#94a3b8", strokeWidth: 2 },
             labelStyle: {
                 fontSize: 10,
