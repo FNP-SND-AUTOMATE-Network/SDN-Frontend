@@ -71,7 +71,7 @@ export default function TopologyPage() {
                 {/* Main Grid Layout */}
                 <div className="grid grid-cols-12 gap-6" style={{ height: "calc(100vh - 240px)" }}>
                     {/* Left Sidebar - Sites Tree */}
-                    <div className="col-span-3 h-full rounded-lg shadow-sm overflow-hidden">
+                    <div className="col-span-2 h-full rounded-lg shadow-sm overflow-hidden">
                         <TopologySiteTree
                             onSiteSelect={handleSiteSelect}
                             onDeviceSelect={handleDeviceSelect}
@@ -81,7 +81,7 @@ export default function TopologyPage() {
                     </div>
 
                     {/* Right Side - Canvas + Table */}
-                    <div className="col-span-9 flex flex-col h-full">
+                    <div className="col-span-10 flex flex-col h-full">
                         {/* Topology Canvas - Expands when table is collapsed */}
                         <div
                             className="rounded-lg shadow-sm overflow-hidden transition-all duration-300"
