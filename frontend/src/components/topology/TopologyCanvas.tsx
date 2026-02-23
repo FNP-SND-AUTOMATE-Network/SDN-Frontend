@@ -181,17 +181,26 @@ function layoutNodes(topoNodes: TopologyNode[]): Node[] {
 
 // --- Build edges from topology links ---
 function buildEdges(links: TopologyLink[]): Edge[] {
-    // Detect parallel edges (same source↔target pair) and assign offsets
+    // Deduplicate bidirectional links (A→B and B→A represent the same physical connection)
+    const seen = new Set<string>();
+    const uniqueLinks = links.filter((link) => {
+        const forwardKey = `${link.source}:::${link.target}`;
+        const reverseKey = `${link.target}:::${link.source}`;
+        if (seen.has(reverseKey)) return false; // Already have the reverse direction
+        seen.add(forwardKey);
+        return true;
+    });
+
+    // Detect parallel edges (same device pair) and assign offsets
     const pairCount: Record<string, number> = {};
     const pairIndex: Record<string, number> = {};
 
-    links.forEach((link) => {
-        // Normalize pair key so A→B and B→A are the same pair
+    uniqueLinks.forEach((link) => {
         const pairKey = [link.source, link.target].sort().join(":::");
         pairCount[pairKey] = (pairCount[pairKey] || 0) + 1;
     });
 
-    return links.map((link) => {
+    return uniqueLinks.map((link) => {
         const pairKey = [link.source, link.target].sort().join(":::");
         const totalInPair = pairCount[pairKey] || 1;
         const currentIndex = pairIndex[pairKey] || 0;
@@ -200,20 +209,20 @@ function buildEdges(links: TopologyLink[]): Edge[] {
         // Calculate offset for parallel edges so they fan out
         let offset = 0;
         if (totalInPair > 1) {
-            const spread = 30; // px between parallel edges
+            const spread = 30;
             offset = (currentIndex - (totalInPair - 1) / 2) * spread;
         }
 
-        // Build label showing interface names
-        const sourceTp = link.source_tp || "";
-        const targetTp = link.target_tp || "";
+        // Build label from sourceHandle / targetHandle (interface port names)
+        const srcPort = link.sourceHandle || "";
+        const tgtPort = link.targetHandle || "";
         let label = "";
-        if (sourceTp && targetTp) {
-            label = `${sourceTp} ↔ ${targetTp}`;
-        } else if (sourceTp) {
-            label = sourceTp;
-        } else if (targetTp) {
-            label = targetTp;
+        if (srcPort && tgtPort) {
+            label = `${srcPort} ↔ ${tgtPort}`;
+        } else if (srcPort) {
+            label = srcPort;
+        } else if (tgtPort) {
+            label = tgtPort;
         }
 
         return {

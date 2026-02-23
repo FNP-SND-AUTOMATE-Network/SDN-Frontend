@@ -15,8 +15,11 @@ export interface TopologyLink {
   id: string;
   source: string;
   target: string;
-  source_tp: string; // source termination point (interface name)
-  target_tp: string; // target termination point (interface name)
+  sourceHandle: string; // source interface port name (e.g., "1", "GigabitEthernet4")
+  targetHandle: string; // target interface port name (e.g., "3", "2")
+  type: string; // link type (e.g., "OPENFLOW-L2", "NETCONF-L2")
+  raw_source: string; // full source termination point ID
+  raw_target: string; // full target termination point ID
 }
 
 export interface TopologyResponse {
