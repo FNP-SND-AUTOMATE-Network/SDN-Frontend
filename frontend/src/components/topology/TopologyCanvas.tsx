@@ -258,7 +258,9 @@ export default function TopologyCanvas({
                 token,
                 selectedSiteId
             );
-            const flowNodes = layoutNodes(data.nodes || []);
+            // Filter: only actual devices (parent === null), exclude interface/termination-point nodes
+            const deviceNodes = (data.nodes || []).filter(n => n.parent === null);
+            const flowNodes = layoutNodes(deviceNodes);
             const flowEdges = buildEdges(data.links || []);
             setNodes(flowNodes);
             setEdges(flowEdges);
