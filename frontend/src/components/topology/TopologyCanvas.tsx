@@ -263,12 +263,13 @@ function InterfaceLabelEdge({
     const srcPort = (data?.srcPort as string) || "";
     const tgtPort = (data?.tgtPort as string) || "";
 
-    // Place labels right at the handle connection points with a small offset
+    // Place labels at the handle connection points, offset horizontally for parallel edges
+    const edgeOffset = (pathOptions.offset as number) || 0;
     // Source handle is at the bottom of the node → label goes just below
-    const srcLabelX = sourceX;
+    const srcLabelX = sourceX + edgeOffset;
     const srcLabelY = sourceY + 20;
     // Target handle is at the top of the node → label goes just above
-    const tgtLabelX = targetX;
+    const tgtLabelX = targetX + edgeOffset;
     const tgtLabelY = targetY - 20;
 
     const labelClass =
