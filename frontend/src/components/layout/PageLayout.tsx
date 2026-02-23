@@ -6,9 +6,9 @@ interface PageLayoutProps {
   className?: string;
 }
 
-export const PageLayout: React.FC<PageLayoutProps> = ({ 
-  children, 
-  className = "" 
+export const PageLayout: React.FC<PageLayoutProps> = ({
+  children,
+  className = ""
 }) => {
   return (
     <div className={`min-h-screen bg-gradient-to-br from-primary-50 to-secondary-100 font-sf-pro ${className}`}>
@@ -21,10 +21,8 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
       {/* Main Content Area - Responsive positioning */}
       <main className="pt-16 lg:ml-64 min-h-screen overflow-y-auto">
         <div className="w-full">
-          <div className="py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto">
-              {children}
-            </div>
+          <div className="py-6 px-6">
+            {children}
           </div>
         </div>
       </main>
