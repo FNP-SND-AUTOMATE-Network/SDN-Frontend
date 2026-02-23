@@ -368,106 +368,9 @@ export default function DeviceModal({
                   placeholder="e.g. 830"
                   disabled={true}
                 />
-                {/* <Input
-                  label="Username"
-                  name="netconf_username"
-                  value={formData.netconf_username || ""}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  placeholder="admin"
-                />
-                <div className="relative">
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    label="Password"
-                    name="netconf_password"
-                    value={formData.netconf_password || ""}
-                    onChange={handleChange}
-                    disabled={isLoading}
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-[32px] text-gray-400 hover:text-gray-600 focus:outline-none"
-                  >
-                    <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="w-4 h-4" />
-                  </button>
-                </div> */}
               </div>
             </div>
           )}
-
-          {/* Environment Settings Card */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setIsEnvSettingsOpen(!isEnvSettingsOpen)}
-              className="w-full flex items-center justify-between p-5 text-left bg-white hover:bg-gray-50 focus:outline-none transition-colors"
-            >
-              <div>
-                <h3 className="text-sm font-bold text-gray-900 font-sf-pro-display">Environment Settings</h3>
-                <p className="text-xs text-gray-500 font-sf-pro-text mt-0.5">Optional configuration for site and OS details</p>
-              </div>
-              <FontAwesomeIcon icon={isEnvSettingsOpen ? faChevronUp : faChevronDown} className="text-gray-400 w-4 h-4 ml-4" />
-            </button>
-            {isEnvSettingsOpen && (
-              <div className="p-5 pt-0 border-t border-gray-100 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Local Site
-                    </label>
-                    <select
-                      name="local_site_id"
-                      value={formData.local_site_id || ""}
-                      onChange={handleChange}
-                      disabled={isLoading}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text text-sm"
-                    >
-                      <option value="">Select Site</option>
-                      {allSites.map((site) => (
-                        <option key={site.id} value={site.id}>
-                          {site.site_code}
-                          {site.site_name ? ` - ${site.site_name}` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      OS Type
-                    </label>
-                    <select
-                      name="os_id"
-                      value={formData.os_id || ""}
-                      onChange={handleChange}
-                      disabled={isLoading}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text text-sm"
-                    >
-                      <option value="">Select OS</option>
-                      {allOperatingSystems.map((os) => (
-                        <option key={os.id} value={os.id}>
-                          {os.os_type}{os.description ? ` - ${os.description}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <Input
-                  label="Device Model"
-                  name="device_model"
-                  value={formData.device_model || ""}
-                  onChange={handleChange}
-                  error={errors.device_model || ""}
-                  disabled={isLoading}
-                  required
-                  placeholder="e.g. CSR1000v"
-                />
-              </div>
-            )}
-          </div>
-
           {/* Advanced / Hardware Settings Card */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
             <button
@@ -476,7 +379,9 @@ export default function DeviceModal({
               className="w-full flex items-center justify-between p-5 text-left bg-white hover:bg-gray-50 focus:outline-none transition-colors"
             >
               <div>
-                <h3 className="text-sm font-bold text-gray-900 font-sf-pro-display">Hardware & System Settings</h3>
+                <h3 className="text-sm font-bold text-gray-900 font-sf-pro-display">
+                  Hardware & System Settings <span className="text-red-500">*</span>
+                </h3>
                 <p className="text-xs text-gray-500 font-sf-pro-text mt-0.5">Required tracking metrics and meta information</p>
               </div>
               <FontAwesomeIcon icon={isAdvancedOpen ? faChevronUp : faChevronDown} className="text-gray-400 w-4 h-4 ml-4" />
@@ -556,9 +461,7 @@ export default function DeviceModal({
                       {(["tag", "group", "other"] as const).map((typeKey) => {
                         const tagsOfType = allTags.filter((t) => t.type === typeKey);
                         if (tagsOfType.length === 0) return null;
-
                         const typeLabel = typeKey === "tag" ? "Tag" : typeKey === "group" ? "Group" : "Other";
-
                         return (
                           <div key={typeKey}>
                             <div className="text-xs font-medium text-gray-500 mb-1 font-sf-pro-text">
@@ -602,6 +505,76 @@ export default function DeviceModal({
               </div>
             )}
           </div>
+          {/* Environment Settings Card */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setIsEnvSettingsOpen(!isEnvSettingsOpen)}
+              className="w-full flex items-center justify-between p-5 text-left bg-white hover:bg-gray-50 focus:outline-none transition-colors"
+            >
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 font-sf-pro-display">Environment Settings</h3>
+                <p className="text-xs text-gray-500 font-sf-pro-text mt-0.5">Optional configuration for site and OS details</p>
+              </div>
+              <FontAwesomeIcon icon={isEnvSettingsOpen ? faChevronUp : faChevronDown} className="text-gray-400 w-4 h-4 ml-4" />
+            </button>
+            {isEnvSettingsOpen && (
+              <div className="p-5 pt-0 border-t border-gray-100 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Local Site
+                    </label>
+                    <select
+                      name="local_site_id"
+                      value={formData.local_site_id || ""}
+                      onChange={handleChange}
+                      disabled={isLoading}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text text-sm"
+                    >
+                      <option value="">Select Site</option>
+                      {allSites.map((site) => (
+                        <option key={site.id} value={site.id}>
+                          {site.site_code}
+                          {site.site_name ? ` - ${site.site_name}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      OS Type
+                    </label>
+                    <select
+                      name="os_id"
+                      value={formData.os_id || ""}
+                      onChange={handleChange}
+                      disabled={isLoading}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text text-sm"
+                    >
+                      <option value="">Select OS</option>
+                      {allOperatingSystems.map((os) => (
+                        <option key={os.id} value={os.id}>
+                          {os.os_type}{os.description ? ` - ${os.description}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <Input
+                  label="Device Model"
+                  name="device_model"
+                  value={formData.device_model || ""}
+                  onChange={handleChange}
+                  error={errors.device_model || ""}
+                  disabled={isLoading}
+                  required
+                  placeholder="e.g. CSR1000v"
+                />
+              </div>
+            )}
+          </div>
+
 
           {/* Footer */}
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
