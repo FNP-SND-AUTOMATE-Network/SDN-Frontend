@@ -15,6 +15,10 @@ import {
     Position,
     NodeProps,
     BackgroundVariant,
+    getSmoothStepPath,
+    EdgeLabelRenderer,
+    BaseEdge,
+    type EdgeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -179,6 +183,75 @@ function layoutNodes(topoNodes: TopologyNode[]): Node[] {
     });
 }
 
+// --- Custom Edge: shows interface labels near source and target ---
+function InterfaceLabelEdge({
+    id,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+    style,
+    markerEnd,
+    data,
+}: EdgeProps) {
+    const pathOptions = (data?.pathOptions as { offset?: number }) || {};
+    const [edgePath] = getSmoothStepPath({
+        sourceX,
+        sourceY,
+        targetX,
+        targetY,
+        sourcePosition,
+        targetPosition,
+        offset: pathOptions.offset as number || 0,
+    });
+
+    const srcPort = (data?.srcPort as string) || "";
+    const tgtPort = (data?.tgtPort as string) || "";
+
+    // Position labels ~20% and ~80% along the line
+    const srcLabelX = sourceX + (targetX - sourceX) * 0.2;
+    const srcLabelY = sourceY + (targetY - sourceY) * 0.2;
+    const tgtLabelX = sourceX + (targetX - sourceX) * 0.8;
+    const tgtLabelY = sourceY + (targetY - sourceY) * 0.8;
+
+    const labelClass =
+        "text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100/90 text-slate-600 pointer-events-none whitespace-nowrap";
+
+    return (
+        <>
+            <BaseEdge id={id} path={edgePath} style={style} markerEnd={markerEnd} />
+            <EdgeLabelRenderer>
+                {srcPort && (
+                    <div
+                        style={{
+                            position: "absolute",
+                            transform: `translate(-50%, -50%) translate(${srcLabelX}px, ${srcLabelY}px)`,
+                            pointerEvents: "none",
+                        }}
+                        className="nodrag nopan"
+                    >
+                        <span className={labelClass}>{srcPort}</span>
+                    </div>
+                )}
+                {tgtPort && (
+                    <div
+                        style={{
+                            position: "absolute",
+                            transform: `translate(-50%, -50%) translate(${tgtLabelX}px, ${tgtLabelY}px)`,
+                            pointerEvents: "none",
+                        }}
+                        className="nodrag nopan"
+                    >
+                        <span className={labelClass}>{tgtPort}</span>
+                    </div>
+                )}
+            </EdgeLabelRenderer>
+        </>
+    );
+}
+
 // --- Build edges from topology links ---
 function buildEdges(links: TopologyLink[]): Edge[] {
     // Deduplicate bidirectional links (A→B and B→A represent the same physical connection)
@@ -186,7 +259,7 @@ function buildEdges(links: TopologyLink[]): Edge[] {
     const uniqueLinks = links.filter((link) => {
         const forwardKey = `${link.source}:::${link.target}`;
         const reverseKey = `${link.target}:::${link.source}`;
-        if (seen.has(reverseKey)) return false; // Already have the reverse direction
+        if (seen.has(reverseKey)) return false;
         seen.add(forwardKey);
         return true;
     });
@@ -206,45 +279,24 @@ function buildEdges(links: TopologyLink[]): Edge[] {
         const currentIndex = pairIndex[pairKey] || 0;
         pairIndex[pairKey] = currentIndex + 1;
 
-        // Calculate offset for parallel edges so they fan out
         let offset = 0;
         if (totalInPair > 1) {
             const spread = 30;
             offset = (currentIndex - (totalInPair - 1) / 2) * spread;
         }
 
-        // Build label from sourceHandle / targetHandle (interface port names)
-        const srcPort = link.sourceHandle || "";
-        const tgtPort = link.targetHandle || "";
-        let label = "";
-        if (srcPort && tgtPort) {
-            label = `${srcPort} ↔ ${tgtPort}`;
-        } else if (srcPort) {
-            label = srcPort;
-        } else if (tgtPort) {
-            label = tgtPort;
-        }
-
         return {
             id: link.id,
             source: link.source,
             target: link.target,
-            label: label || undefined,
-            type: "smoothstep",
+            type: "interfaceLabel",
             animated: false,
-            pathOptions: { offset },
+            data: {
+                srcPort: link.sourceHandle || "",
+                tgtPort: link.targetHandle || "",
+                pathOptions: { offset },
+            },
             style: { stroke: "#94a3b8", strokeWidth: 2 },
-            labelStyle: {
-                fontSize: 10,
-                fontWeight: 500,
-                fill: "#475569",
-            },
-            labelBgStyle: {
-                fill: "#f1f5f9",
-                fillOpacity: 0.9,
-            },
-            labelBgPadding: [6, 4] as [number, number],
-            labelBgBorderRadius: 4,
             markerEnd: {
                 type: MarkerType.ArrowClosed,
                 color: "#94a3b8",
@@ -255,9 +307,12 @@ function buildEdges(links: TopologyLink[]): Edge[] {
     });
 }
 
-// --- Node types registration ---
+// --- Type registrations ---
 const nodeTypes = {
     deviceNode: DeviceNodeComponent,
+};
+const edgeTypes = {
+    interfaceLabel: InterfaceLabelEdge,
 };
 
 // --- Main Component ---
@@ -337,7 +392,7 @@ export default function TopologyCanvas({
     // Empty / no site selected state
     if (!selectedSiteId) {
         return (
-            <div className="relative h-full bg-gray-50 flex items-center justify-center overflow-hidden">
+            <div className="relative h-full bg-white flex items-center justify-center overflow-hidden">
                 <div className="text-center">
                     <div className="mb-4">
                         <FontAwesomeIcon
@@ -360,7 +415,7 @@ export default function TopologyCanvas({
     // Loading state
     if (isLoading) {
         return (
-            <div className="relative h-full bg-gray-50 flex items-center justify-center overflow-hidden">
+            <div className="relative h-full bg-white flex items-center justify-center overflow-hidden">
                 <div className="text-center">
                     <FontAwesomeIcon
                         icon={faSpinner}
@@ -377,7 +432,7 @@ export default function TopologyCanvas({
     // Error state
     if (error) {
         return (
-            <div className="relative h-full bg-gray-50 flex items-center justify-center overflow-hidden">
+            <div className="relative h-full bg-white flex items-center justify-center overflow-hidden">
                 <div className="text-center">
                     <p className="text-sm text-red-500 mb-3">{error}</p>
                     <button
@@ -394,7 +449,7 @@ export default function TopologyCanvas({
     // Empty topology for this site
     if (nodes.length === 0) {
         return (
-            <div className="relative h-full bg-gray-50 flex items-center justify-center overflow-hidden">
+            <div className="relative h-full bg-white flex items-center justify-center overflow-hidden">
                 <div className="text-center">
                     <FontAwesomeIcon
                         icon={faNetworkWired}
@@ -451,12 +506,13 @@ export default function TopologyCanvas({
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 fitView
                 fitViewOptions={{ padding: 0.3 }}
                 minZoom={0.2}
                 maxZoom={2}
                 proOptions={{ hideAttribution: true }}
-                className="bg-gray-50"
+                className="bg-white"
             >
                 <Background
                     variant={BackgroundVariant.Dots}
