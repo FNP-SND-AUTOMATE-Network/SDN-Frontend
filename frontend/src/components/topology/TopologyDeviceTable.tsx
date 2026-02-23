@@ -128,10 +128,6 @@ export default function TopologyDeviceTable({
     return (
         <div>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900">Device</h3>
-                </div>
-
                 <div className="overflow-x-auto overflow-y-visible">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
