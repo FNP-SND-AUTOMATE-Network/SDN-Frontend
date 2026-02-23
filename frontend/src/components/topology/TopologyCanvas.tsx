@@ -263,24 +263,16 @@ function InterfaceLabelEdge({
     const srcPort = (data?.srcPort as string) || "";
     const tgtPort = (data?.tgtPort as string) || "";
 
-    // Position labels near the actual connection points with a small inward offset
-    const LABEL_OFFSET = 50;
-
-    // For source label: offset from source point toward target
-    const dx = targetX - sourceX;
-    const dy = targetY - sourceY;
-    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-
-    // Source label: near source, offset toward target
-    const srcLabelX = sourceX + (dx / dist) * LABEL_OFFSET;
-    const srcLabelY = sourceY + (dy / dist) * LABEL_OFFSET;
-
-    // Target label: near target, offset toward source
-    const tgtLabelX = targetX - (dx / dist) * LABEL_OFFSET;
-    const tgtLabelY = targetY - (dy / dist) * LABEL_OFFSET;
+    // Place labels right at the handle connection points with a small offset
+    // Source handle is at the bottom of the node → label goes just below
+    const srcLabelX = sourceX;
+    const srcLabelY = sourceY + 20;
+    // Target handle is at the top of the node → label goes just above
+    const tgtLabelX = targetX;
+    const tgtLabelY = targetY - 20;
 
     const labelClass =
-        "text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100/90 text-slate-600 border border-slate-200 pointer-events-none whitespace-nowrap";
+        "text-[10px] font-medium px-1.5 py-0.5 rounded bg-white text-slate-600 border border-slate-300 shadow-sm pointer-events-none whitespace-nowrap";
 
     return (
         <>
@@ -317,13 +309,13 @@ function InterfaceLabelEdge({
 
 // --- Build edges from topology links ---
 function buildEdges(links: TopologyLink[]): Edge[] {
-    // Deduplicate bidirectional links (A→B and B→A represent the same physical connection)
+    // Deduplicate bidirectional links using raw_source/raw_target (interface-level)
+    // This way different interface pairs between the same devices are kept as separate edges
     const seen = new Set<string>();
     const uniqueLinks = links.filter((link) => {
-        const forwardKey = `${link.source}:::${link.target}`;
-        const reverseKey = `${link.target}:::${link.source}`;
-        if (seen.has(reverseKey)) return false;
-        seen.add(forwardKey);
+        const dedupKey = [link.raw_source, link.raw_target].sort().join(":::");
+        if (seen.has(dedupKey)) return false;
+        seen.add(dedupKey);
         return true;
     });
 
@@ -342,9 +334,10 @@ function buildEdges(links: TopologyLink[]): Edge[] {
         const currentIndex = pairIndex[pairKey] || 0;
         pairIndex[pairKey] = currentIndex + 1;
 
+        // Fan out parallel edges so they don't overlap
         let offset = 0;
         if (totalInPair > 1) {
-            const spread = 30;
+            const spread = 50; // px between parallel edges
             offset = (currentIndex - (totalInPair - 1) / 2) * spread;
         }
 
