@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronUp, faChevronDown, faTable } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "@/components/layout/PageLayout";
@@ -8,41 +8,37 @@ import { ProtectedRoute } from "@/components/auth/AuthGuard";
 import TopologySiteTree from "@/components/topology/TopologySiteTree";
 import TopologyCanvas from "@/components/topology/TopologyCanvas";
 import TopologyDeviceTable from "@/components/topology/TopologyDeviceTable";
-import { DeviceNetwork, deviceNetworkService } from "@/services/deviceNetworkService";
 import { useAuth } from "@/contexts/AuthContext";
+import { $api } from "@/lib/apiv2/fetch";
+import { paths, components } from "@/lib/apiv2/schema";
+
+export type TopologyDeviceItem = components["schemas"]["DeviceNetworkResponse"];
 
 export default function TopologyPage() {
     const { token } = useAuth();
     const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
     const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
-    const [devices, setDevices] = useState<DeviceNetwork[]>([]);
-    const [isLoadingDevices, setIsLoadingDevices] = useState(false);
     const [isTableCollapsed, setIsTableCollapsed] = useState(false);
 
-    // Fetch devices when site is selected
-    useEffect(() => {
-        const fetchDevices = async () => {
-            if (!token || !selectedSiteId) {
-                setDevices([]);
-                return;
-            }
+    // Fetch devices when site is selected using React Query
+    const { data: devicesData, isLoading: isLoadingDevices } = $api.useQuery(
+        "get",
+        "/device-networks/",
+        {
+            params: {
+                query: {
+                    site_id: selectedSiteId as string,
+                    page: 1,
+                    page_size: 100,
+                },
+            },
+        },
+        {
+            enabled: !!selectedSiteId,
+        }
+    );
 
-            setIsLoadingDevices(true);
-            try {
-                const response = await deviceNetworkService.getDevices(token, 1, 100, {
-                    site_id: selectedSiteId,
-                });
-                setDevices(response.devices);
-            } catch (err) {
-                console.error("Failed to load devices:", err);
-                setDevices([]);
-            } finally {
-                setIsLoadingDevices(false);
-            }
-        };
-
-        fetchDevices();
-    }, [token, selectedSiteId]);
+    const devices = devicesData?.devices || [];
 
     const handleSiteSelect = (siteId: string) => {
         setSelectedSiteId(siteId);
@@ -116,7 +112,7 @@ export default function TopologyPage() {
                         >
                             <div className="h-full overflow-auto">
                                 <TopologyDeviceTable
-                                    devices={devices}
+                                    devices={devices as any}
                                     selectedDeviceId={selectedDeviceId}
                                     onDeviceSelect={handleDeviceSelect}
                                 />

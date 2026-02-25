@@ -1,24 +1,44 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faCog,
     faDatabase,
-    faCircle,
-    faEllipsisVertical,
     faFile,
+    faEllipsisVertical,
+    faCircle,
 } from "@fortawesome/free-solid-svg-icons";
 import {
     Router as RouterIcon,
     Shield,
     Wifi,
-    Box,
+    Box as BoxIcon,
     Server,
 } from "lucide-react";
-import { DeviceNetwork, TypeDevice, StatusDevice } from "@/services/deviceNetworkService";
+import {
+    Box,
+    Typography,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Paper,
+    IconButton,
+    Menu,
+    MenuItem,
+    ListItemIcon,
+    ListItemText,
+    Chip,
+} from "@mui/material";
 import ConfigPreviewModal from "./ConfigPreviewModal";
 import TopologyConfigModal from "./TopologyConfigModal";
+import { components } from "@/lib/apiv2/schema";
+
+type DeviceNetwork = components["schemas"]["DeviceNetworkResponse"];
+type StatusDevice = components["schemas"]["StatusDevice"];
 
 interface TopologyDeviceTableProps {
     devices: DeviceNetwork[];
@@ -26,223 +46,208 @@ interface TopologyDeviceTableProps {
     onDeviceSelect?: (deviceId: string) => void;
 }
 
+const getTypeIcon = (type: string, className = "w-4 h-4") => {
+    switch (type) {
+        case "SWITCH":
+            return <Server className={className} />;
+        case "ROUTER":
+            return <RouterIcon className={className} />;
+        case "FIREWALL":
+            return <Shield className={className} />;
+        case "ACCESS_POINT":
+            return <Wifi className={className} />;
+        default:
+            return <BoxIcon className={className} />;
+    }
+};
+
+const getTypeChipProps = (type: string) => {
+    switch (type) {
+        case "SWITCH":
+            return { bgcolor: "info.50", color: "info.700" };
+        case "ROUTER":
+            return { bgcolor: "secondary.50", color: "secondary.700" };
+        case "FIREWALL":
+            return { bgcolor: "error.50", color: "error.700" };
+        case "ACCESS_POINT":
+            return { bgcolor: "primary.50", color: "primary.700" };
+        default:
+            return { bgcolor: "grey.50", color: "grey.700" };
+    }
+};
+
+const getStatusChipProps = (status: StatusDevice) => {
+    switch (status) {
+        case "ONLINE":
+            return { bgcolor: "success.100", color: "success.800", label: "Online" };
+        case "OFFLINE":
+            return { bgcolor: "error.100", color: "error.800", label: "Offline" };
+        case "MAINTENANCE":
+            return { bgcolor: "warning.100", color: "warning.800", label: "Maintenance" };
+        default:
+            return { bgcolor: "info.100", color: "info.800", label: "Other" };
+    }
+};
+
 export default function TopologyDeviceTable({
     devices,
     selectedDeviceId,
     onDeviceSelect,
 }: TopologyDeviceTableProps) {
-    const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-    const [configModalDevice, setConfigModalDevice] = useState<DeviceNetwork | null>(null);
-    const [configEditorDevice, setConfigEditorDevice] = useState<DeviceNetwork | null>(null);
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [menuDeviceId, setMenuDeviceId] = useState<string | null>(null);
+    const [configModalDevice, setConfigModalDevice] = useState<any | null>(null);
+    const [configEditorDevice, setConfigEditorDevice] = useState<any | null>(null);
 
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setOpenDropdownId(null);
-            }
-        };
-
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const toggleDropdown = (deviceId: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        setOpenDropdownId(openDropdownId === deviceId ? null : deviceId);
+    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, deviceId: string) => {
+        event.stopPropagation();
+        setAnchorEl(event.currentTarget);
+        setMenuDeviceId(deviceId);
     };
 
-    const getTypeBadge = (type: string) => {
-        const base =
-            "inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded whitespace-nowrap font-sf-pro-text";
-        switch (type) {
-            case "SWITCH":
-                return `${base} bg-blue-50 text-blue-700`;
-            case "ROUTER":
-                return `${base} bg-purple-50 text-purple-700`;
-            case "FIREWALL":
-                return `${base} bg-red-50 text-red-700`;
-            case "ACCESS_POINT":
-                return `${base} bg-indigo-50 text-indigo-700`;
-            default:
-                return `${base} bg-gray-50 text-gray-700`;
-        }
-    };
-
-    const getTypeIcon = (type: string) => {
-        const iconClass = "w-4 h-4";
-        switch (type) {
-            case "SWITCH":
-                return <Server className={iconClass} />;
-            case "ROUTER":
-                return <RouterIcon className={iconClass} />;
-            case "FIREWALL":
-                return <Shield className={iconClass} />;
-            case "ACCESS_POINT":
-                return <Wifi className={iconClass} />;
-            default:
-                return <Box className={iconClass} />;
-        }
-    };
-
-    const getStatusBadge = (status: StatusDevice) => {
-        const badges: Record<StatusDevice, { label: string; className: string }> = {
-            ONLINE: {
-                label: "Online",
-                className: "bg-green-100 text-green-800",
-            },
-            OFFLINE: {
-                label: "Offline",
-                className: "bg-gray-100 text-gray-800",
-            },
-            MAINTENANCE: {
-                label: "Maintenance",
-                className: "bg-yellow-100 text-yellow-800",
-            },
-            OTHER: {
-                label: "Other",
-                className: "bg-blue-100 text-blue-800",
-            },
-        };
-
-        const badge = badges[status] || badges.OTHER;
-        return (
-            <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.className}`}
-            >
-                <FontAwesomeIcon icon={faCircle} className="w-2 h-2" />
-                {badge.label}
-            </span>
-        );
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+        setMenuDeviceId(null);
     };
 
     if (devices.length === 0) {
         return (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-                <p className="text-gray-500 text-sm">No devices to display</p>
-            </div>
+            <Paper elevation={0} sx={{ p: 4, textAlign: "center", border: 1, borderColor: "divider", borderRadius: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                    No devices to display
+                </Typography>
+            </Paper>
         );
     }
 
+    const currentDevice = devices.find(d => d.id === menuDeviceId);
+
     return (
-        <div>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="overflow-x-auto overflow-y-visible">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Name
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Type
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    IP Management
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Status
-                                </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+        <Box>
+            <TableContainer component={Paper} elevation={0} sx={{ border: 1, borderColor: "divider", borderRadius: 2, overflowX: "auto" }}>
+                <Table sx={{ minWidth: 650 }} aria-label="topology devices table">
+                    <TableHead sx={{ bgcolor: "grey.50" }}>
+                        <TableRow>
+                            <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>Name</TableCell>
+                            <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>Type</TableCell>
+                            <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>IP Management</TableCell>
+                            <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>Status</TableCell>
+                            <TableCell align="right" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}></TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {devices.map((device) => {
+                            const isSelected = selectedDeviceId === device.id;
+                            const typeProps = getTypeChipProps(device.type as string);
+                            const statusProps = getStatusChipProps(device.status as StatusDevice);
 
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {devices.map((device) => {
-                                const isSelected = selectedDeviceId === device.id;
-                                return (
-                                    <tr
-                                        key={device.id}
-                                        className={`cursor-pointer transition-colors ${isSelected
-                                            ? "bg-primary-50"
-                                            : "hover:bg-gray-50"
-                                            }`}
-                                        onClick={() => onDeviceSelect?.(device.id)}
-                                    >
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900">
-                                                {device.device_name}
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                {device.device_model}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900">
-                                                <span className={getTypeBadge(device.type)}>
-                                                    <span>{getTypeIcon(device.type)}</span>
-                                                    {device.type.replace("_", " ")}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900">
-                                                {device.ip_address || "-"}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            {getStatusBadge(device.status)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <div className="relative inline-block" ref={openDropdownId === device.id ? dropdownRef : null}>
-                                                {/* Ellipsis Button */}
-                                                <button
-                                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-                                                    onClick={(e) => toggleDropdown(device.id, e)}
-                                                    title="Actions"
-                                                >
-                                                    <FontAwesomeIcon icon={faEllipsisVertical} className="w-4 h-4" />
-                                                </button>
+                            return (
+                                <TableRow
+                                    key={device.id}
+                                    hover
+                                    selected={isSelected}
+                                    onClick={() => onDeviceSelect?.(device.id)}
+                                    sx={{
+                                        cursor: "pointer",
+                                        "&.Mui-selected": { bgcolor: "primary.50", "&:hover": { bgcolor: "primary.100" } },
+                                    }}
+                                >
+                                    <TableCell>
+                                        <Typography variant="body2" fontWeight={500} color="text.primary">
+                                            {device.device_name}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {device.device_model}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Chip
+                                            icon={<Box sx={{ display: 'flex', alignItems: 'center', pl: 1 }}>{getTypeIcon(device.type as string)}</Box>}
+                                            label={(device.type as string).replace("_", " ")}
+                                            size="small"
+                                            sx={{
+                                                bgcolor: typeProps.bgcolor,
+                                                color: typeProps.color,
+                                                fontWeight: 500,
+                                                borderRadius: 1,
+                                                "& .MuiChip-icon": { color: typeProps.color }
+                                            }}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2" color="text.primary">
+                                            {device.ip_address || "-"}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Chip
+                                            icon={<FontAwesomeIcon icon={faCircle} className="w-2 h-2 ml-1.5" />}
+                                            label={statusProps.label}
+                                            size="small"
+                                            sx={{
+                                                bgcolor: statusProps.bgcolor,
+                                                color: statusProps.color,
+                                                fontWeight: 500,
+                                                "& .MuiChip-icon": { color: statusProps.color, width: 8, height: 8 }
+                                            }}
+                                        />
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <IconButton
+                                            size="small"
+                                            onClick={(e) => handleMenuOpen(e, device.id)}
+                                            sx={{ color: "text.secondary" }}
+                                        >
+                                            <FontAwesomeIcon icon={faEllipsisVertical} className="w-4 h-4" />
+                                        </IconButton>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            </TableContainer>
 
-                                                {/* Dropdown Menu */}
-                                                {openDropdownId === device.id && (
-                                                    <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-[100]">
-                                                        <button
-                                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setOpenDropdownId(null);
-                                                                setConfigEditorDevice(device);
-                                                            }}
-                                                        >
-                                                            <FontAwesomeIcon icon={faCog} className="w-4 h-4 text-green-600" />
-                                                            Config
-                                                        </button>
-                                                        <button
-                                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setOpenDropdownId(null);
-                                                                setConfigModalDevice(device);
-                                                            }}
-                                                        >
-                                                            <FontAwesomeIcon icon={faFile} className="w-4 h-4 text-blue-600" />
-                                                            View Config
-                                                        </button>
-                                                        <button
-                                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setOpenDropdownId(null);
-                                                                // TODO: Implement backup
-                                                            }}
-                                                        >
-                                                            <FontAwesomeIcon icon={faDatabase} className="w-4 h-4 text-orange-600" />
-                                                            Backup
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleMenuClose}
+                onClick={(e) => e.stopPropagation()}
+                slotProps={{ paper: { sx: { width: 160, boxShadow: 3, mt: 0.5, borderRadius: 2 } } }}
+                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            >
+                <MenuItem onClick={(e) => {
+                    e.stopPropagation();
+                    handleMenuClose();
+                    setConfigEditorDevice(currentDevice);
+                }}>
+                    <ListItemIcon>
+                        <FontAwesomeIcon icon={faCog} className="text-green-600 w-4 h-4" />
+                    </ListItemIcon>
+                    <ListItemText primary="Config" primaryTypographyProps={{ variant: "body2", color: "text.primary" }} />
+                </MenuItem>
+                <MenuItem onClick={(e) => {
+                    e.stopPropagation();
+                    handleMenuClose();
+                    setConfigModalDevice(currentDevice);
+                }}>
+                    <ListItemIcon>
+                        <FontAwesomeIcon icon={faFile} className="text-blue-600 w-4 h-4" />
+                    </ListItemIcon>
+                    <ListItemText primary="View Config" primaryTypographyProps={{ variant: "body2", color: "text.primary" }} />
+                </MenuItem>
+                <MenuItem onClick={(e) => {
+                    e.stopPropagation();
+                    handleMenuClose();
+                    // TODO: Implement backup
+                }}>
+                    <ListItemIcon>
+                        <FontAwesomeIcon icon={faDatabase} className="text-orange-600 w-4 h-4" />
+                    </ListItemIcon>
+                    <ListItemText primary="Backup" primaryTypographyProps={{ variant: "body2", color: "text.primary" }} />
+                </MenuItem>
+            </Menu>
 
             {/* Config Preview Modal */}
             <ConfigPreviewModal
@@ -257,6 +262,6 @@ export default function TopologyDeviceTable({
                 onClose={() => setConfigEditorDevice(null)}
                 device={configEditorDevice}
             />
-        </div>
+        </Box>
     );
 }

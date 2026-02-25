@@ -32,14 +32,29 @@ import {
     Router as RouterIcon,
     Shield,
     Wifi,
-    Box,
+    Box as BoxIcon,
 } from "lucide-react";
-import {
-    topologyService,
-    TopologyNode,
-    TopologyLink,
-} from "@/services/topologyService";
+import { $api, fetchClient } from "@/lib/apiv2/fetch";
 import { useAuth } from "@/contexts/AuthContext";
+import { Box, Typography, Button, CircularProgress } from "@mui/material";
+
+export interface TopologyNode {
+    id: string;
+    label: string;
+    type: string;
+    parent: string | null;
+}
+
+export interface TopologyLink {
+    id: string;
+    source: string;
+    target: string;
+    sourceHandle: string;
+    targetHandle: string;
+    type: string;
+    raw_source: string;
+    raw_target: string;
+}
 
 // --- Device type config ---
 const DEVICE_CONFIG: Record<
@@ -93,7 +108,7 @@ const getDeviceIcon = (type: string, size: number = 20) => {
         case "access_point":
             return <Wifi style={{ width: size, height: size }} />;
         default:
-            return <Box style={{ width: size, height: size }} />;
+            return <BoxIcon style={{ width: size, height: size }} />;
     }
 };
 
@@ -383,57 +398,56 @@ export default function TopologyCanvas({
     const { token } = useAuth();
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-    const [isLoading, setIsLoading] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [syncError, setSyncError] = useState<string | null>(null);
 
-    // Fetch topology when site is selected
-    const fetchTopology = useCallback(async () => {
-        if (!token || !selectedSiteId) {
-            setNodes([]);
-            setEdges([]);
-            return;
+    // Fetch topology using React Query
+    const {
+        data: topologyData,
+        isLoading,
+        error: queryError,
+        refetch,
+    } = $api.useQuery(
+        "get",
+        "/api/v1/nbi/topology",
+        {
+            params: {
+                query: {
+                    local_site_id: selectedSiteId as string,
+                },
+            },
+        },
+        {
+            enabled: !!selectedSiteId,
         }
+    );
 
-        setIsLoading(true);
-        setError(null);
-        try {
-            const data = await topologyService.getTopology(
-                token,
-                selectedSiteId
-            );
-            // Filter: only actual devices (parent === null), exclude interface/termination-point nodes
-            const deviceNodes = (data.nodes || []).filter(n => n.parent === null);
-            const dataLinks = data.links || [];
-            const flowNodes = layoutNodes(deviceNodes, dataLinks);
-            const flowEdges = buildEdges(dataLinks);
-            setNodes(flowNodes);
-            setEdges(flowEdges);
-        } catch (err: any) {
-            console.error("Failed to load topology:", err);
-            setError(err.message || "Failed to load topology");
-            setNodes([]);
-            setEdges([]);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [token, selectedSiteId, setNodes, setEdges]);
+    const error = queryError ? (queryError as any).message || "Failed to load topology" : syncError;
 
+    // Update nodes and edges when data changes
     useEffect(() => {
-        fetchTopology();
-    }, [fetchTopology]);
+        if (topologyData) {
+            const dataNodes = (topologyData.nodes as unknown as TopologyNode[]) || [];
+            const dataLinks = (topologyData.links as unknown as TopologyLink[]) || [];
+            const deviceNodes = dataNodes.filter((n) => n.parent === null);
+            setNodes(layoutNodes(deviceNodes, dataLinks));
+            setEdges(buildEdges(dataLinks));
+        } else {
+            setNodes([]);
+            setEdges([]);
+        }
+    }, [topologyData, setNodes, setEdges]);
 
     // Sync topology from ODL
     const handleSync = async () => {
-        if (!token) return;
         setIsSyncing(true);
+        setSyncError(null);
         try {
-            await topologyService.syncTopology(token);
-            // Re-fetch after sync
-            await fetchTopology();
+            await fetchClient.POST("/api/v1/nbi/topology/sync");
+            await refetch();
         } catch (err: any) {
             console.error("Topology sync failed:", err);
-            setError(err.message || "Sync failed");
+            setSyncError(err.message || "Sync failed");
         } finally {
             setIsSyncing(false);
         }
@@ -450,88 +464,77 @@ export default function TopologyCanvas({
     // Empty / no site selected state
     if (!selectedSiteId) {
         return (
-            <div className="relative h-full bg-white flex items-center justify-center overflow-hidden">
-                <div className="text-center">
-                    <div className="mb-4">
-                        <FontAwesomeIcon
-                            icon={faNetworkWired}
-                            className="w-16 h-16 text-gray-300"
-                        />
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <Box display="flex" alignItems="center" justifyContent="center" height="100%" bgcolor="background.paper" position="relative" overflow="hidden">
+                <Box textAlign="center">
+                    <Box mb={2}>
+                        <FontAwesomeIcon icon={faNetworkWired} className="w-16 h-16 text-gray-300" />
+                    </Box>
+                    <Typography variant="h6" color="text.primary" gutterBottom>
                         Topology Diagram
-                    </h3>
-                    <p className="text-sm text-gray-500 max-w-md">
-                        Select a site from the sidebar to view its network
-                        topology
-                    </p>
-                </div>
-            </div>
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" maxWidth={300} mx="auto">
+                        Select a site from the sidebar to view its network topology
+                    </Typography>
+                </Box>
+            </Box>
         );
     }
 
     // Loading state
     if (isLoading) {
         return (
-            <div className="relative h-full bg-white flex items-center justify-center overflow-hidden">
-                <div className="text-center">
-                    <FontAwesomeIcon
-                        icon={faSpinner}
-                        className="w-8 h-8 text-blue-500 animate-spin mb-3"
-                    />
-                    <p className="text-sm text-gray-500">
+            <Box display="flex" alignItems="center" justifyContent="center" height="100%" bgcolor="background.paper" position="relative" overflow="hidden">
+                <Box textAlign="center">
+                    <CircularProgress size={32} sx={{ mb: 2 }} />
+                    <Typography variant="body2" color="text.secondary">
                         Loading topology...
-                    </p>
-                </div>
-            </div>
+                    </Typography>
+                </Box>
+            </Box>
         );
     }
 
     // Error state
     if (error) {
         return (
-            <div className="relative h-full bg-white flex items-center justify-center overflow-hidden">
-                <div className="text-center">
-                    <p className="text-sm text-red-500 mb-3">{error}</p>
-                    <button
-                        onClick={fetchTopology}
-                        className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                    >
+            <Box display="flex" alignItems="center" justifyContent="center" height="100%" bgcolor="background.paper" position="relative" overflow="hidden">
+                <Box textAlign="center">
+                    <Typography variant="body2" color="error.main" mb={2}>{error}</Typography>
+                    <Button variant="contained" onClick={() => refetch()}>
                         Retry
-                    </button>
-                </div>
-            </div>
+                    </Button>
+                </Box>
+            </Box>
         );
     }
 
     // Empty topology for this site
     if (nodes.length === 0) {
         return (
-            <div className="relative h-full bg-white flex items-center justify-center overflow-hidden">
-                <div className="text-center">
-                    <FontAwesomeIcon
-                        icon={faNetworkWired}
-                        className="w-12 h-12 text-gray-300 mb-3"
-                    />
-                    <h3 className="text-base font-medium text-gray-900 mb-1">
+            <Box display="flex" alignItems="center" justifyContent="center" height="100%" bgcolor="background.paper" position="relative" overflow="hidden">
+                <Box textAlign="center">
+                    <FontAwesomeIcon icon={faNetworkWired} className="w-12 h-12 text-gray-300 mb-3" />
+                    <Typography variant="subtitle1" color="text.primary" fontWeight={500} gutterBottom>
                         No Devices Found
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-4">
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" mb={3}>
                         No devices are assigned to this site yet.
-                    </p>
-                    <button
+                    </Typography>
+                    <Button
+                        variant="contained"
                         onClick={handleSync}
                         disabled={isSyncing}
-                        className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                        startIcon={
+                            <FontAwesomeIcon
+                                icon={isSyncing ? faSpinner : faSync}
+                                className={isSyncing ? "animate-spin" : ""}
+                            />
+                        }
                     >
-                        <FontAwesomeIcon
-                            icon={isSyncing ? faSpinner : faSync}
-                            className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`}
-                        />
                         {isSyncing ? "Syncing..." : "Sync from ODL"}
-                    </button>
-                </div>
-            </div>
+                    </Button>
+                </Box>
+            </Box>
         );
     }
 
@@ -539,23 +542,27 @@ export default function TopologyCanvas({
         <div className="relative h-full w-full">
             {/* Toolbar */}
             <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
-                <button
+                <Button
+                    variant="outlined"
+                    size="small"
+                    color="inherit"
                     onClick={handleSync}
                     disabled={isSyncing}
-                    className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 inline-flex items-center gap-1.5"
-                    title="Sync topology from ODL"
+                    startIcon={
+                        <FontAwesomeIcon
+                            icon={isSyncing ? faSpinner : faSync}
+                            className={isSyncing ? "animate-spin" : ""}
+                        />
+                    }
+                    sx={{ bgcolor: "white", "&:hover": { bgcolor: "grey.50" }, textTransform: "none" }}
                 >
-                    <FontAwesomeIcon
-                        icon={isSyncing ? faSpinner : faSync}
-                        className={`w-3 h-3 ${isSyncing ? "animate-spin" : ""}`}
-                    />
                     {isSyncing ? "Syncing..." : "Sync"}
-                </button>
-                <div className="text-xs text-gray-500 bg-white/80 px-2 py-1 rounded">
-                    {nodes.length} device{nodes.length !== 1 ? "s" : ""}
-                    {edges.length > 0 &&
-                        ` · ${edges.length} link${edges.length !== 1 ? "s" : ""}`}
-                </div>
+                </Button>
+                <Box bgcolor="rgba(255,255,255,0.8)" px={1} py={0.5} borderRadius={1}>
+                    <Typography variant="caption" color="text.secondary">
+                        {nodes.length} device{nodes.length !== 1 ? "s" : ""}
+                    </Typography>
+                </Box>
             </div>
 
             <ReactFlow

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faChevronRight,
@@ -9,10 +9,23 @@ import {
     faFolderOpen,
     faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
-import { Server, Router as RouterIcon, Shield, Wifi, Box } from "lucide-react";
-import { LocalSite, siteService } from "@/services/siteService";
-import { DeviceNetwork, deviceNetworkService } from "@/services/deviceNetworkService";
-import { useAuth } from "@/contexts/AuthContext";
+import { Server, Router as RouterIcon, Shield, Wifi, Box as BoxIcon } from "lucide-react";
+import {
+    List,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Collapse,
+    CircularProgress,
+    Box,
+    Typography,
+    Divider,
+} from "@mui/material";
+import { $api } from "@/lib/apiv2/fetch";
+import { components } from "@/lib/apiv2/schema";
+
+type LocalSite = components["schemas"]["LocalSiteResponse"];
+type DeviceNetwork = components["schemas"]["DeviceNetworkResponse"];
 
 const getDeviceIcon = (type: string, className: string) => {
     switch (type) {
@@ -25,7 +38,7 @@ const getDeviceIcon = (type: string, className: string) => {
         case "ACCESS_POINT":
             return <Wifi className={className} />;
         default:
-            return <Box className={className} />;
+            return <BoxIcon className={className} />;
     }
 };
 
@@ -36,9 +49,155 @@ interface TopologySiteTreeProps {
     selectedDeviceId?: string | null;
 }
 
-interface SiteWithDevices extends LocalSite {
-    devices?: DeviceNetwork[];
-    isLoading?: boolean;
+function SiteItem({
+    site,
+    isSelected,
+    selectedDeviceId,
+    onSiteSelect,
+    onDeviceSelect,
+}: {
+    site: LocalSite;
+    isSelected: boolean;
+    selectedDeviceId?: string | null;
+    onSiteSelect?: (id: string) => void;
+    onDeviceSelect?: (id: string) => void;
+}) {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    // Fetch devices for this site only when expanded
+    const { data: devicesData, isLoading } = $api.useQuery(
+        "get",
+        "/device-networks/",
+        {
+            params: {
+                query: {
+                    site_id: site.id,
+                    page: 1,
+                    page_size: 100,
+                },
+            },
+        },
+        {
+            enabled: isExpanded,
+        }
+    );
+
+    const devices = devicesData?.devices || [];
+    const deviceCount = site.device_count || 0;
+
+    const handleToggle = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsExpanded(!isExpanded);
+        onSiteSelect?.(site.id);
+    };
+
+    return (
+        <Box mb={0.5}>
+            <ListItemButton
+                selected={isSelected}
+                onClick={handleToggle}
+                sx={{
+                    borderRadius: 1,
+                    mb: 0.5,
+                    px: 1.5,
+                    py: 0.75,
+                    "&.Mui-selected": {
+                        backgroundColor: "primary.50",
+                        color: "primary.700",
+                        "&:hover": {
+                            backgroundColor: "primary.100",
+                        },
+                    },
+                }}
+            >
+                <ListItemIcon sx={{ minWidth: 28 }}>
+                    <FontAwesomeIcon
+                        icon={isExpanded ? faChevronDown : faChevronRight}
+                        className="text-gray-400 w-3 h-3"
+                    />
+                </ListItemIcon>
+                <ListItemIcon sx={{ minWidth: 28 }}>
+                    <FontAwesomeIcon
+                        icon={isExpanded ? faFolderOpen : faFolder}
+                        className={`w-4 h-4 ${isSelected ? "text-primary-600" : "text-blue-500"}`}
+                    />
+                </ListItemIcon>
+                <ListItemText
+                    primary={site.site_name || site.site_code}
+                    primaryTypographyProps={{
+                        variant: "body2",
+                        fontWeight: 500,
+                        noWrap: true,
+                    }}
+                />
+                <Typography variant="caption" color="text.secondary">
+                    ({deviceCount})
+                </Typography>
+            </ListItemButton>
+
+            <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding sx={{ pl: 4 }}>
+                    {isLoading ? (
+                        <ListItemButton disabled sx={{ py: 0.5 }}>
+                            <ListItemIcon sx={{ minWidth: 28 }}>
+                                <CircularProgress size={12} thickness={5} />
+                            </ListItemIcon>
+                            <ListItemText
+                                primary="Loading devices..."
+                                primaryTypographyProps={{ variant: "caption", color: "text.secondary" }}
+                            />
+                        </ListItemButton>
+                    ) : devices.length > 0 ? (
+                        devices.map((device) => {
+                            const isDeviceSelected = selectedDeviceId === device.id;
+                            return (
+                                <ListItemButton
+                                    key={device.id}
+                                    selected={isDeviceSelected}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDeviceSelect?.(device.id);
+                                    }}
+                                    sx={{
+                                        borderRadius: 1,
+                                        mb: 0.5,
+                                        py: 0.5,
+                                        px: 1.5,
+                                        "&.Mui-selected": {
+                                            backgroundColor: "primary.50",
+                                            color: "primary.700",
+                                        },
+                                    }}
+                                >
+                                    <ListItemIcon sx={{ minWidth: 28 }}>
+                                        {getDeviceIcon(
+                                            device.type as string,
+                                            `w-3.5 h-3.5 ${isDeviceSelected ? "text-primary-600" : "text-gray-400"}`
+                                        )}
+                                    </ListItemIcon>
+                                    <ListItemText
+                                        primary={device.device_name}
+                                        primaryTypographyProps={{
+                                            variant: "body2",
+                                            noWrap: true,
+                                            color: isDeviceSelected ? "primary.700" : "text.primary",
+                                        }}
+                                    />
+                                </ListItemButton>
+                            );
+                        })
+                    ) : (
+                        <ListItemButton disabled sx={{ py: 0.5 }}>
+                            <ListItemText
+                                primary="No devices"
+                                primaryTypographyProps={{ variant: "caption", fontStyle: "italic", color: "text.secondary" }}
+                            />
+                        </ListItemButton>
+                    )}
+                </List>
+            </Collapse>
+        </Box>
+    );
 }
 
 export default function TopologySiteTree({
@@ -47,201 +206,90 @@ export default function TopologySiteTree({
     selectedSiteId,
     selectedDeviceId,
 }: TopologySiteTreeProps) {
-    const { token } = useAuth();
-    const [sites, setSites] = useState<SiteWithDevices[]>([]);
-    const [expandedSites, setExpandedSites] = useState<Set<string>>(new Set());
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
     // Fetch all sites
-    useEffect(() => {
-        const fetchSites = async () => {
-            if (!token) return;
+    const { data: sitesData, isLoading, error } = $api.useQuery("get", "/local-sites/", {
+        params: {
+            query: {
+                page: 1,
+                page_size: 100,
+            },
+        },
+    });
 
-            setIsLoading(true);
-            setError(null);
-            try {
-                const response = await siteService.getLocalSites(token, 1, 100);
-                setSites(response.sites);
-            } catch (err: any) {
-                setError(err.message || "Failed to load sites");
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchSites();
-    }, [token]);
-
-    // Fetch devices for a site when expanded
-    const fetchDevicesForSite = async (siteId: string) => {
-        if (!token) return;
-
-        // Mark site as loading
-        setSites(prev => prev.map(site =>
-            site.id === siteId ? { ...site, isLoading: true } : site
-        ));
-
-        try {
-            const response = await deviceNetworkService.getDevices(token, 1, 100, { site_id: siteId });
-            setSites(prev => prev.map(site =>
-                site.id === siteId ? { ...site, devices: response.devices, isLoading: false } : site
-            ));
-        } catch (err: any) {
-            console.error("Failed to load devices:", err);
-            setSites(prev => prev.map(site =>
-                site.id === siteId ? { ...site, isLoading: false } : site
-            ));
-        }
-    };
-
-    // Toggle site expansion
-    const toggleSite = (siteId: string) => {
-        const newExpanded = new Set(expandedSites);
-        if (newExpanded.has(siteId)) {
-            newExpanded.delete(siteId);
-        } else {
-            newExpanded.add(siteId);
-            // Fetch devices if not already loaded
-            const site = sites.find(s => s.id === siteId);
-            if (site && !site.devices) {
-                fetchDevicesForSite(siteId);
-            }
-        }
-        setExpandedSites(newExpanded);
-    };
+    const sites = sitesData?.sites || [];
 
     // Group sites by city
-    const sitesByCity = sites.reduce((acc, site) => {
-        const city = site.city || "Other";
-        if (!acc[city]) {
-            acc[city] = [];
-        }
-        acc[city].push(site);
-        return acc;
-    }, {} as Record<string, SiteWithDevices[]>);
+    const sitesByCity = useMemo(() => {
+        return sites.reduce((acc, site) => {
+            const city = site.city || "Other";
+            if (!acc[city]) {
+                acc[city] = [];
+            }
+            acc[city].push(site);
+            return acc;
+        }, {} as Record<string, LocalSite[]>);
+    }, [sites]);
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center p-8">
-                <FontAwesomeIcon icon={faSpinner} className="w-6 h-6 text-gray-400 animate-spin" />
-            </div>
+            <Box display="flex" justifyContent="center" alignItems="center" p={4} height="100%">
+                <CircularProgress size={32} />
+            </Box>
         );
     }
 
     if (error) {
         return (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {error}
-            </div>
+            <Box p={2} m={2} bgcolor="error.50" color="error.main" borderRadius={1} border={1} borderColor="error.100">
+                <Typography variant="body2">{((error as any)?.message) || "Failed to load sites"}</Typography>
+            </Box>
         );
     }
 
     return (
-        <div className="h-full overflow-y-auto bg-white border-r border-gray-200">
-            <div className="p-4 border-b border-gray-200">
-                <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+        <Box height="100%" sx={{ overflowY: "auto", bgcolor: "background.paper", borderRight: 1, borderColor: "divider" }}>
+            <Box p={2} borderBottom={1} borderColor="divider">
+                <Typography variant="subtitle2" fontWeight={600} textTransform="uppercase" color="text.primary">
                     Sites
-                </h2>
-            </div>
+                </Typography>
+            </Box>
 
-            <div className="p-2">
+            <Box p={1}>
                 {Object.entries(sitesByCity).map(([city, citySites]) => (
-                    <div key={city} className="mb-2">
-                        {/* City Header */}
-                        <div className="px-2 py-1 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <Box key={city} mb={2}>
+                        <Typography
+                            variant="caption"
+                            fontWeight={600}
+                            color="text.secondary"
+                            textTransform="uppercase"
+                            sx={{ px: 1, py: 0.5, display: "block", letterSpacing: "0.05em" }}
+                        >
                             {city}
-                        </div>
+                        </Typography>
 
-                        {/* Sites in this city */}
-                        {citySites.map((site) => {
-                            const isExpanded = expandedSites.has(site.id);
-                            const isSelected = selectedSiteId === site.id;
-                            const deviceCount = site.device_count || 0;
-
-                            return (
-                                <div key={site.id} className="mb-1">
-                                    {/* Site Row */}
-                                    <div
-                                        className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${isSelected
-                                            ? "bg-primary-50 text-primary-700"
-                                            : "hover:bg-gray-50 text-gray-700"
-                                            }`}
-                                        onClick={() => {
-                                            toggleSite(site.id);
-                                            onSiteSelect?.(site.id);
-                                        }}
-                                    >
-                                        <FontAwesomeIcon
-                                            icon={isExpanded ? faChevronDown : faChevronRight}
-                                            className="w-3 h-3 text-gray-400"
-                                        />
-                                        <FontAwesomeIcon
-                                            icon={isExpanded ? faFolderOpen : faFolder}
-                                            className={`w-4 h-4 ${isSelected ? "text-primary-600" : "text-blue-500"}`}
-                                        />
-                                        <div className="flex-1 flex items-center justify-between min-w-0">
-                                            <span className="text-sm font-medium truncate">
-                                                {site.site_name || site.site_code}
-                                            </span>
-                                            <span className="text-xs text-gray-500 ml-2">
-                                                ({deviceCount})
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Devices (when expanded) */}
-                                    {isExpanded && (
-                                        <div className="ml-6 mt-1">
-                                            {site.isLoading ? (
-                                                <div className="flex items-center gap-2 px-2 py-1 text-gray-500">
-                                                    <FontAwesomeIcon icon={faSpinner} className="w-3 h-3 animate-spin" />
-                                                    <span className="text-xs">Loading devices...</span>
-                                                </div>
-                                            ) : site.devices && site.devices.length > 0 ? (
-                                                site.devices.map((device) => {
-                                                    const isDeviceSelected = selectedDeviceId === device.id;
-                                                    return (
-                                                        <div
-                                                            key={device.id}
-                                                            className={`flex items-center gap-2 px-2 py-1 rounded cursor-pointer transition-colors ${isDeviceSelected
-                                                                ? "bg-primary-50 text-primary-700"
-                                                                : "hover:bg-gray-50 text-gray-600"
-                                                                }`}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                onDeviceSelect?.(device.id);
-                                                            }}
-                                                        >
-                                                            {getDeviceIcon(
-                                                                device.type,
-                                                                `w-3.5 h-3.5 ${isDeviceSelected ? "text-primary-600" : "text-gray-400"}`
-                                                            )}
-                                                            <span className="text-sm truncate flex-1">
-                                                                {device.device_name}
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })
-                                            ) : (
-                                                <div className="px-2 py-1 text-xs text-gray-500 italic">
-                                                    No devices
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
+                        <List disablePadding>
+                            {citySites.map((site) => (
+                                <SiteItem
+                                    key={site.id}
+                                    site={site}
+                                    isSelected={selectedSiteId === site.id}
+                                    selectedDeviceId={selectedDeviceId}
+                                    onSiteSelect={onSiteSelect}
+                                    onDeviceSelect={onDeviceSelect}
+                                />
+                            ))}
+                        </List>
+                    </Box>
                 ))}
 
                 {sites.length === 0 && (
-                    <div className="p-8 text-center text-gray-500 text-sm">
-                        No sites found
-                    </div>
+                    <Box p={4} textAlign="center">
+                        <Typography variant="body2" color="text.secondary">
+                            No sites found
+                        </Typography>
+                    </Box>
                 )}
-            </div>
-        </div>
+            </Box>
+        </Box>
     );
 }

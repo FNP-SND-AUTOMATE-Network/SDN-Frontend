@@ -286,7 +286,6 @@ export default function TopologyConfigModal({
                             interfaceData={ifaceData}
                             mode="edit"
                             deviceId={nodeId}
-                            token={token}
                             onSuccess={() => loadSectionData("interface")} // Refresh on success
                             onCancel={() => { }}
                             hideFooter={true}
