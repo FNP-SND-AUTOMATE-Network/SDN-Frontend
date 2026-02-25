@@ -1,7 +1,23 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Typography,
+  Box,
+} from "@mui/material";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faEllipsisVertical,
@@ -9,24 +25,26 @@ import {
   faTrash,
   faMapMarkerAlt,
 } from "@fortawesome/free-solid-svg-icons";
-import { LocalSite, SiteType } from "@/services/siteService";
+import { components } from "@/lib/apiv2/schema";
+
+type LocalSiteResponse = components["schemas"]["LocalSiteResponse"];
 
 interface SiteTableProps {
-  sites: LocalSite[];
-  onEditSite: (site: LocalSite) => void;
+  sites: LocalSiteResponse[];
+  onEditSite: (site: LocalSiteResponse) => void;
   onDeleteSite: (siteId: string, siteName: string) => void;
 }
 
-const getSiteTypeBadge = (siteType: SiteType) => {
-  const badges: Record<SiteType, { label: string; className: string }> = {
-    DataCenter: { label: "Data Center", className: "bg-blue-100 text-blue-800" },
-    BRANCH: { label: "Branch", className: "bg-green-100 text-green-800" },
-    OTHER: { label: "Other", className: "bg-gray-100 text-gray-800" },
+const getSiteTypeBadge = (siteType: string) => {
+  const badges: Record<string, { label: string; color: "primary" | "success" | "default" }> = {
+    DataCenter: { label: "Data Center", color: "primary" },
+    BRANCH: { label: "Branch", color: "success" },
+    OTHER: { label: "Other", color: "default" },
   };
   return badges[siteType] || badges.OTHER;
 };
 
-const formatLocation = (site: LocalSite) => {
+const formatLocation = (site: LocalSiteResponse) => {
   const parts = [];
   if (site.building_name) parts.push(site.building_name);
   if (site.floor_number !== null && site.floor_number !== undefined)
@@ -36,7 +54,7 @@ const formatLocation = (site: LocalSite) => {
   return parts.length > 0 ? parts.join(", ") : "-";
 };
 
-const formatAddress = (site: LocalSite) => {
+const formatAddress = (site: LocalSiteResponse) => {
   const parts = [];
   if (site.address) parts.push(site.address);
   if (site.city) parts.push(site.city);
@@ -58,197 +76,157 @@ export default function SiteTable({
   onEditSite,
   onDeleteSite,
 }: SiteTableProps) {
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [menuSiteId, setMenuSiteId] = useState<string | null>(null);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpenDropdownId(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleDropdownClick = (e: React.MouseEvent, siteId: string) => {
+  const handleMenuClick = (e: React.MouseEvent<HTMLButtonElement>, siteId: string) => {
     e.stopPropagation();
+    setAnchorEl(e.currentTarget);
+    setMenuSiteId(siteId);
+  };
 
-    if (openDropdownId === siteId) {
-      setOpenDropdownId(null);
-      return;
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setMenuSiteId(null);
+  };
+
+  const handleEdit = () => {
+    if (!menuSiteId) return;
+    const site = sites.find((s) => s.site_code === menuSiteId);
+    if (site) {
+      onEditSite(site);
     }
-
-    const button = e.currentTarget as HTMLElement;
-    const rect = button.getBoundingClientRect();
-
-    setDropdownPosition({
-      top: rect.bottom + 4,
-      left: rect.right - 176,
-    });
-    setOpenDropdownId(siteId);
+    handleMenuClose();
   };
 
-  const handleEdit = (site: LocalSite) => {
-    onEditSite(site);
-    setOpenDropdownId(null);
-  };
-
-  const handleDelete = (site: LocalSite) => {
-    onDeleteSite(site.id, site.site_name || site.site_code);
-    setOpenDropdownId(null);
+  const handleDelete = () => {
+    if (!menuSiteId) return;
+    const site = sites.find((s) => s.site_code === menuSiteId);
+    if (site) {
+      onDeleteSite(site.site_code, site.site_name || site.site_code); // Use site_code as ID
+    }
+    handleMenuClose();
   };
 
   return (
-    <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider first:rounded-tl-lg">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Location
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Address
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Devices
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Updated
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+    <>
+      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 2 }}>
+        <Table sx={{ minWidth: 650 }} aria-label="local sites table">
+          <TableHead sx={{ bgcolor: "grey.50" }}>
+            <TableRow>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Name</TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Type</TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Location</TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Address</TableCell>
+              <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Devices</TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Updated</TableCell>
+              <TableCell align="right" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}></TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {sites.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-6 py-12 text-center text-gray-500 font-sf-pro-text"
-                >
-                  <FontAwesomeIcon
-                    icon={faMapMarkerAlt}
-                    className="w-12 h-12 mx-auto mb-3 text-gray-300"
-                  />
-                  <p className="text-lg font-medium">No sites found</p>
-                  <p className="text-sm text-gray-400">Add a new site to get started</p>
-                </td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                  <Box sx={{ color: "text.secondary", textAlign: "center" }}>
+                    <FontAwesomeIcon icon={faMapMarkerAlt} size="3x" style={{ opacity: 0.3, marginBottom: 16 }} />
+                    <Typography variant="h6" fontWeight="medium" sx={{ mb: 1 }}>
+                      No sites found
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Add a new site to get started
+                    </Typography>
+                  </Box>
+                </TableCell>
+              </TableRow>
             ) : (
               sites.map((site) => {
                 const typeBadge = getSiteTypeBadge(site.site_type);
                 return (
-                  <tr key={site.id} className="hover:bg-gray-50 transition-colors">
-                    {/* Name Column */}
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900 font-sf-pro-text">
-                          {site.site_name || site.site_code}
-                        </div>
-                        {site.site_name && (
-                          <div className="text-xs text-gray-500 font-sf-pro-text">
-                            {site.site_code}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Type Column */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${typeBadge.className}`}>
-                        {typeBadge.label}
-                      </span>
-                    </td>
-
-                    {/* Location Column */}
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-700 font-sf-pro-text">
+                  <TableRow
+                    key={site.site_code}
+                    sx={{ "&:last-child td, &:last-child th": { border: 0 }, "&:hover": { bgcolor: "action.hover" }, transition: "background-color 0.2s" }}
+                  >
+                    <TableCell component="th" scope="row">
+                      <Typography variant="body2" fontWeight={500} color="text.primary">
+                        {site.site_name || site.site_code}
+                      </Typography>
+                      {site.site_name && (
+                        <Typography variant="caption" color="text.secondary">
+                          {site.site_code}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={typeBadge.label}
+                        color={typeBadge.color}
+                        size="small"
+                        sx={{ fontSize: "0.75rem", height: 24, fontWeight: 500 }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" color="text.secondary">
                         {formatLocation(site)}
-                      </span>
-                    </td>
-
-                    {/* Address Column */}
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-500 font-sf-pro-text truncate max-w-xs block">
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <Typography variant="body2" color="text.secondary" noWrap>
                         {formatAddress(site)}
-                      </span>
-                    </td>
-
-                    {/* Devices Column */}
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className="text-sm font-medium text-gray-900 font-sf-pro-text">
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Typography variant="body2" fontWeight={500}>
                         {site.device_count || 0}
-                      </span>
-                    </td>
-
-                    {/* Updated Column */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-500 font-sf-pro-text">
-                        {formatDate(site.updated_at)}
-                      </span>
-                    </td>
-
-                    {/* Actions Column */}
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <button
-                        onClick={(e) => handleDropdownClick(e, site.id)}
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" color="text.secondary">
+                        {formatDate(site.updated_at || new Date().toISOString())}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleMenuClick(e, site.site_code)}
+                        sx={{ color: "text.secondary", "&:hover": { color: "text.primary" } }}
                       >
-                        <FontAwesomeIcon icon={faEllipsisVertical} className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
+                        <FontAwesomeIcon icon={faEllipsisVertical} style={{ width: 16 }} />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
                 );
               })
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-      {/* Portal Dropdown Menu */}
-      {openDropdownId && typeof window !== "undefined" && createPortal(
-        <div
-          ref={dropdownRef}
-          className="fixed w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[9999]"
-          style={{
-            top: dropdownPosition.top,
-            left: dropdownPosition.left,
-          }}
-        >
-          <button
-            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
-            onClick={() => {
-              const site = sites.find(s => s.id === openDropdownId);
-              if (site) handleEdit(site);
-            }}
-          >
-            <FontAwesomeIcon icon={faPencil} className="w-4 h-4 text-blue-600" />
-            Edit
-          </button>
-          <hr className="my-1 border-gray-200" />
-          <button
-            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
-            onClick={() => {
-              const site = sites.find(s => s.id === openDropdownId);
-              if (site) handleDelete(site);
-            }}
-          >
-            <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
-            Delete
-          </button>
-        </div>,
-        document.body
-      )}
-    </div>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        transformOrigin={{ horizontal: "right", vertical: "top" }}
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        slotProps={{
+          paper: {
+            elevation: 3,
+            sx: { minWidth: 150, borderRadius: 2, mt: 0.5 },
+          },
+        }}
+      >
+        <MenuItem onClick={(e) => { e.stopPropagation(); handleEdit(); }}>
+          <ListItemIcon>
+            <FontAwesomeIcon icon={faPencil} className="text-blue-600 w-4 h-4" />
+          </ListItemIcon>
+          <ListItemText primary="Edit" primaryTypographyProps={{ variant: "body2", color: "text.primary" }} />
+        </MenuItem>
+        <MenuItem onClick={(e) => { e.stopPropagation(); handleDelete(); }}>
+          <ListItemIcon>
+            <FontAwesomeIcon icon={faTrash} className="text-red-600 w-4 h-4" />
+          </ListItemIcon>
+          <ListItemText primary="Delete" primaryTypographyProps={{ variant: "body2", color: "error.main" }} />
+        </MenuItem>
+      </Menu>
+    </>
   );
 }

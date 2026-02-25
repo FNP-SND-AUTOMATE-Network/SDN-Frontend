@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/Button";
+import { Box, Typography, Pagination, useMediaQuery, useTheme } from "@mui/material";
 
 interface SitePaginationProps {
   currentPage: number;
@@ -15,91 +15,51 @@ export default function SitePagination({
   total,
   onPageChange,
 }: SitePaginationProps) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   const totalPages = Math.ceil(total / pageSize);
-  const startIndex = (currentPage - 1) * pageSize + 1;
+  const startIndex = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endIndex = Math.min(currentPage * pageSize, total);
 
+  const handlePaginationChange = (_event: React.ChangeEvent<unknown>, page: number) => {
+    onPageChange(page);
+  };
+
+  if (total === 0) return null;
+
   return (
-    <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg mt-4">
-      <div className="flex-1 flex justify-between sm:hidden">
-        <Button
-          variant="outline"
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-        >
-          Next
-        </Button>
-      </div>
-      <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm text-gray-700 font-sf-pro-text">
-            Showing{" "}
-            <span className="font-medium">{total > 0 ? startIndex : 0}</span>{" "}
-            to <span className="font-medium">{endIndex}</span> of{" "}
-            <span className="font-medium">{total}</span> results
-          </p>
-        </div>
-        <div>
-          <nav
-            className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-            aria-label="Pagination"
-          >
-            <Button
-              variant="outline"
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="rounded-r-none"
-            >
-              Previous
-            </Button>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        py: 2,
+        px: 3,
+        bgcolor: "white",
+        borderTop: 1,
+        borderColor: "divider",
+        minHeight: 64,
+        gap: 2,
+      }}
+    >
+      <Typography variant="body2" color="text.secondary">
+        Showing <Box component="span" fontWeight="medium">{startIndex}</Box> to{" "}
+        <Box component="span" fontWeight="medium">{endIndex}</Box> of{" "}
+        <Box component="span" fontWeight="medium">{total}</Box> results
+      </Typography>
 
-            {/* Page Numbers */}
-            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-              let pageNumber: number;
-              if (totalPages <= 5) {
-                pageNumber = i + 1;
-              } else if (currentPage <= 3) {
-                pageNumber = i + 1;
-              } else if (currentPage >= totalPages - 2) {
-                pageNumber = totalPages - 4 + i;
-              } else {
-                pageNumber = currentPage - 2 + i;
-              }
-
-              return (
-                <button
-                  key={pageNumber}
-                  onClick={() => onPageChange(pageNumber)}
-                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium font-sf-pro-text ${
-                    currentPage === pageNumber
-                      ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
-                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {pageNumber}
-                </button>
-              );
-            })}
-
-            <Button
-              variant="outline"
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="rounded-l-none"
-            >
-              Next
-            </Button>
-          </nav>
-        </div>
-      </div>
-    </div>
+      <Pagination
+        count={totalPages}
+        page={currentPage}
+        onChange={handlePaginationChange}
+        color="primary"
+        shape="rounded"
+        size={isMobile ? "small" : "medium"}
+        siblingCount={isMobile ? 0 : 1}
+      />
+    </Box>
   );
 }
 

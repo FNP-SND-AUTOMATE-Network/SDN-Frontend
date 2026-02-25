@@ -6,19 +6,21 @@ import { ProtectedRoute } from "@/components/auth/AuthGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
+import { $api } from "@/lib/apiv2/fetch";
+import { fetchClient } from "@/lib/apiv2/fetch";
+import { components } from "@/lib/apiv2/schema";
+
+type LocalSiteResponse = components["schemas"]["LocalSiteResponse"];
+type LocalSiteCreate = components["schemas"]["LocalSiteCreate"];
+type LocalSiteUpdate = components["schemas"]["LocalSiteUpdate"];
+import SiteHeader from "@/components/device/site/SiteHeader";
+import SiteTable from "@/components/device/site/SiteTable";
+import SitePagination from "@/components/device/site/SitePagination";
+import CreateSiteModal from "@/components/device/site/CreateSiteModal";
+import EditSiteModal from "@/components/device/site/EditSiteModal";
 import {
-  siteService,
-  LocalSite,
-  LocalSiteCreateRequest,
-  LocalSiteUpdateRequest,
-} from "@/services/siteService";
-import {
-  SiteHeader,
-  SiteTable,
-  SiteModal,
   SiteSkeleton,
   SiteTableSkeleton,
-  SitePagination,
 } from "@/components/device/site";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -33,11 +35,7 @@ export default function DeviceSitePage() {
     showError,
   } = useSnackbar();
 
-  const [sites, setSites] = useState<LocalSite[]>([]);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isDataLoading, setIsDataLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const isFirstLoadRef = useRef(true);
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -68,7 +66,7 @@ export default function DeviceSitePage() {
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
     mode: "add" | "edit";
-    site: LocalSite | null;
+    site: LocalSiteResponse | null;
   }>({
     isOpen: false,
     mode: "add",
@@ -86,48 +84,28 @@ export default function DeviceSitePage() {
     siteName: "",
   });
 
-  // Fetch sites
-  const fetchSites = useCallback(async () => {
-    if (!token) return;
-
-    try {
-      if (isFirstLoadRef.current) {
-        setIsInitialLoading(true);
-      } else {
-        setIsDataLoading(true);
-      }
-      setError(null);
-      const response = await siteService.getLocalSites(
-        token,
-        pagination.page,
-        pagination.pageSize,
-        {
+  const { data, isLoading: isInitialLoading, error, refetch } = $api.useQuery(
+    "get",
+    "/local-sites/",
+    {
+      params: {
+        query: {
+          page: pagination.page,
+          page_size: pagination.pageSize,
           search: debouncedSearch || undefined,
           site_type: filters.site_type || undefined,
-        }
-      );
-      setSites(response.sites);
-      setPagination((prev) => ({
-        ...prev,
-        total: response.total,
-      }));
-
-      // Mark first load as complete
-      if (isFirstLoadRef.current) {
-        isFirstLoadRef.current = false;
-      }
-    } catch (err) {
-      console.error("Error fetching sites:", err);
-      setError("Unable to load site data");
-    } finally {
-      setIsInitialLoading(false);
-      setIsDataLoading(false);
+        },
+      },
     }
-  }, [token, pagination.page, pagination.pageSize, debouncedSearch, filters.site_type]);
+  );
+
+  const sites = data?.sites || [];
 
   useEffect(() => {
-    fetchSites();
-  }, [fetchSites]);
+    if (data?.total !== undefined) {
+      setPagination((prev) => ({ ...prev, total: data.total }));
+    }
+  }, [data?.total]);
 
   // Modal handlers
   const openAddModal = () => {
@@ -138,11 +116,11 @@ export default function DeviceSitePage() {
     });
   };
 
-  const openEditModal = (site: LocalSite) => {
+  const openEditModal = (site: LocalSiteResponse) => {
     setModalState({
       isOpen: true,
       mode: "edit",
-      site: site,
+      site: site as any, // Temporary cast until modals are refactored
     });
   };
 
@@ -155,17 +133,22 @@ export default function DeviceSitePage() {
   };
 
   const handleModalSuccess = () => {
-    fetchSites();
+    refetch();
   };
 
   // CRUD operations
-  const handleCreateSite = async (data: LocalSiteCreateRequest) => {
+  const handleCreateSite = async (data: LocalSiteCreate) => {
     if (!token) return;
 
     try {
-      await siteService.createLocalSite(token, data);
+      const { error } = await fetchClient.POST("/local-sites/", {
+        body: data,
+      });
+
+      if (error) throw error;
+
       showSuccess("Site created successfully");
-      await fetchSites();
+      refetch();
     } catch (err: any) {
       console.error("Error creating site:", err);
       showError(err.message || "Unable to create site");
@@ -173,27 +156,27 @@ export default function DeviceSitePage() {
     }
   };
 
-  const handleUpdateSite = async (data: LocalSiteUpdateRequest) => {
+  const handleUpdateSite = async (data: LocalSiteUpdate) => {
     if (!token || !modalState.site) return;
 
     try {
-      await siteService.updateLocalSite(token, modalState.site.id, data);
+      const { error } = await fetchClient.PUT("/local-sites/{site_id}", {
+        params: {
+          path: {
+            site_id: modalState.site.site_code, // Assuming site.id maps to site_code based on schema
+          },
+        },
+        body: data,
+      });
+
+      if (error) throw error;
+
       showSuccess("Site updated successfully");
-      await fetchSites();
+      refetch();
     } catch (err: any) {
       console.error("Error updating site:", err);
       showError(err.message || "Unable to update site");
       throw err;
-    }
-  };
-
-  const handleModalSubmit = async (
-    data: LocalSiteCreateRequest | LocalSiteUpdateRequest
-  ) => {
-    if (modalState.mode === "add") {
-      await handleCreateSite(data as LocalSiteCreateRequest);
-    } else {
-      await handleUpdateSite(data as LocalSiteUpdateRequest);
     }
   };
 
@@ -218,10 +201,19 @@ export default function DeviceSitePage() {
     if (!token || !confirmModal.siteId) return;
 
     try {
-      await siteService.deleteLocalSite(token, confirmModal.siteId);
+      const { error } = await fetchClient.DELETE("/local-sites/{site_id}", {
+        params: {
+          path: {
+            site_id: confirmModal.siteId,
+          },
+        },
+      });
+
+      if (error) throw error;
+
       showSuccess("Site deleted successfully");
       closeConfirmModal();
-      await fetchSites();
+      refetch();
     } catch (err: any) {
       console.error("Error deleting site:", err);
       showError(err.message || "Unable to delete site");
@@ -287,12 +279,12 @@ export default function DeviceSitePage() {
                 <h3 className="text-lg font-medium text-gray-900 mb-2 font-sf-pro-display">
                   Error Occurred
                 </h3>
-                <p className="text-gray-600 font-sf-pro-text">{error}</p>
+                <p className="text-gray-600 font-sf-pro-text">{error instanceof Error ? error.message : "An error occurred"}</p>
               </div>
             ) : (
               <>
                 <SiteTable
-                  sites={sites}
+                  sites={sites as any}
                   onEditSite={canCreateOrEdit ? openEditModal : () => { }}
                   onDeleteSite={canDelete ? openDeleteConfirm : () => { }}
                 />
@@ -310,15 +302,22 @@ export default function DeviceSitePage() {
           </>
         )}
 
-        {/* Site Modal */}
+        {/* Create Site Modal */}
         {canCreateOrEdit && (
-          <SiteModal
-            isOpen={modalState.isOpen}
+          <CreateSiteModal
+            isOpen={modalState.isOpen && modalState.mode === "add"}
             onClose={closeModal}
-            onSuccess={handleModalSuccess}
-            mode={modalState.mode}
+            onSubmit={handleCreateSite}
+          />
+        )}
+
+        {/* Edit Site Modal */}
+        {canCreateOrEdit && (
+          <EditSiteModal
+            isOpen={modalState.isOpen && modalState.mode === "edit"}
             site={modalState.site}
-            onSubmit={handleModalSubmit}
+            onClose={closeModal}
+            onSubmit={handleUpdateSite}
           />
         )}
 
