@@ -1,45 +1,61 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faPlus,
-  faSearch,
-  faTimes,
-  faDesktop,
-  faServer,
-  faDatabase,
-  faLayerGroup,
-} from "@fortawesome/free-solid-svg-icons";
-import { Button } from "@/components/ui/Button";
+  Box,
+  Typography,
+  Paper,
+  Stack,
+  TextField,
+  InputAdornment,
+  IconButton,
+  Button,
+  MenuItem,
+  Select,
+} from "@mui/material";
+import {
+  Add,
+  Search,
+  Close,
+  Layers,
+} from "@mui/icons-material";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faDatabase, faServer, faDesktop } from "@fortawesome/free-solid-svg-icons";
 
 interface StatusCardProps {
   label: string;
   count: number;
-  icon: any;
+  icon: React.ReactNode;
   color: "blue" | "green" | "purple" | "orange";
 }
 
 function StatusCard({ label, count, icon, color }: StatusCardProps) {
   const iconColorClasses = {
-    blue: "text-blue-500",
-    green: "text-green-500",
-    purple: "text-purple-500",
-    orange: "text-orange-500",
+    blue: "#3b82f6",
+    green: "#22c55e",
+    purple: "#a855f7",
+    orange: "#f97316",
   };
 
   return (
-    <div className="flex-1 min-w-[140px] p-4 rounded-lg border border-gray-200 bg-white">
-      <div className="flex items-center gap-2 mb-1">
-        <FontAwesomeIcon icon={icon} className={`w-4 h-4 ${iconColorClasses[color]}`} />
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+    <Paper variant="outlined" sx={{ flex: 1, minWidth: 140, p: 2, borderRadius: 2 }}>
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+        <Box sx={{ color: iconColorClasses[color], display: "flex", alignItems: "center" }}>
+          {icon}
+        </Box>
+        <Typography
+          variant="caption"
+          fontWeight={600}
+          color="text.secondary"
+          sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}
+        >
           {label}
-        </span>
-      </div>
-      <div className="text-2xl font-bold text-gray-900 font-sf-pro-display">
+        </Typography>
+      </Stack>
+      <Typography variant="h5" fontWeight={700}>
         {count.toLocaleString()}
-      </div>
-    </div>
+      </Typography>
+    </Paper>
   );
 }
 
@@ -83,101 +99,108 @@ export default function OperationHeader({
     onSearch("");
   };
 
-  const handleOsTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onFilterChange({ os_type: e.target.value });
-  };
-
   return (
-    <div className="mb-6">
-      {/* Header Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 font-sf-pro-display">
-            Operating Systems
-          </h1>
-          <p className="text-sm text-gray-500 font-sf-pro-text">
-            Manage OS images and configurations for your infrastructure
-          </p>
-        </div>
-      </div>
+    <Box sx={{ mb: 3 }}>
+      {/* Title */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" fontWeight={700}>
+          Operating Systems
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Manage OS images and configurations for your infrastructure
+        </Typography>
+      </Box>
 
-      {/* Search, Filter, and Add Button - All in one row */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center mb-6">
-        {/* Search Input */}
-        <div className="relative flex-1 max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FontAwesomeIcon icon={faSearch} className="w-4 h-4 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search operating systems..."
-            value={localSearch}
-            onChange={handleSearchChange}
-            className="w-full pl-9 pr-9 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text"
-          />
-          {localSearch && (
-            <button
-              onClick={handleClearSearch}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-            >
-              <FontAwesomeIcon icon={faTimes} className="w-3 h-3" />
-            </button>
-          )}
-        </div>
+      {/* Search, Filter, Add - one row */}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={2}
+        alignItems={{ sm: "center" }}
+        sx={{ mb: 3 }}
+      >
+        <TextField
+          size="small"
+          placeholder="Search operating systems..."
+          value={localSearch}
+          onChange={handleSearchChange}
+          sx={{
+            flex: 1,
+            maxWidth: 360,
+            "& .MuiOutlinedInput-root": {
+              bgcolor: "white",
+              borderRadius: 2
+            },
+          }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search fontSize="small" color="action" />
+                </InputAdornment>
+              ),
+              endAdornment: localSearch ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={handleClearSearch} edge="end">
+                    <Close fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+            },
+          }}
+        />
 
-        {/* Type Filter */}
-        <select
+        <Select
+          size="small"
           value={selectedOsType}
-          onChange={handleOsTypeChange}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-sf-pro-text bg-white min-w-[140px]"
+          onChange={(e) => onFilterChange({ os_type: e.target.value })
+          }
+          displayEmpty
+          sx={{ minWidth: 140, bgcolor: "white", borderRadius: 2 }}
         >
-          <option value="">All Types</option>
-          {/* <option value="CISCO_IOS">Cisco IOS</option>
-          <option value="CISCO_NXOS">Cisco NX-OS</option>
-          <option value="CISCO_ASA">Cisco ASA</option>
-          <option value="CISCO_Nexus">Cisco Nexus</option>
-          <option value="CISCO_IOS_XR">Cisco IOS-XR</option> */}
-          <option value="CISCO_IOS_XE">Cisco IOS-XE</option>
-          <option value="HUAWEI_VRP">Huawei VRP</option>
-        </select>
+          <MenuItem value="">All Types</MenuItem>
+          <MenuItem value="CISCO_IOS_XE">Cisco IOS-XE</MenuItem>
+          <MenuItem value="HUAWEI_VRP">Huawei VRP</MenuItem>
+        </Select>
 
-        {/* Spacer */}
-        <div className="flex-1" />
+        <Box flex={1} />
 
-        {/* Add OS Button */}
-        <Button onClick={onAddOs} className="flex items-center gap-2 whitespace-nowrap">
-          <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={onAddOs}
+          sx={{ whiteSpace: "nowrap", borderRadius: 2 }}
+        >
           Add OS
         </Button>
-      </div>
+      </Stack>
 
       {/* Status Cards */}
-      <div className="flex gap-4 overflow-x-auto pb-2">
+      <Stack direction="row" spacing={2} sx={{ overflowX: "auto", pb: 0.5 }}>
         <StatusCard
           label="Total OS"
           count={totalOs}
-          icon={faDesktop}
+          icon={<FontAwesomeIcon icon={faDesktop} fontSize="16px" />}
           color="blue"
         />
         <StatusCard
           label="Devices"
           count={totalDevices}
-          icon={faServer}
+          icon={<FontAwesomeIcon icon={faServer} fontSize="16px" />}
           color="green"
         />
         <StatusCard
           label="Backups"
           count={totalBackups}
-          icon={faDatabase}
+          icon={<FontAwesomeIcon icon={faDatabase} fontSize="16px" />}
           color="purple"
         />
         <StatusCard
           label="Total Usage"
           count={totalUsage}
-          icon={faLayerGroup}
+          icon={<Layers fontSize="small" />}
           color="orange"
         />
-      </div>
-    </div>
+      </Stack>
+    </Box>
   );
 }

@@ -1,17 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimes, faDownload } from "@fortawesome/free-solid-svg-icons";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { useEffect, useRef, useState } from "react";
 import {
-  OperatingSystem,
-  OperatingSystemCreateRequest,
-  OperatingSystemUpdateRequest,
-  OsType,
-  OSFile,
-} from "@/services/operatingSystemService";
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Box,
+  Typography,
+  TextField,
+  Button,
+  IconButton,
+  Stack,
+  Chip,
+  MenuItem,
+  Skeleton,
+  CircularProgress,
+} from "@mui/material";
+import { Close, Download, CloudUpload } from "@mui/icons-material";
+import { components } from "@/lib/apiv2/schema";
+
+type OperatingSystem = components["schemas"]["OperatingSystemResponse"];
+type OperatingSystemCreateRequest = components["schemas"]["OperatingSystemCreate"];
+type OperatingSystemUpdateRequest = components["schemas"]["OperatingSystemUpdate"];
+type OsType = components["schemas"]["OsType"];
+type OSFile = components["schemas"]["OSFileResponse"];
 import { Tag } from "@/services/tagService";
 
 interface OperationModalProps {
@@ -34,7 +47,6 @@ interface OperationModalProps {
 }
 
 interface FormErrors {
-
   os_type?: string;
   description?: string;
   file?: string;
@@ -59,7 +71,7 @@ export default function OperationModal({
     description: "",
   });
   const [file, setFile] = useState<File | null>(null);
-  const [version, setVersion] = useState<string>("");
+  const [version, setVersion] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -74,9 +86,7 @@ export default function OperationModal({
           os_type: os.os_type,
           description: os.description || "",
         });
-        setSelectedTagIds(
-          os.tags ? os.tags.map((t) => t.tag_id) : []
-        );
+        setSelectedTagIds(os.tags ? os.tags.map((t) => t.tag_id) : []);
       } else {
         setFormData({
           os_type: "CISCO_IOS_XE" as OsType,
@@ -90,27 +100,14 @@ export default function OperationModal({
     }
   }, [isOpen, mode, os]);
 
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen]);
-
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value === "" ? null : value,
     }));
-
     if (errors[name as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -119,33 +116,25 @@ export default function OperationModal({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0] || null;
     setFile(selectedFile);
-    if (errors.file) {
-      setErrors((prev) => ({ ...prev, file: "" }));
-    }
+    if (errors.file) setErrors((prev) => ({ ...prev, file: "" }));
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-
     if (isLoading) return;
-
     const droppedFile = e.dataTransfer.files?.[0];
     if (droppedFile) {
       setFile(droppedFile);
-      if (errors.file) {
-        setErrors((prev) => ({ ...prev, file: "" }));
-      }
+      if (errors.file) setErrors((prev) => ({ ...prev, file: "" }));
     }
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!isLoading) {
-      setIsDragging(true);
-    }
+    if (!isLoading) setIsDragging(true);
   };
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
@@ -159,20 +148,11 @@ export default function OperationModal({
     fileInputRef.current?.click();
   };
 
-  const handleVersionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setVersion(e.target.value);
-    if (errors.version) {
-      setErrors((prev) => ({ ...prev, version: "" }));
-    }
-  };
-
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
-
     if (formData.description && formData.description.length > 500) {
       newErrors.description = "Description must not exceed 500 characters";
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -187,13 +167,8 @@ export default function OperationModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
+    if (!validateForm()) return;
     setIsLoading(true);
-
     try {
       await onSubmit({
         osData: formData,
@@ -204,271 +179,312 @@ export default function OperationModal({
       onSuccess();
       onClose();
     } catch (error) {
-      // Error จะถูก handle โดย parent component
       console.error("Error submitting operating system:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
+    <Dialog
+      open={isOpen}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{ sx: { borderRadius: 1 } }}
     >
-      <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-lg">
-          <h2 className="text-xl font-semibold text-gray-900 font-sf-pro-display">
-            {mode === "add" ? "Add Operating System" : "Edit Operating System"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            disabled={isLoading}
-          >
-            <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
-          </button>
-        </div>
+      <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Typography variant="h6" component="span" fontWeight={600}>
+          {mode === "add" ? "Add Operating System" : "Edit Operating System"}
+        </Typography>
+        <IconButton onClick={onClose} disabled={isLoading} size="small">
+          <Close fontSize="small" />
+        </IconButton>
+      </DialogTitle>
 
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="p-6 space-y-6 overflow-y-auto flex-1"
-        >
+      <form onSubmit={handleSubmit}>
+        <DialogContent dividers sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
           {/* Basic Information */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4 font-sf-pro-display">
+          <Box>
+            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
               Basic Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  OS Type
-                </label>
-                <select
-                  name="os_type"
-                  value={formData.os_type || "OTHER"}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed font-sf-pro-text"
-                >
-                  {/* <option value="CISCO_IOS">Cisco IOS</option>
-                  <option value="CISCO_NXOS">Cisco NX-OS</option>
-                  <option value="CISCO_ASA">Cisco ASA</option>
-                  <option value="CISCO_Nexus">Cisco Nexus</option>
-                  <option value="CISCO_IOS_XR">Cisco IOS-XR</option> */}
-                  <option value="CISCO_IOS_XE">Cisco IOS-XE</option>
-                  <option value="HUAWEI_VRP">Huawei VRP</option>
-                  <option value="OTHER">Other</option>
-                </select>
-              </div>
-            </div>
-          </div>
+            </Typography>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}>
+              <TextField
+                select
+                label="OS Type"
+                name="os_type"
+                value={formData.os_type || "OTHER"}
+                onChange={handleChange}
+                disabled={isLoading}
+                size="small"
+                fullWidth
+              >
+                <MenuItem value="CISCO_IOS_XE">Cisco IOS-XE</MenuItem>
+                <MenuItem value="HUAWEI_VRP">Huawei VRP</MenuItem>
+                <MenuItem value="OTHER">Other</MenuItem>
+              </TextField>
+            </Box>
+          </Box>
 
           {/* Description & Tags */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}>
+            <Box>
+              <TextField
+                label="Description"
                 name="description"
                 value={formData.description || ""}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text min-h-[80px]"
+                size="small"
+                fullWidth
+                multiline
+                minRows={3}
                 placeholder="Short description about this OS"
+                error={!!errors.description}
+                helperText={errors.description}
               />
-              {errors.description && (
-                <p className="mt-1 text-xs text-red-600">{errors.description}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            </Box>
+            <Box>
+              <Typography variant="body2" fontWeight={500} color="text.secondary" sx={{ mb: 1 }}>
                 Tags (optional)
-              </label>
+              </Typography>
               {allTags.length === 0 ? (
-                <p className="text-xs text-gray-400 font-sf-pro-text">
+                <Typography variant="caption" color="text.disabled">
                   No tags available. You can create tags in Tag/Group page.
-                </p>
+                </Typography>
               ) : (
-                <div className="space-y-3">
+                <Stack spacing={1.5}>
                   {(["tag", "group", "other"] as const).map((typeKey) => {
                     const tagsOfType = allTags.filter((t) => t.type === typeKey);
                     if (tagsOfType.length === 0) return null;
-
-                    const typeLabel =
-                      typeKey === "tag"
-                        ? "Tag"
-                        : typeKey === "group"
-                          ? "Group"
-                          : "Other";
+                    const typeLabel = typeKey === "tag" ? "Tag" : typeKey === "group" ? "Group" : "Other";
 
                     return (
-                      <div key={typeKey}>
-                        <div className="text-xs font-medium text-gray-500 mb-1 font-sf-pro-text">
+                      <Box key={typeKey}>
+                        <Typography variant="caption" fontWeight={500} color="text.secondary" sx={{ mb: 0.5, display: "block" }}>
                           {typeLabel}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
+                        </Typography>
+                        <Stack direction="row" flexWrap="wrap" useFlexGap spacing={0.75}>
                           {tagsOfType.map((tag) => {
                             const isSelected = selectedTagIds.includes(tag.tag_id);
                             return (
-                              <button
+                              <Chip
                                 key={tag.tag_id}
-                                type="button"
+                                label={tag.tag_name}
+                                size="small"
                                 onClick={() => toggleTagSelection(tag.tag_id)}
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border transition-colors font-sf-pro-text ${isSelected
-                                  ? "border-blue-500 bg-blue-100 text-blue-800"
-                                  : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
-                                  }`}
-                              >
-                                <span
-                                  className="w-2 h-2 rounded-full mr-2"
-                                  style={{ backgroundColor: tag.color }}
-                                />
-                                {tag.tag_name}
-                              </button>
+                                variant={isSelected ? "filled" : "outlined"}
+                                sx={{
+                                  fontSize: 11,
+                                  fontWeight: 500,
+                                  ...(isSelected
+                                    ? { bgcolor: "primary.100", color: "primary.dark", borderColor: "primary.main" }
+                                    : { borderColor: "grey.300", "&:hover": { borderColor: "primary.light", bgcolor: "primary.50" } }),
+                                }}
+                                avatar={
+                                  <Box
+                                    component="span"
+                                    sx={{
+                                      width: 8,
+                                      height: 8,
+                                      borderRadius: "50%",
+                                      bgcolor: tag.color,
+                                      ml: "4px !important",
+                                    }}
+                                  />
+                                }
+                              />
                             );
                           })}
-                        </div>
-                      </div>
+                        </Stack>
+                      </Box>
                     );
                   })}
-                </div>
+                </Stack>
               )}
-            </div>
-          </div>
+            </Box>
+          </Box>
 
-          {/* File Upload - Dropzone */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4 font-sf-pro-display">
+          {/* File Upload */}
+          <Box>
+            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
               OS File (optional)
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+            </Typography>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" }, gap: 2, alignItems: "start" }}>
+              <Box>
+                <Typography variant="body2" fontWeight={500} color="text.secondary" sx={{ mb: 0.5 }}>
                   OS File
-                </label>
-                <div
+                </Typography>
+                <Box
                   onDrop={handleDrop}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
-                  className={`flex flex-col items-center justify-center px-4 py-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isDragging
-                    ? "border-blue-400 bg-blue-50"
-                    : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50"
-                    } ${isLoading ? "opacity-60 cursor-not-allowed" : ""}`}
                   onClick={handleBrowseClick}
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    px: 2,
+                    py: 4,
+                    border: 2,
+                    borderStyle: "dashed",
+                    borderRadius: 1,
+                    cursor: isLoading ? "not-allowed" : "pointer",
+                    opacity: isLoading ? 0.6 : 1,
+                    borderColor: isDragging ? "primary.main" : "grey.300",
+                    bgcolor: isDragging ? "primary.50" : "grey.50",
+                    transition: "all 0.2s",
+                    "&:hover": {
+                      borderColor: "primary.main",
+                      bgcolor: "primary.50",
+                    },
+                  }}
                 >
-                  <div className="text-sm font-medium text-gray-800 font-sf-pro-text">
+                  <CloudUpload sx={{ fontSize: 28, color: "action.active", mb: 1 }} />
+                  <Typography variant="body2" fontWeight={500}>
                     Drag and drop OS file here
-                  </div>
-                  <div className="mt-1 text-xs text-gray-500 font-sf-pro-text">
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
                     Or click to browse (single file)
-                  </div>
+                  </Typography>
                   {file && (
-                    <div className="mt-3 px-3 py-2 rounded-md bg-white border border-gray-200 w-full text-xs text-gray-700 font-sf-pro-text flex items-center justify-between">
-                      <span className="truncate max-w-[220px]">
+                    <Box
+                      sx={{
+                        mt: 1.5,
+                        px: 1.5,
+                        py: 1,
+                        borderRadius: 0.5,
+                        bgcolor: "background.paper",
+                        border: 1,
+                        borderColor: "divider",
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Typography variant="caption" noWrap sx={{ maxWidth: 220 }}>
                         {file.name}
-                      </span>
-                      <span className="ml-2 whitespace-nowrap">
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap", ml: 1 }}>
                         {(file.size / (1024 * 1024)).toFixed(2)} MB
-                      </span>
-                    </div>
+                      </Typography>
+                    </Box>
                   )}
-                </div>
+                </Box>
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="*/*"
                   onChange={handleFileChange}
                   disabled={isLoading}
-                  className="hidden"
+                  style={{ display: "none" }}
                 />
                 {errors.file && (
-                  <p className="mt-1 text-xs text-red-600">{errors.file}</p>
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                    {errors.file}
+                  </Typography>
                 )}
-              </div>
-              <div>
-                <Input
+              </Box>
+              <Box>
+                <TextField
                   label="Version (optional)"
                   name="version"
                   value={version}
-                  onChange={handleVersionChange}
-                  error={errors.version || ""}
+                  onChange={(e) => {
+                    setVersion(e.target.value);
+                    if (errors.version) setErrors((prev) => ({ ...prev, version: "" }));
+                  }}
+                  error={!!errors.version}
+                  helperText={errors.version || "File will be uploaded after saving OS information."}
                   disabled={isLoading}
+                  size="small"
+                  fullWidth
                   placeholder="e.g. 17.3.1"
                 />
-                <p className="mt-2 text-xs text-gray-500 font-sf-pro-text">
-                  File will be uploaded after saving OS information. Large OS
-                  images are supported.
-                </p>
-              </div>
-            </div>
-          </div>
+              </Box>
+            </Box>
+          </Box>
 
           {/* Existing Files (Edit mode) */}
           {mode === "edit" && (
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4 font-sf-pro-display">
+            <Box>
+              <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
                 Uploaded Files
-              </h3>
+              </Typography>
               {isFilesLoading ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-md border border-gray-200"
-                    >
-                      <div className="space-y-1 w-full">
-                        <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse" />
-                        <div className="h-3 w-1/3 bg-gray-200 rounded animate-pulse" />
-                      </div>
-                    </div>
+                <Stack spacing={1}>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} variant="rounded" height={56} />
                   ))}
-                </div>
+                </Stack>
               ) : files.length === 0 ? (
-                <div className="p-4 bg-gray-50 border border-dashed border-gray-300 rounded-md text-sm text-gray-500 font-sf-pro-text">
-                  No files uploaded for this operating system yet.
-                </div>
+                <Box
+                  sx={{
+                    p: 2,
+                    bgcolor: "grey.50",
+                    border: 1,
+                    borderStyle: "dashed",
+                    borderColor: "grey.300",
+                    borderRadius: 0.5,
+                    textAlign: "center",
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    No files uploaded for this operating system yet.
+                  </Typography>
+                </Box>
               ) : (
-                <div className="space-y-2">
-                  {files.map((file) => (
-                    <div
-                      key={file.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-md border border-gray-200"
+                <Stack spacing={1}>
+                  {files.map((f) => (
+                    <Box
+                      key={f.id}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        p: 1.5,
+                        bgcolor: "grey.50",
+                        borderRadius: 0.5,
+                        border: 1,
+                        borderColor: "divider",
+                      }}
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-900 font-sf-pro-text truncate">
-                            {file.file_name}
-                          </span>
-                          {file.version && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs font-medium">
-                              v{file.version}
-                            </span>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                          <Typography variant="body2" fontWeight={500} noWrap>
+                            {f.file_name}
+                          </Typography>
+                          {f.version && (
+                            <Chip
+                              label={`v${f.version}`}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                              sx={{ fontSize: 11 }}
+                            />
                           )}
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500 font-sf-pro-text">
-                          <span>
-                            {(file.file_size / (1024 * 1024)).toFixed(2)} MB
-                          </span>
-                          {file.file_type && <span>{file.file_type}</span>}
-                          {file.checksum && (
-                            <span className="truncate max-w-[200px]">
-                              checksum: {file.checksum}
-                            </span>
+                        </Stack>
+                        <Stack direction="row" spacing={1.5} sx={{ mt: 0.5 }}>
+                          <Typography variant="caption" color="text.secondary">
+                            {(f.file_size / (1024 * 1024)).toFixed(2)} MB
+                          </Typography>
+                          {f.file_type && (
+                            <Typography variant="caption" color="text.secondary">
+                              {f.file_type}
+                            </Typography>
                           )}
-                        </div>
-                        <div className="mt-1 text-xs text-gray-400 font-sf-pro-text">
+                          {f.checksum && (
+                            <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>
+                              checksum: {f.checksum}
+                            </Typography>
+                          )}
+                        </Stack>
+                        <Typography variant="caption" color="text.disabled" sx={{ mt: 0.25, display: "block" }}>
                           Uploaded at{" "}
-                          {new Date(file.created_at).toLocaleString("en-US", {
+                          {new Date(f.created_at).toLocaleString("en-US", {
                             year: "numeric",
                             month: "short",
                             day: "2-digit",
@@ -476,64 +492,58 @@ export default function OperationModal({
                             minute: "2-digit",
                             hour12: false,
                           })}
-                        </div>
-                      </div>
-                      {(onDownloadFile || onDeleteFile) && (
-                        <div className="ml-4 flex items-center gap-2">
-                          {onDownloadFile && (
-                            <button
-                              type="button"
-                              disabled={isLoading}
-                              onClick={() => onDownloadFile(file)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors"
-                              title="Download"
-                            >
-                              <FontAwesomeIcon icon={faDownload} />
-                            </button>
-                          )}
-                          {onDeleteFile && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="text-red-600 border-red-200 hover:bg-red-50"
-                              disabled={isLoading}
-                              onClick={() => onDeleteFile(file.id)}
-                            >
-                              Delete
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                        </Typography>
+                      </Box>
+                      <Stack direction="row" spacing={0.5} sx={{ ml: 2 }}>
+                        {onDownloadFile && (
+                          <IconButton
+                            size="small"
+                            disabled={isLoading}
+                            onClick={() => onDownloadFile(f)}
+                            title="Download"
+                          >
+                            <Download fontSize="small" />
+                          </IconButton>
+                        )}
+                        {onDeleteFile && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            disabled={isLoading}
+                            onClick={() => onDeleteFile(f.id)}
+                            sx={{ fontSize: 11, minWidth: 0, px: 1.5 }}
+                          >
+                            Delete
+                          </Button>
+                        )}
+                      </Stack>
+                    </Box>
                   ))}
-                </div>
+                </Stack>
               )}
-            </div>
+            </Box>
           )}
+        </DialogContent>
 
-          {/* Footer */}
-          <div className="flex justify-end space-x-3 pt-4 border-gray-200">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading
-                ? "Saving..."
-                : mode === "add"
-                  ? "Add Operating System"
-                  : "Save Changes"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button variant="outlined" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={isLoading}
+            startIcon={isLoading ? <CircularProgress size={16} /> : undefined}
+          >
+            {isLoading
+              ? "Saving..."
+              : mode === "add"
+                ? "Add Operating System"
+                : "Save Changes"}
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
   );
 }
-
-
