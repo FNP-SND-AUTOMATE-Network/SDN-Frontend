@@ -10,6 +10,7 @@ export type OsType =
   | "CISCO_Nexus"
   | "CISCO_IOS_XR"
   | "CISCO_IOS_XE"
+  | "HUAWEI_VRP"
   | "OTHER";
 
 // ข้อมูล Tag แบบย่อที่แนบมากับ OS (จาก OperatingSystemResponse.tags)
@@ -93,9 +94,9 @@ export interface OSFileListResponse {
 // API Error class (reuse pattern from siteService)
 export class APIError extends Error {
   constructor(
-    message: string,
-    public status: number,
-    public response?: any,
+    public message: string,
+    public status?: number,
+    public response?: unknown,
   ) {
     super(message);
     this.name = "APIError";

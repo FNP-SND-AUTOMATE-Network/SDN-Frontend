@@ -132,9 +132,9 @@ export interface SubnetCreateRequest {
 
 export class IPAMAPIError extends Error {
   constructor(
-    message: string,
+    public message: string,
     public status: number,
-    public response?: any,
+    public response?: unknown,
   ) {
     super(message);
     this.name = "IPAMAPIError";
