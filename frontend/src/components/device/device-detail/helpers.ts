@@ -1,38 +1,46 @@
 // Helper functions for device detail components
 
-export const getStatusBadge = (status: string) => {
-  const base =
-    "px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap font-sf-pro-text";
+/**
+ * Get MUI-compatible status config
+ */
+export const getStatusConfig = (
+  status: string,
+): { color: "success" | "error" | "info" | "default"; label: string } => {
   switch (status) {
     case "ONLINE":
-      return { dot: "bg-green-500", bg: "bg-green-100" };
+      return { color: "success", label: "Online" };
     case "OFFLINE":
-      return { dot: "bg-red-500", bg: "bg-red-100" };
+      return { color: "error", label: "Offline" };
     case "MAINTENANCE":
-      return { dot: "bg-blue-500", bg: "bg-blue-100" };
+      return { color: "info", label: "Maintenance" };
     default:
-      return { dot: "bg-gray-400", bg: "bg-gray-100" };
+      return { color: "default", label: status || "Unknown" };
   }
 };
 
-export const getTypeBadge = (type: string) => {
-  const base =
-    "px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap font-sf-pro-text";
+/**
+ * Get type color for inline text
+ */
+export const getTypeColor = (type: string): string => {
   switch (type) {
     case "SWITCH":
-      return `${base} bg-blue-100 text-blue-800`;
+      return "#2563EB";
     case "ROUTER":
-      return `${base} bg-purple-100 text-purple-800`;
+      return "#7C3AED";
     case "FIREWALL":
-      return `${base} bg-red-100 text-red-800`;
+      return "#DC2626";
     case "ACCESS_POINT":
-      return `${base} bg-indigo-100 text-indigo-800`;
+      return "#0891B2";
     default:
-      return `${base} bg-gray-100 text-gray-800`;
+      return "#6B7280";
   }
 };
 
-export const formatDate = (dateString: string) => {
+/**
+ * Format date string to localized display
+ */
+export const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return "-";
   const date = new Date(dateString);
   return date.toLocaleDateString("en-US", {
     year: "numeric",
@@ -43,3 +51,6 @@ export const formatDate = (dateString: string) => {
     hour12: false,
   });
 };
+
+// Keep backward compatibility for old references
+export const getStatusBadge = getStatusConfig;

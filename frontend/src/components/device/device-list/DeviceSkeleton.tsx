@@ -1,89 +1,97 @@
 "use client";
 
+import {
+  Box,
+  Stack,
+  Skeleton,
+  Paper,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableContainer,
+} from "@mui/material";
+
 export default function DeviceSkeleton() {
   return (
-    <div className="space-y-4">
-      {/* Header skeleton */}
-      <div className="mb-6">
-        {/* Page Title */}
-        <div className="mb-4">
-          <div className="h-7 w-32 bg-gray-200 rounded animate-pulse" />
-          <div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2" />
-        </div>
+    <Box>
+      {/* Page Title */}
+      <Box mb={2}>
+        <Skeleton variant="text" width={120} height={36} />
+        <Skeleton variant="text" width={280} height={20} />
+      </Box>
 
-        {/* Status Cards Skeleton */}
-        <div className="flex gap-4 mb-6 overflow-x-auto pb-2">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div
-              key={index}
-              className="bg-white border border-gray-200 rounded-lg p-4 flex-1 min-w-[140px]"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 rounded-full bg-gray-200 animate-pulse" />
-                <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
-              </div>
-              <div className="flex items-baseline gap-2">
-                <div className="h-8 w-8 bg-gray-200 rounded animate-pulse" />
-                <div className="h-4 w-10 bg-gray-200 rounded animate-pulse" />
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* Search + Filters Row */}
+      <Stack direction="row" spacing={1.5} alignItems="center" mb={3}>
+        <Skeleton variant="rounded" width={360} height={40} sx={{ borderRadius: 0.5 }} />
+        <Skeleton variant="rounded" width={140} height={40} sx={{ borderRadius: 0.5 }} />
+        <Skeleton variant="rounded" width={140} height={40} sx={{ borderRadius: 0.5 }} />
+        <Box flex={1} />
+        <Skeleton variant="rounded" width={120} height={40} sx={{ borderRadius: 0.5 }} />
+      </Stack>
 
-        {/* Search and Filters Row Skeleton */}
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-          <div className="h-10 w-64 bg-gray-200 rounded-lg animate-pulse" />
-          <div className="flex items-center gap-2">
-            <div className="h-10 w-28 bg-gray-200 rounded-lg animate-pulse" />
-            <div className="h-10 w-28 bg-gray-200 rounded-lg animate-pulse" />
-          </div>
-          <div className="flex-1" />
-          <div className="flex items-center gap-4">
-            <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
-            <div className="h-10 w-28 bg-gray-200 rounded-lg animate-pulse" />
-          </div>
-        </div>
-      </div>
+      {/* Status Cards */}
+      <Stack direction="row" spacing={2} mb={3}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Paper key={i} variant="outlined" sx={{ p: 2, flex: 1, minWidth: 140, borderRadius: 0.5 }}>
+            <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
+              <Skeleton variant="circular" width={10} height={10} />
+              <Skeleton variant="text" width={50} height={18} />
+            </Stack>
+            <Stack direction="row" alignItems="baseline" spacing={1}>
+              <Skeleton variant="text" width={30} height={32} />
+              <Skeleton variant="text" width={28} height={18} />
+            </Stack>
+          </Paper>
+        ))}
+      </Stack>
 
-      {/* Table skeleton */}
-      <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                {Array.from({ length: 9 }).map((_, index) => (
-                  <th
-                    key={index}
-                    className="px-6 py-3 text-left"
-                  >
-                    <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {Array.from({ length: 6 }).map((_, rowIndex) => (
-                <tr key={rowIndex}>
-                  {Array.from({ length: 9 }).map((_, colIndex) => (
-                    <td key={colIndex} className="px-6 py-4">
-                      <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
-                    </td>
-                  ))}
-                </tr>
+      {/* Table */}
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 0.5 }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ bgcolor: "grey.50" }}>
+              {Array.from({ length: 9 }).map((_, i) => (
+                <TableCell key={i}>
+                  <Skeleton variant="text" width={60} height={16} />
+                </TableCell>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {Array.from({ length: 6 }).map((_, rowIdx) => (
+              <TableRow key={rowIdx}>
+                {/* Device Name */}
+                <TableCell><Skeleton variant="text" width={120} /></TableCell>
+                {/* Serial */}
+                <TableCell><Skeleton variant="text" width={100} /></TableCell>
+                {/* Type */}
+                <TableCell><Skeleton variant="text" width={70} /></TableCell>
+                {/* Model */}
+                <TableCell><Skeleton variant="text" width={80} /></TableCell>
+                {/* IP */}
+                <TableCell><Skeleton variant="text" width={90} /></TableCell>
+                {/* Vendor */}
+                <TableCell><Skeleton variant="text" width={60} /></TableCell>
+                {/* Site */}
+                <TableCell><Skeleton variant="text" width={70} /></TableCell>
+                {/* Status */}
+                <TableCell><Skeleton variant="rounded" width={60} height={24} sx={{ borderRadius: 3 }} /></TableCell>
+                {/* Actions */}
+                <TableCell align="right"><Skeleton variant="circular" width={28} height={28} /></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-      {/* Pagination skeleton */}
-      <div className="mt-4 flex items-center justify-between">
-        <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
-        <div className="flex gap-2">
-          <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" />
-          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
-        </div>
-      </div>
-    </div>
+      {/* Pagination */}
+      <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2} mt={1} px={1}>
+        <Skeleton variant="text" width={120} height={20} />
+        <Skeleton variant="text" width={40} height={20} />
+        <Skeleton variant="rounded" width={60} height={30} />
+      </Stack>
+    </Box>
   );
 }

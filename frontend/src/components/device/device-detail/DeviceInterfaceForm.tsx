@@ -1,12 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMicrochip, faGlobe, faRoute, faClock } from "@fortawesome/free-solid-svg-icons";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import {
+    Box,
+    Typography,
+    Stack,
+    TextField,
+    Switch,
+    FormControlLabel,
+    Button,
+    Divider,
+    CircularProgress,
+} from "@mui/material";
+import {
+    Memory,
+    Language,
+    AltRoute,
+    AccessTime,
+} from "@mui/icons-material";
 import { InterfaceDiscoveryResponse } from "@/services/deviceNetworkService";
-import { intentService } from "@/services/intentService";
+import { fetchClient } from "@/lib/apiv2/fetch";
 import { useSnackbar } from "@/hooks/useSnackbar";
 
 type NetworkInterface = InterfaceDiscoveryResponse["interfaces"][0];
@@ -15,18 +28,33 @@ interface DeviceInterfaceFormProps {
     interfaceData: NetworkInterface;
     mode: "view" | "edit";
     deviceId: string;
-    token: string | null;
     onSuccess: () => void;
     onCancel: () => void;
     hideFooter?: boolean;
     onSaveRef?: React.MutableRefObject<(() => Promise<void>) | null>;
 }
 
+// --- Helper: Section Header ---
+function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
+    return (
+        <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            sx={{ pb: 1, mb: 2, borderBottom: 1, borderColor: "divider" }}
+        >
+            {icon}
+            <Typography variant="subtitle2" fontWeight={600}>
+                {title}
+            </Typography>
+        </Stack>
+    );
+}
+
 export function DeviceInterfaceForm({
     interfaceData,
     mode,
     deviceId,
-    token,
     onSuccess,
     onCancel,
     hideFooter,
@@ -69,66 +97,57 @@ export function DeviceInterfaceForm({
         }
     }, [interfaceData]);
 
+    // Helper to execute an intent via fetchClient
+    const executeIntent = async (intent: string, params: Record<string, any>) => {
+        const { error } = await fetchClient.POST("/api/v1/nbi/intent", {
+            body: {
+                intent,
+                node_id: deviceId,
+                params,
+            },
+        });
+        if (error) {
+            throw new Error((error as any)?.message || `Failed to execute intent: ${intent}`);
+        }
+    };
+
     const handleSave = async () => {
-        if (!token) return;
         setIsSaving(true);
         try {
             // 1. Handle Admin Status (Enable / Disable)
             const currentAdminUp = interfaceData.admin_status?.toLowerCase() === "up";
 
             if (adminStatus && !currentAdminUp) {
-                await intentService.executeIntent(token, {
-                    intent: "interface.enable",
-                    node_id: deviceId,
-                    params: { interface: interfaceData.name }
-                });
+                await executeIntent("interface.enable", { interface: interfaceData.name });
             } else if (!adminStatus && currentAdminUp) {
-                await intentService.executeIntent(token, {
-                    intent: "interface.disable",
-                    node_id: deviceId,
-                    params: { interface: interfaceData.name }
-                });
+                await executeIntent("interface.disable", { interface: interfaceData.name });
             }
 
             // 2. Handle IP (interface.set_ipv4)
             const ipChanged = ipv4Address !== (interfaceData.ipv4_address || "") || subnetMask !== (interfaceData.subnet_mask || "");
-            if (ipChanged) {
-                if (ipv4Address && subnetMask) {
-                    await intentService.executeIntent(token, {
-                        intent: "interface.set_ipv4",
-                        node_id: deviceId,
-                        params: {
-                            interface: interfaceData.name,
-                            ip: ipv4Address,
-                            mask: subnetMask
-                        }
-                    });
-                }
+            if (ipChanged && ipv4Address && subnetMask) {
+                await executeIntent("interface.set_ipv4", {
+                    interface: interfaceData.name,
+                    ip: ipv4Address,
+                    mask: subnetMask,
+                });
             }
 
             // 3. Handle Description (interface.set_description)
             const descChanged = description !== (interfaceData.description || "");
             if (descChanged) {
-                await intentService.executeIntent(token, {
-                    intent: "interface.set_description",
-                    node_id: deviceId,
-                    params: {
-                        interface: interfaceData.name,
-                        description: description
-                    }
+                await executeIntent("interface.set_description", {
+                    interface: interfaceData.name,
+                    description,
                 });
             }
 
             // 4. Handle MTU (interface.set_mtu)
             const mtuChanged = mtu !== (interfaceData.mtu || "");
             if (mtuChanged && mtu) {
-                await intentService.executeIntent(token, {
-                    intent: "interface.set_mtu",
-                    node_id: deviceId,
-                    params: {
-                        interface: interfaceData.name,
-                        mtu: parseInt(mtu.toString(), 10)
-                    }
+                await executeIntent("interface.set_mtu", {
+                    interface: interfaceData.name,
+                    mtu: parseInt(mtu.toString(), 10),
                 });
             }
 
@@ -143,14 +162,10 @@ export function DeviceInterfaceForm({
                     prefix = parts[1];
                 }
 
-                await intentService.executeIntent(token, {
-                    intent: "interface.set_ipv6",
-                    node_id: deviceId,
-                    params: {
-                        interface: interfaceData.name,
-                        ip: ip,
-                        prefix: prefix
-                    }
+                await executeIntent("interface.set_ipv6", {
+                    interface: interfaceData.name,
+                    ip,
+                    prefix,
                 });
             }
 
@@ -162,24 +177,16 @@ export function DeviceInterfaceForm({
 
             if (newProcessId !== oldProcessId || newArea !== oldArea) {
                 if (newProcessId && newArea) {
-                    await intentService.executeIntent(token, {
-                        intent: "routing.ospf.add_network_interface",
-                        node_id: deviceId,
-                        params: {
-                            process_id: parseInt(newProcessId, 10),
-                            interface: interfaceData.name,
-                            area: parseInt(newArea, 10)
-                        }
+                    await executeIntent("routing.ospf.add_network_interface", {
+                        process_id: parseInt(newProcessId, 10),
+                        interface: interfaceData.name,
+                        area: parseInt(newArea, 10),
                     });
                 } else if (!newProcessId && !newArea && oldProcessId && oldArea) {
-                    await intentService.executeIntent(token, {
-                        intent: "routing.ospf.remove_network_interface",
-                        node_id: deviceId,
-                        params: {
-                            process_id: parseInt(oldProcessId, 10),
-                            interface: interfaceData.name,
-                            area: parseInt(oldArea, 10)
-                        }
+                    await executeIntent("routing.ospf.remove_network_interface", {
+                        process_id: parseInt(oldProcessId, 10),
+                        interface: interfaceData.name,
+                        area: parseInt(oldArea, 10),
                     });
                 }
             }
@@ -197,135 +204,325 @@ export function DeviceInterfaceForm({
     const isUp = interfaceData.oper_status?.toLowerCase() === "up";
     const isEdit = mode === "edit";
 
-    const renderField = (label: string, value: string | number, readonly: boolean = false, onChange?: (val: string) => void) => {
-        if (!isEdit || readonly) {
-            return (
-                <div className="flex flex-col">
-                    <span className="text-xs text-gray-500 font-medium mb-1">{label}</span>
-                    <span className="text-sm text-gray-900 font-sf-pro-text">{value || "-"}</span>
-                </div>
-            );
-        }
-        return (
-            <div className="flex flex-col">
-                <label className="text-xs text-gray-700 font-medium mb-1">{label}</label>
-                <Input
-                    value={value?.toString() || ""}
-                    onChange={(e) => onChange?.(e.target.value)}
-                    className="h-8 text-sm"
-                />
-            </div>
-        );
-    }
-
     // Expose handleSave to parent
     if (onSaveRef) {
         onSaveRef.current = handleSave;
     }
 
     return (
-        <div className={`flex flex-col ${hideFooter ? "" : "h-full"}`}>
-            <div className={`font-sf-pro-text space-y-8 flex-1 ${hideFooter ? "" : "p-6 overflow-y-auto"}`}>
-                {/* Section 1: Hardware & Status */}
-                <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 border-b pb-2">
-                        <FontAwesomeIcon icon={faMicrochip} className="text-gray-400 w-4 h-4" /> Hardware & Status
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="flex flex-col">
-                            <span className="text-xs text-gray-500 font-medium mb-2">Operational Status</span>
-                            <div className="flex items-center gap-2">
-                                <span className={`w-3 h-3 rounded-full ${isUp ? "bg-green-500" : "bg-red-500"}`}></span>
-                                <span className={`text-sm font-medium ${isUp ? "text-green-700" : "text-red-700"}`}>
-                                    {interfaceData.oper_status?.toUpperCase() || "UNKNOWN"}
-                                </span>
-                            </div>
-                        </div>
+        <Box sx={{ display: "flex", flexDirection: "column", ...(hideFooter ? {} : { height: "100%" }) }}>
+            <Box sx={{ flex: 1, ...(hideFooter ? {} : { p: 3, overflowY: "auto" }) }}>
+                <Stack spacing={4}>
+                    {/* Section 1: Hardware & Status */}
+                    <Box>
+                        <SectionHeader
+                            icon={<Memory fontSize="small" color="action" />}
+                            title="Hardware & Status"
+                        />
+                        <Box
+                            sx={{
+                                display: "grid",
+                                gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1fr" },
+                                gap: 2.5,
+                            }}
+                        >
+                            {/* Operational Status */}
+                            <Box>
+                                <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
+                                    Operational Status
+                                </Typography>
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                    <Box
+                                        sx={{
+                                            width: 10,
+                                            height: 10,
+                                            borderRadius: "50%",
+                                            bgcolor: isUp ? "success.main" : "error.main",
+                                        }}
+                                    />
+                                    <Typography
+                                        variant="body2"
+                                        fontWeight={500}
+                                        color={isUp ? "success.dark" : "error.dark"}
+                                    >
+                                        {interfaceData.oper_status?.toUpperCase() || "UNKNOWN"}
+                                    </Typography>
+                                </Stack>
+                            </Box>
 
-                        <div className="flex flex-col">
-                            <span className="text-xs text-gray-500 font-medium mb-2">Admin Status</span>
+                            {/* Admin Status */}
+                            <Box>
+                                <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
+                                    Admin Status
+                                </Typography>
+                                {isEdit ? (
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={adminStatus}
+                                                onChange={() => setAdminStatus(!adminStatus)}
+                                                size="small"
+                                            />
+                                        }
+                                        label={adminStatus ? "UP" : "DOWN"}
+                                        slotProps={{ typography: { variant: "body2", fontWeight: 500 } }}
+                                    />
+                                ) : (
+                                    <Typography variant="body2">
+                                        {interfaceData.admin_status?.toUpperCase()}
+                                    </Typography>
+                                )}
+                            </Box>
+
+                            {/* Description */}
                             {isEdit ? (
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" className="sr-only peer" checked={adminStatus} onChange={() => setAdminStatus(!adminStatus)} />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                    <span className="ml-3 text-sm font-medium text-gray-700">{adminStatus ? "UP" : "DOWN"}</span>
-                                </label>
+                                <TextField
+                                    label="Description"
+                                    size="small"
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    fullWidth
+                                />
                             ) : (
-                                <span className="text-sm text-gray-900 font-sf-pro-text">{interfaceData.admin_status?.toUpperCase()}</span>
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
+                                        Description
+                                    </Typography>
+                                    <Typography variant="body2">{description || "-"}</Typography>
+                                </Box>
                             )}
-                        </div>
 
-                        {renderField("Description", description, false, setDescription)}
-                        {renderField("MAC Address", interfaceData.mac_address, true)}
-                        {renderField("Duplex", duplex, false, setDuplex)}
+                            {/* MAC Address (always read-only) */}
+                            <Box>
+                                <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
+                                    MAC Address
+                                </Typography>
+                                <Typography variant="body2">{interfaceData.mac_address || "-"}</Typography>
+                            </Box>
 
-                        <div className="flex flex-col">
-                            <span className="text-xs text-gray-500 font-medium mb-2">Auto Negotiate</span>
+                            {/* Duplex */}
                             {isEdit ? (
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" className="sr-only peer" checked={autoNegotiate} onChange={() => setAutoNegotiate(!autoNegotiate)} />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                    <span className="ml-3 text-sm font-medium text-gray-700">{autoNegotiate ? "ON" : "OFF"}</span>
-                                </label>
+                                <TextField
+                                    label="Duplex"
+                                    size="small"
+                                    value={duplex}
+                                    onChange={(e) => setDuplex(e.target.value)}
+                                    fullWidth
+                                />
                             ) : (
-                                <span className="text-sm text-gray-900 font-sf-pro-text">{interfaceData.auto_negotiate ? "ON" : "OFF"}</span>
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
+                                        Duplex
+                                    </Typography>
+                                    <Typography variant="body2">{duplex || "-"}</Typography>
+                                </Box>
                             )}
-                        </div>
-                    </div>
-                </div>
 
-                {/* Section 2: IP Configuration */}
-                <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 border-b pb-2">
-                        <FontAwesomeIcon icon={faGlobe} className="text-gray-400 w-4 h-4" /> IP Configuration
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {renderField("IPv4 Address", ipv4Address, false, setIpv4Address)}
-                        {renderField("Subnet Mask (or Prefix)", subnetMask, false, setSubnetMask)}
-                        {renderField("IPv6 Address", ipv6Address, false, setIpv6Address)}
-                        {renderField("MTU", mtu, false, setMtu)}
-                    </div>
-                </div>
+                            {/* Auto Negotiate */}
+                            <Box>
+                                <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
+                                    Auto Negotiate
+                                </Typography>
+                                {isEdit ? (
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={autoNegotiate}
+                                                onChange={() => setAutoNegotiate(!autoNegotiate)}
+                                                size="small"
+                                            />
+                                        }
+                                        label={autoNegotiate ? "ON" : "OFF"}
+                                        slotProps={{ typography: { variant: "body2", fontWeight: 500 } }}
+                                    />
+                                ) : (
+                                    <Typography variant="body2">
+                                        {interfaceData.auto_negotiate ? "ON" : "OFF"}
+                                    </Typography>
+                                )}
+                            </Box>
+                        </Box>
+                    </Box>
 
-                {/* Section 3: Routing (Optional) */}
-                {(interfaceData.has_ospf || isEdit) && (
-                    <div className="space-y-4">
-                        <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 border-b pb-2">
-                            <FontAwesomeIcon icon={faRoute} className="text-gray-400 w-4 h-4" /> OSPF Routing
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {renderField("Process ID", ospfProcessId, false, setOspfProcessId)}
-                            {renderField("Area", ospfArea, false, setOspfArea)}
-                        </div>
-                    </div>
-                )}
+                    {/* Section 2: IP Configuration */}
+                    <Box>
+                        <SectionHeader
+                            icon={<Language fontSize="small" color="action" />}
+                            title="IP Configuration"
+                        />
+                        <Box
+                            sx={{
+                                display: "grid",
+                                gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+                                gap: 2.5,
+                            }}
+                        >
+                            {isEdit ? (
+                                <TextField
+                                    label="IPv4 Address"
+                                    size="small"
+                                    value={ipv4Address}
+                                    onChange={(e) => setIpv4Address(e.target.value)}
+                                    fullWidth
+                                />
+                            ) : (
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
+                                        IPv4 Address
+                                    </Typography>
+                                    <Typography variant="body2">{ipv4Address || "-"}</Typography>
+                                </Box>
+                            )}
 
-                {/* Section 4: Metadata */}
-                <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 border-b pb-2">
-                        <FontAwesomeIcon icon={faClock} className="text-gray-400 w-4 h-4" /> Last Change
-                    </h3>
-                    <div className="flex flex-col">
-                        <span className="text-sm text-gray-900">
-                            {interfaceData.last_change ? new Date(interfaceData.last_change).toLocaleString() : "-"}
-                        </span>
-                    </div>
-                </div>
-            </div>
+                            {isEdit ? (
+                                <TextField
+                                    label="Subnet Mask (or Prefix)"
+                                    size="small"
+                                    value={subnetMask}
+                                    onChange={(e) => setSubnetMask(e.target.value)}
+                                    fullWidth
+                                />
+                            ) : (
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
+                                        Subnet Mask
+                                    </Typography>
+                                    <Typography variant="body2">{subnetMask || "-"}</Typography>
+                                </Box>
+                            )}
+
+                            {isEdit ? (
+                                <TextField
+                                    label="IPv6 Address"
+                                    size="small"
+                                    value={ipv6Address}
+                                    onChange={(e) => setIpv6Address(e.target.value)}
+                                    fullWidth
+                                />
+                            ) : (
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
+                                        IPv6 Address
+                                    </Typography>
+                                    <Typography variant="body2">{ipv6Address || "-"}</Typography>
+                                </Box>
+                            )}
+
+                            {isEdit ? (
+                                <TextField
+                                    label="MTU"
+                                    size="small"
+                                    value={mtu}
+                                    onChange={(e) => setMtu(e.target.value)}
+                                    fullWidth
+                                />
+                            ) : (
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
+                                        MTU
+                                    </Typography>
+                                    <Typography variant="body2">{mtu || "-"}</Typography>
+                                </Box>
+                            )}
+                        </Box>
+                    </Box>
+
+                    {/* Section 3: OSPF Routing (Optional) */}
+                    {(interfaceData.has_ospf || isEdit) && (
+                        <Box>
+                            <SectionHeader
+                                icon={<AltRoute fontSize="small" color="action" />}
+                                title="OSPF Routing"
+                            />
+                            <Box
+                                sx={{
+                                    display: "grid",
+                                    gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+                                    gap: 2.5,
+                                }}
+                            >
+                                {isEdit ? (
+                                    <TextField
+                                        label="Process ID"
+                                        size="small"
+                                        value={ospfProcessId}
+                                        onChange={(e) => setOspfProcessId(e.target.value)}
+                                        fullWidth
+                                    />
+                                ) : (
+                                    <Box>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
+                                            Process ID
+                                        </Typography>
+                                        <Typography variant="body2">{ospfProcessId || "-"}</Typography>
+                                    </Box>
+                                )}
+
+                                {isEdit ? (
+                                    <TextField
+                                        label="Area"
+                                        size="small"
+                                        value={ospfArea}
+                                        onChange={(e) => setOspfArea(e.target.value)}
+                                        fullWidth
+                                    />
+                                ) : (
+                                    <Box>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
+                                            Area
+                                        </Typography>
+                                        <Typography variant="body2">{ospfArea || "-"}</Typography>
+                                    </Box>
+                                )}
+                            </Box>
+                        </Box>
+                    )}
+
+                    {/* Section 4: Last Change */}
+                    <Box>
+                        <SectionHeader
+                            icon={<AccessTime fontSize="small" color="action" />}
+                            title="Last Change"
+                        />
+                        <Typography variant="body2">
+                            {interfaceData.last_change
+                                ? new Date(interfaceData.last_change).toLocaleString()
+                                : "-"}
+                        </Typography>
+                    </Box>
+                </Stack>
+            </Box>
 
             {/* Footer */}
             {!hideFooter && (
-                <div className="p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 rounded-b-xl shrink-0">
-                    <Button variant="outline" onClick={onCancel} disabled={isSaving}>
-                        {isEdit ? "Cancel" : "Close"}
-                    </Button>
-                    {isEdit && (
-                        <Button variant="primary" onClick={handleSave} disabled={isSaving}>
-                            Save Changes
+                <>
+                    <Divider />
+                    <Box
+                        sx={{
+                            p: 2.5,
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            gap: 1.5,
+                            bgcolor: "grey.50",
+                            flexShrink: 0,
+                        }}
+                    >
+                        <Button variant="outlined" onClick={onCancel} disabled={isSaving}>
+                            {isEdit ? "Cancel" : "Close"}
                         </Button>
-                    )}
-                </div>
+                        {isEdit && (
+                            <Button
+                                variant="contained"
+                                onClick={handleSave}
+                                disabled={isSaving}
+                                startIcon={isSaving ? <CircularProgress size={16} /> : undefined}
+                            >
+                                Save Changes
+                            </Button>
+                        )}
+                    </Box>
+                </>
             )}
-        </div>
+        </Box>
     );
 }

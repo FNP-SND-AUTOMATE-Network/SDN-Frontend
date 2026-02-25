@@ -1,196 +1,257 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEllipsisVertical, faEye, faEdit } from "@fortawesome/free-solid-svg-icons";
-import { DeviceNetwork, deviceNetworkService, InterfaceDiscoveryResponse } from "@/services/deviceNetworkService";
-import { useSnackbar } from "@/hooks/useSnackbar";
+import { useState } from "react";
+import {
+    Box,
+    Typography,
+    Table,
+    TableContainer,
+    TableHead,
+    TableBody,
+    TableRow,
+    TableCell,
+    Paper,
+    IconButton,
+    Menu,
+    MenuItem,
+    ListItemIcon,
+    ListItemText,
+    Alert,
+    Skeleton,
+    Stack,
+} from "@mui/material";
+import {
+    MoreVert,
+    Visibility,
+    Edit,
+    FiberManualRecord,
+} from "@mui/icons-material";
+import { $api } from "@/lib/apiv2/fetch";
+import { paths } from "@/lib/apiv2/schema";
+import { InterfaceDiscoveryResponse } from "@/services/deviceNetworkService";
 import { DeviceInterfaceModal } from "./DeviceInterfaceModal";
 
-interface DeviceInterfacesTabProps {
-    device: DeviceNetwork;
-    token: string | null;
-}
+type DeviceNetwork =
+    paths["/device-networks/{device_id}"]["get"]["responses"]["200"]["content"]["application/json"];
 
 type NetworkInterface = InterfaceDiscoveryResponse["interfaces"][0];
 
-export function DeviceInterfacesTab({ device, token }: DeviceInterfacesTabProps) {
-    const { showError } = useSnackbar();
-    const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+interface DeviceInterfacesTabProps {
+    device: DeviceNetwork;
+}
 
+export function DeviceInterfacesTab({ device }: DeviceInterfacesTabProps) {
     // Modal state
     const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null);
     const [modalMode, setModalMode] = useState<"view" | "edit">("view");
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // Dropdown state
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    // Menu state
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [menuIface, setMenuIface] = useState<NetworkInterface | null>(null);
 
-    // Click outside handler for dropdown
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (!(event.target as Element).closest('.dropdown-container')) {
-                setOpenMenuId(null);
-            }
-        };
-        document.addEventListener('click', handleClickOutside);
-        return () => document.removeEventListener('click', handleClickOutside);
-    }, []);
+    const nodeId = device.node_id;
 
-    const fetchInterfaces = async () => {
-        if (!token) return;
-
-        if (!device.node_id) {
-            setIsLoading(false);
-            setError("Device does not have a valid Node ID. Please mount the device to ODL first.");
-            return;
+    // --- Fetch interfaces via React Query ---
+    const {
+        data: discoverData,
+        isLoading,
+        error,
+        refetch,
+    } = $api.useQuery(
+        "get",
+        "/api/v1/nbi/devices/{node_id}/interfaces/discover",
+        {
+            params: {
+                path: { node_id: nodeId! },
+            },
+        },
+        {
+            enabled: !!nodeId,
         }
+    );
 
-        try {
-            setIsLoading(true);
-            setError(null);
-            const response = await deviceNetworkService.discoverInterfaces(token, device.node_id);
-            setInterfaces(response.interfaces || []);
-        } catch (err: any) {
-            const message = err?.message || "Failed to discover interfaces";
-            setError(message);
-            showError(message);
-        } finally {
-            setIsLoading(false);
-        }
+    const interfaces = (discoverData as InterfaceDiscoveryResponse | undefined)?.interfaces ?? [];
+
+    // --- Menu Handlers ---
+    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, iface: NetworkInterface) => {
+        setAnchorEl(event.currentTarget);
+        setMenuIface(iface);
     };
 
-    useEffect(() => {
-        fetchInterfaces();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [device.node_id, token]);
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+        setMenuIface(null);
+    };
 
+    const handleView = () => {
+        if (menuIface) {
+            setSelectedInterface(menuIface);
+            setModalMode("view");
+            setIsModalOpen(true);
+        }
+        handleMenuClose();
+    };
+
+    const handleEdit = () => {
+        if (menuIface) {
+            setSelectedInterface(menuIface);
+            setModalMode("edit");
+            setIsModalOpen(true);
+        }
+        handleMenuClose();
+    };
+
+    // --- Loading ---
     if (isLoading) {
         return (
-            <div className="flex justify-center items-center py-12">
-                <div className="text-sm text-gray-500 font-sf-pro-text animate-pulse">
-                    Discovering interfaces from device...
-                </div>
-            </div>
+            <Box py={4}>
+                <Stack spacing={1}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} variant="rounded" height={40} />
+                    ))}
+                </Stack>
+            </Box>
         );
     }
 
+    // --- No node_id ---
+    if (!nodeId) {
+        return (
+            <Box py={4}>
+                <Alert severity="warning">
+                    Device does not have a valid Node ID. Please mount the device to ODL first.
+                </Alert>
+            </Box>
+        );
+    }
+
+    // --- Error ---
     if (error) {
         return (
-            <div className="flex justify-center items-center py-12">
-                <div className="text-sm text-red-600 font-sf-pro-text text-center">
-                    <p className="mb-2 font-medium">Error discovering interfaces</p>
-                    <p className="text-gray-500">{error}</p>
-                </div>
-            </div>
+            <Box py={4}>
+                <Alert severity="error">
+                    Failed to discover interfaces. Please try again.
+                </Alert>
+            </Box>
         );
     }
 
+    // --- Empty ---
     if (interfaces.length === 0) {
         return (
-            <div className="flex justify-center items-center py-12">
-                <div className="text-sm text-gray-500 font-sf-pro-text">
+            <Box py={6} textAlign="center">
+                <Typography color="text.secondary">
                     No interfaces found on this device.
-                </div>
-            </div>
+                </Typography>
+            </Box>
         );
     }
 
     return (
-        <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-                <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
-                    <tr>
-                        <th className="px-6 py-4 font-sf-pro-text w-16 text-center">Status</th>
-                        <th className="px-6 py-4 font-sf-pro-text">Interface name</th>
-                        <th className="px-6 py-4 font-sf-pro-text">IP Address</th>
-                        <th className="px-6 py-4 font-sf-pro-text">Subnet Mask</th>
-                        <th className="px-6 py-4 font-sf-pro-text">Description</th>
-                        <th className="px-6 py-4 text-center w-16"></th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                    {interfaces.map((iface, index) => (
-                        <tr key={`${iface.name}-${index}`} className="hover:bg-gray-50 transition-colors group">
-                            <td className="px-6 py-4 text-center">
-                                <div className="flex justify-center">
-                                    <span
-                                        className={`w-2 h-2 rounded-full ${iface.oper_status && iface.oper_status.toLowerCase() === "up" ? "bg-green-500" : "bg-red-500"}`}
-                                        title={iface.oper_status ? iface.oper_status.toUpperCase() : "DOWN"}
-                                    ></span>
-                                </div>
-                            </td>
-                            <td className="px-6 py-4 font-medium text-gray-900">
-                                <div className="flex items-center gap-2">
-                                    {iface.name}
-                                </div>
-                            </td>
-                            <td className="px-6 py-4 text-gray-600">{iface.ipv4_address || "-"}</td>
-                            <td className="px-6 py-4 text-gray-600">{iface.subnet_mask || "-"}</td>
-                            <td className="px-6 py-4 text-gray-500 italic max-w-xs truncate">
-                                {iface.description || "-"}
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                                <div className="relative inline-block text-left dropdown-container">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setOpenMenuId(openMenuId === iface.name ? null : iface.name);
-                                        }}
-                                        className="text-gray-400 hover:text-gray-600 p-1 rounded transition-colors focus:outline-none"
-                                    >
-                                        <FontAwesomeIcon icon={faEllipsisVertical} className="w-4 h-4" />
-                                    </button>
+        <>
+            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 0.5 }}>
+                <Table size="small">
+                    <TableHead>
+                        <TableRow sx={{ bgcolor: "grey.50" }}>
+                            <TableCell align="center" sx={{ fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "text.secondary", width: 64 }}>
+                                Status
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "text.secondary" }}>
+                                Interface Name
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "text.secondary" }}>
+                                IP Address
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "text.secondary" }}>
+                                Subnet Mask
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "text.secondary" }}>
+                                Description
+                            </TableCell>
+                            <TableCell align="right" sx={{ width: 48 }} />
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {interfaces.map((iface, index) => {
+                            const isUp = iface.oper_status?.toLowerCase() === "up";
+                            return (
+                                <TableRow
+                                    key={`${iface.name}-${index}`}
+                                    hover
+                                    sx={{ "&:last-child td": { borderBottom: 0 } }}
+                                >
+                                    <TableCell align="center">
+                                        <FiberManualRecord
+                                            sx={{ fontSize: 10, color: isUp ? "success.main" : "error.main" }}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2" fontWeight={500}>
+                                            {iface.name}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {iface.ipv4_address || "-"}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {iface.subnet_mask || "-"}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                            sx={{ maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                                        >
+                                            {iface.description || "-"}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <IconButton
+                                            size="small"
+                                            onClick={(e) => handleMenuOpen(e, iface)}
+                                        >
+                                            <MoreVert fontSize="small" />
+                                        </IconButton>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            </TableContainer>
 
-                                    {openMenuId === iface.name && (
-                                        <div className="absolute right-0 mt-2 w-36 origin-top-right bg-white divide-y divide-gray-100 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
-                                            <div className="px-1 py-1">
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedInterface(iface);
-                                                        setModalMode("view");
-                                                        setIsModalOpen(true);
-                                                        setOpenMenuId(null);
-                                                    }}
-                                                    className="hover:bg-blue-50 hover:text-blue-600 text-gray-700 group flex w-full items-center rounded-md px-2 py-2 text-sm transition-colors"
-                                                >
-                                                    <FontAwesomeIcon icon={faEye} className="w-4 h-4 mr-2" />
-                                                    View config
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedInterface(iface);
-                                                        setModalMode("edit");
-                                                        setIsModalOpen(true);
-                                                        setOpenMenuId(null);
-                                                    }}
-                                                    className="hover:bg-blue-50 hover:text-blue-600 text-gray-700 group flex w-full items-center rounded-md px-2 py-2 text-sm transition-colors mt-1"
-                                                >
-                                                    <FontAwesomeIcon icon={faEdit} className="w-4 h-4 mr-2" />
-                                                    Edit config
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+            {/* Action Menu */}
+            <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleMenuClose}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                transformOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+                <MenuItem onClick={handleView}>
+                    <ListItemIcon><Visibility fontSize="small" /></ListItemIcon>
+                    <ListItemText>View Config</ListItemText>
+                </MenuItem>
+                <MenuItem onClick={handleEdit}>
+                    <ListItemIcon><Edit fontSize="small" /></ListItemIcon>
+                    <ListItemText>Edit Config</ListItemText>
+                </MenuItem>
+            </Menu>
 
-            {/* Modal */}
+            {/* Interface Modal */}
             <DeviceInterfaceModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 interfaceData={selectedInterface}
                 mode={modalMode}
                 deviceId={device.node_id || ""}
-                token={token}
-                onSuccess={fetchInterfaces}
+                onSuccess={() => refetch()}
             />
-        </div>
+        </>
     );
 }

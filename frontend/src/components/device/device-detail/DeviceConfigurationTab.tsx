@@ -1,49 +1,57 @@
 "use client";
 
 import { useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-    faFileCode,
-    faNetworkWired,
-    faEye,
-    faCopy,
-    faCheck,
-} from "@fortawesome/free-solid-svg-icons";
-import { DeviceNetwork } from "@/services/deviceNetworkService";
+    Box,
+    Paper,
+    Typography,
+    Stack,
+    IconButton,
+    Tooltip,
+    Button,
+} from "@mui/material";
+import {
+    Code,
+    Lan,
+    Visibility,
+    ContentCopy,
+    Check,
+} from "@mui/icons-material";
+import { paths } from "@/lib/apiv2/schema";
+
+type DeviceNetwork =
+    paths["/device-networks/{device_id}"]["get"]["responses"]["200"]["content"]["application/json"];
 
 interface DeviceConfigurationTabProps {
     device: DeviceNetwork;
     onPreviewTemplate?: (templateId: string) => void;
 }
 
-// Helper component for copyable text
+// --- Helper: Copyable Text ---
 function CopyableText({ value, label }: { value: string; label?: string }) {
     const [copied, setCopied] = useState(false);
-
     const handleCopy = async () => {
         await navigator.clipboard.writeText(value);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
-
     return (
-        <span className="inline-flex items-center gap-2 group">
-            <span className="font-sf-pro-text">{value}</span>
-            <button
-                onClick={handleCopy}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-                title={`Copy ${label || "value"}`}
-            >
-                <FontAwesomeIcon
-                    icon={copied ? faCheck : faCopy}
-                    className={`w-3 h-3 ${copied ? "text-green-500" : ""}`}
-                />
-            </button>
-        </span>
+        <Stack direction="row" alignItems="center" spacing={0.5}>
+            <Typography variant="body2">{value}</Typography>
+            <Tooltip title={copied ? "Copied!" : `Copy ${label || "value"}`}>
+                <IconButton size="small" onClick={handleCopy} sx={{ p: 0.25 }}>
+                    {copied ? (
+                        <Check sx={{ fontSize: 14, color: "success.main" }} />
+                    ) : (
+                        <ContentCopy sx={{ fontSize: 14, color: "action.active" }} />
+                    )}
+                </IconButton>
+            </Tooltip>
+        </Stack>
     );
 }
 
-// Helper component for info row
+// --- Helper: Info Row ---
 function InfoRow({
     label,
     value,
@@ -57,31 +65,48 @@ function InfoRow({
 }) {
     const displayValue = value || "-";
     return (
-        <div className="flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0">
-            <span className="text-gray-500 font-sf-pro-text">{label}</span>
-            <div className="flex items-center gap-3">
+        <Box
+            sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                py: 1.25,
+                borderBottom: 1,
+                borderColor: "grey.100",
+                "&:last-child": { borderBottom: 0 },
+            }}
+        >
+            <Typography variant="body2" color="text.secondary">
+                {label}
+            </Typography>
+            <Stack direction="row" alignItems="center" spacing={1}>
                 {copyable && value ? (
                     <CopyableText value={value} label={label} />
                 ) : (
-                    <span className="text-gray-900 text-right font-sf-pro-text">
+                    <Typography variant="body2" fontWeight={value ? 500 : 400} color={value ? "text.primary" : "text.disabled"}>
                         {displayValue}
-                    </span>
+                    </Typography>
                 )}
                 {action}
-            </div>
-        </div>
+            </Stack>
+        </Box>
     );
 }
 
-// Helper component for card header
-function CardHeader({ icon, title }: { icon: any; title: string }) {
+// --- Helper: Card Header ---
+function CardHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
     return (
-        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
-            <FontAwesomeIcon icon={icon} className="w-4 h-4 text-gray-400" />
-            <h3 className="text-sm font-semibold text-gray-900 font-sf-pro-text">
+        <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            sx={{ mb: 2, pb: 1.5, borderBottom: 1, borderColor: "divider" }}
+        >
+            {icon}
+            <Typography variant="subtitle2" fontWeight={600}>
                 {title}
-            </h3>
-        </div>
+            </Typography>
+        </Stack>
     );
 }
 
@@ -92,65 +117,68 @@ export default function DeviceConfigurationTab({
     const template = device.configuration_template;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Box
+            sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
+                gap: 3,
+            }}
+        >
             {/* Configuration Template Card */}
-            <div className="bg-white rounded-lg border border-gray-200 p-5">
-                <CardHeader icon={faFileCode} title="Configuration Template" />
-                <div className="text-sm space-y-1">
-                    <InfoRow
-                        label="Template Name"
-                        value={template?.template_name}
-                    />
-                    <InfoRow
-                        label="Template Type"
-                        value={template?.template_type}
-                    />
+            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 0.5 }}>
+                <CardHeader
+                    icon={<Code fontSize="small" color="action" />}
+                    title="Configuration Template"
+                />
+                <Box sx={{ fontSize: 14 }}>
+                    <InfoRow label="Template Name" value={template?.template_name} />
+                    <InfoRow label="Template Type" value={template?.template_type} />
                     <InfoRow
                         label="Template ID"
                         value={template?.id}
                         copyable
                         action={
                             template?.id && onPreviewTemplate ? (
-                                <button
+                                <Button
+                                    size="small"
+                                    variant="text"
+                                    startIcon={<Visibility sx={{ fontSize: 14 }} />}
                                     onClick={() => onPreviewTemplate(template.id)}
-                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                                    sx={{ fontSize: 12, textTransform: "none" }}
                                 >
-                                    <FontAwesomeIcon icon={faEye} className="w-3 h-3" />
                                     Preview
-                                </button>
+                                </Button>
                             ) : null
                         }
                     />
-                </div>
-
+                </Box>
                 {!template && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-md text-sm text-gray-500 text-center">
-                        No configuration template assigned
-                    </div>
+                    <Box sx={{ mt: 2, p: 1.5, bgcolor: "grey.50", borderRadius: 0.5, textAlign: "center" }}>
+                        <Typography variant="body2" color="text.secondary">
+                            No configuration template assigned
+                        </Typography>
+                    </Box>
                 )}
-            </div>
+            </Paper>
 
             {/* NETCONF Setting Card */}
-            <div className="bg-white rounded-lg border border-gray-200 p-5">
-                <CardHeader icon={faNetworkWired} title="NETCONF Setting" />
-                <div className="text-sm space-y-1">
-                    <InfoRow
-                        label="Host"
-                        value={device.netconf_host}
-                        copyable
-                    />
-                    <InfoRow
-                        label="Port"
-                        value={device.netconf_port?.toString()}
-                    />
-                </div>
-
+            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 0.5 }}>
+                <CardHeader
+                    icon={<Lan fontSize="small" color="action" />}
+                    title="NETCONF Setting"
+                />
+                <Box sx={{ fontSize: 14 }}>
+                    <InfoRow label="Host" value={device.netconf_host} copyable />
+                    <InfoRow label="Port" value={device.netconf_port?.toString()} />
+                </Box>
                 {!device.netconf_host && !device.netconf_port && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-md text-sm text-gray-500 text-center">
-                        NETCONF not configured
-                    </div>
+                    <Box sx={{ mt: 2, p: 1.5, bgcolor: "grey.50", borderRadius: 0.5, textAlign: "center" }}>
+                        <Typography variant="body2" color="text.secondary">
+                            NETCONF not configured
+                        </Typography>
+                    </Box>
                 )}
-            </div>
-        </div>
+            </Paper>
+        </Box>
     );
 }

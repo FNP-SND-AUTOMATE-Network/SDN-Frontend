@@ -1,7 +1,15 @@
 "use client";
 
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimes, faNetworkWired } from "@fortawesome/free-solid-svg-icons";
+import {
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    IconButton,
+    Typography,
+    Stack,
+    Box,
+} from "@mui/material";
+import { Close, Cable } from "@mui/icons-material";
 import { InterfaceDiscoveryResponse } from "@/services/deviceNetworkService";
 import { DeviceInterfaceForm } from "./DeviceInterfaceForm";
 
@@ -13,7 +21,6 @@ interface DeviceInterfaceModalProps {
     interfaceData: NetworkInterface | null;
     mode: "view" | "edit";
     deviceId: string;
-    token: string | null;
     onSuccess: () => void;
 }
 
@@ -23,54 +30,64 @@ export function DeviceInterfaceModal({
     interfaceData,
     mode,
     deviceId,
-    token,
     onSuccess,
 }: DeviceInterfaceModalProps) {
-    if (!isOpen || !interfaceData) return null;
+    if (!interfaceData) return null;
 
     const isEdit = mode === "edit";
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
-                {/* Header */}
-                <div className="flex items-center justify-between p-5 border-b border-gray-100">
-                    <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isEdit ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-600'}`}>
-                            <FontAwesomeIcon icon={faNetworkWired} className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-sf-pro-display font-semibold text-gray-900">
+        <Dialog
+            open={isOpen}
+            onClose={onClose}
+            maxWidth="md"
+            fullWidth
+            PaperProps={{ sx: { borderRadius: 1 } }}
+        >
+            <DialogTitle sx={{ pb: 1.5 }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Stack direction="row" alignItems="center" spacing={1.5}>
+                        <Box
+                            sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 1,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                bgcolor: isEdit ? "primary.50" : "grey.100",
+                                color: isEdit ? "primary.main" : "text.secondary",
+                            }}
+                        >
+                            <Cable />
+                        </Box>
+                        <Box>
+                            <Typography variant="h6" fontWeight={600} sx={{ fontSize: 18 }}>
                                 {isEdit ? "Edit Interface:" : "View Interface:"} {interfaceData.name}
-                            </h2>
-                            <p className="text-sm text-gray-500 font-sf-pro-text">
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
                                 {interfaceData.type} - {interfaceData.mac_address}
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors p-2"
-                    >
-                        <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
-                    </button>
-                </div>
+                            </Typography>
+                        </Box>
+                    </Stack>
+                    <IconButton onClick={onClose} size="small">
+                        <Close fontSize="small" />
+                    </IconButton>
+                </Stack>
+            </DialogTitle>
 
-                {/* Content (Form) */}
-                <div className="flex-1 overflow-y-auto">
-                    <DeviceInterfaceForm
-                        interfaceData={interfaceData}
-                        mode={mode}
-                        deviceId={deviceId}
-                        token={token}
-                        onSuccess={() => {
-                            onSuccess();
-                            onClose();
-                        }}
-                        onCancel={onClose}
-                    />
-                </div>
-            </div>
-        </div>
+            <DialogContent dividers sx={{ p: 0 }}>
+                <DeviceInterfaceForm
+                    interfaceData={interfaceData}
+                    mode={mode}
+                    deviceId={deviceId}
+                    onSuccess={() => {
+                        onSuccess();
+                        onClose();
+                    }}
+                    onCancel={onClose}
+                />
+            </DialogContent>
+        </Dialog>
     );
 }

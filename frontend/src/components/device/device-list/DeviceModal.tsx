@@ -1,35 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes, faEye, faEyeSlash, faChevronUp, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
-import {
-  DeviceNetwork,
-  DeviceNetworkCreateRequest,
-  DeviceNetworkUpdateRequest,
-  TypeDevice,
-  StatusDevice,
-} from "@/services/deviceNetworkService";
 import { Tag } from "@/services/tagService";
 import { LocalSite } from "@/services/siteService";
 import { OperatingSystem } from "@/services/operatingSystemService";
+import { paths } from "@/lib/apiv2/schema";
+
+type DeviceNetwork = paths["/device-networks/"]["get"]["responses"]["200"]["content"]["application/json"]["devices"][number];
+
 
 interface DeviceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (device: DeviceNetwork) => void;
+  onSuccess: (device?: DeviceNetwork) => void;
   mode: "add" | "edit";
   device: DeviceNetwork | null;
-  onSubmit: (
-    data: DeviceNetworkCreateRequest | DeviceNetworkUpdateRequest,
-    tagIds: string[]
-  ) => Promise<DeviceNetwork>;
-  allTags: Tag[];
-  allSites: LocalSite[];
-  allOperatingSystems: OperatingSystem[];
+  allTags?: Tag[];
+  allSites?: LocalSite[];
+  allOperatingSystems?: OperatingSystem[];
 }
 
 interface FormErrors {
@@ -40,20 +34,23 @@ interface FormErrors {
   mac_address?: string;
 }
 
+type DeviceBody = paths["/device-networks/"]["post"]["requestBody"]["content"]["application/json"];
+
 export default function DeviceModal({
   isOpen,
   onClose,
   onSuccess,
   mode,
   device,
-  onSubmit,
-  allTags,
-  allSites,
-  allOperatingSystems,
+  allTags = [],
+  allSites = [],
+  allOperatingSystems = [],
 }: DeviceModalProps) {
-  const [formData, setFormData] = useState<
-    DeviceNetworkCreateRequest | DeviceNetworkUpdateRequest
-  >({});
+  const queryClient = useQueryClient();
+  const [data, setData] = useState<
+    DeviceBody
+  >({
+  } as DeviceBody);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
@@ -90,24 +87,28 @@ export default function DeviceModal({
     if (isOpen) {
       if (mode === "edit" && device) {
         // Edit mode: preload device data
-        setFormData({
+        setData({
           device_name: device.device_name,
           serial_number: device.serial_number,
           device_model: device.device_model,
-          type: device.type as TypeDevice,
-          status: device.status as StatusDevice,
+          type: device.type,
+          status: device.status,
           ip_address: device.ip_address || "",
           mac_address: device.mac_address,
           description: device.description || "",
           local_site_id: device.local_site_id || null,
           os_id: device.os_id || null,
           node_id: device.node_id || "",
+          vendor: device.vendor || "CISCO",
+          management_protocol: device.management_protocol || "NETCONF",
+          datapath_id: device.datapath_id || "",
           netconf_host: device.netconf_host || "",
-        });
-        setSelectedTagIds(device.tags ? device.tags.map((t) => t.tag_id) : []);
+          netconf_port: device.netconf_port || 830,
+        } as DeviceBody);
+        setSelectedTagIds(device.tags ? device.tags.map((t: any) => t.tag_id) : []);
       } else {
         // Add mode: reset form
-        setFormData({
+        setData({
           device_name: "",
           serial_number: "",
           device_model: "",
@@ -119,8 +120,12 @@ export default function DeviceModal({
           local_site_id: null,
           os_id: null,
           node_id: "",
+          vendor: "CISCO",
+          management_protocol: "NETCONF",
+          datapath_id: "",
           netconf_host: "",
-        });
+          netconf_port: 830,
+        } as DeviceBody);
         setSelectedTagIds([]);
       }
       setErrors({});
@@ -134,7 +139,7 @@ export default function DeviceModal({
     >
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setData((prev) => ({
       ...prev,
       [name]: value === "" ? null : value,
     }));
@@ -150,23 +155,23 @@ export default function DeviceModal({
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    if (!formData.device_name?.trim()) {
+    if (!data.device_name?.trim()) {
       newErrors.device_name = "Please enter device name";
     }
 
-    if (!formData.serial_number?.trim()) {
+    if (!data.serial_number?.trim()) {
       newErrors.serial_number = "Please enter serial number";
     }
 
-    if (!formData.device_model?.trim()) {
+    if (!data.device_model?.trim()) {
       newErrors.device_model = "Please enter device model";
     }
 
-    if (!formData.mac_address?.trim()) {
+    if (!data.mac_address?.trim()) {
       newErrors.mac_address = "Please enter MAC address";
     }
 
-    if (formData.ip_address && formData.ip_address.length > 50) {
+    if (data.ip_address && data.ip_address.length > 50) {
       newErrors.ip_address = "IP address must not exceed 50 characters";
     }
 
@@ -188,12 +193,28 @@ export default function DeviceModal({
 
     setIsLoading(true);
     try {
-      const result = await onSubmit(formData, selectedTagIds);
-      onSuccess(result);
+      const { fetchClient } = await import("@/lib/apiv2/fetch");
+
+      if (mode === "add") {
+        const { error } = await fetchClient.POST("/device-networks/", {
+          body: data,
+        });
+        if (error) throw error;
+      } else if (mode === "edit" && device) {
+        const { error } = await fetchClient.PUT("/device-networks/{device_id}", {
+          params: { path: { device_id: device.id } },
+          body: data,
+        });
+        if (error) throw error;
+      }
+
+      // Invalidate device list cache so table auto-refreshes
+      queryClient.invalidateQueries({ queryKey: ["get", "/device-networks/"] });
+      onSuccess();
       onClose();
     } catch (error: any) {
       console.error(`Error ${mode === "add" ? "creating" : "updating"} device:`, error);
-      setFormError(error?.message || `Failed to ${mode === "add" ? "create" : "update"} device. Please try again.`);
+      setFormError(error?.detail || error?.message || `Failed to ${mode === "add" ? "create" : "update"} device. Please try again.`);
     } finally {
       setIsLoading(false);
     }
@@ -247,7 +268,7 @@ export default function DeviceModal({
             <Input
               label="Device Name"
               name="device_name"
-              value={formData.device_name || ""}
+              value={data.device_name || ""}
               onChange={handleChange}
               error={errors.device_name || ""}
               disabled={isLoading}
@@ -261,7 +282,7 @@ export default function DeviceModal({
                 </label>
                 <select
                   name="type"
-                  value={formData.type || "SWITCH"}
+                  value={data.type || "SWITCH"}
                   onChange={handleChange}
                   disabled={isLoading}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text text-sm"
@@ -280,7 +301,7 @@ export default function DeviceModal({
                 </label>
                 <select
                   name="vendor"
-                  value={formData.vendor || "CISCO"}
+                  value={data.vendor || "CISCO"}
                   onChange={handleChange}
                   disabled={isLoading}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text text-sm"
@@ -298,7 +319,7 @@ export default function DeviceModal({
               </label>
               <select
                 name="management_protocol"
-                value={formData.management_protocol || "NETCONF"}
+                value={data.management_protocol || "NETCONF"}
                 onChange={handleChange}
                 disabled={isLoading}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text text-sm"
@@ -310,7 +331,7 @@ export default function DeviceModal({
           </div>
 
           {/* Conditional Properties Card */}
-          {formData.management_protocol === "OPENFLOW" ? (
+          {data.management_protocol === "OPENFLOW" ? (
             <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm space-y-4">
               <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 OPENFLOW PROPERTIES
@@ -319,7 +340,7 @@ export default function DeviceModal({
                 <Input
                   label="Node ID"
                   name="node_id"
-                  value={formData.node_id || ""}
+                  value={data.node_id || ""}
                   onChange={handleChange}
                   disabled={isLoading}
                   placeholder="e.g. openflow:1"
@@ -328,7 +349,7 @@ export default function DeviceModal({
                   <Input
                     label="Datapath ID (DPID)"
                     name="datapath_id"
-                    value={formData.datapath_id || ""}
+                    value={data.datapath_id || ""}
                     onChange={handleChange}
                     disabled={isLoading}
                     placeholder="e.g. 0000000000000001"
@@ -345,7 +366,7 @@ export default function DeviceModal({
               <Input
                 label="Node ID (ODL Name)"
                 name="node_id"
-                value={formData.node_id || ""}
+                value={data.node_id || ""}
                 onChange={handleChange}
                 disabled={isLoading}
                 placeholder="e.g. CSR1000vT"
@@ -354,7 +375,7 @@ export default function DeviceModal({
                 <Input
                   label="Host / IP Address"
                   name="netconf_host"
-                  value={formData.netconf_host || ""}
+                  value={data.netconf_host || ""}
                   onChange={handleChange}
                   disabled={isLoading}
                   placeholder="e.g. 192.168.1.50"
@@ -363,7 +384,7 @@ export default function DeviceModal({
                   label="Port"
                   name="netconf_port"
                   type="number"
-                  value={formData.netconf_port || "830"}
+                  value={data.netconf_port || "830"}
                   onChange={handleChange}
                   placeholder="e.g. 830"
                   disabled={true}
@@ -392,7 +413,7 @@ export default function DeviceModal({
                   <Input
                     label="Serial Number"
                     name="serial_number"
-                    value={formData.serial_number || ""}
+                    value={data.serial_number || ""}
                     onChange={handleChange}
                     error={errors.serial_number || ""}
                     disabled={isLoading}
@@ -402,7 +423,7 @@ export default function DeviceModal({
                   <Input
                     label="MAC Address"
                     name="mac_address"
-                    value={formData.mac_address || ""}
+                    value={data.mac_address || ""}
                     onChange={handleChange}
                     error={errors.mac_address || ""}
                     disabled={isLoading}
@@ -412,7 +433,7 @@ export default function DeviceModal({
                   <Input
                     label="IP Address (Management)"
                     name="ip_address"
-                    value={formData.ip_address || ""}
+                    value={data.ip_address || ""}
                     onChange={handleChange}
                     error={errors.ip_address || ""}
                     disabled={isLoading}
@@ -425,7 +446,7 @@ export default function DeviceModal({
                     <Input
                       type="text"
                       name="status"
-                      value={formData.status || "OFFLINE"}
+                      value={data.status || "OFFLINE"}
                       disabled={true}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-700 disabled:cursor-not-allowed font-sf-pro-text"
                     />
@@ -438,7 +459,7 @@ export default function DeviceModal({
                   </label>
                   <textarea
                     name="description"
-                    value={formData.description || ""}
+                    value={data.description || ""}
                     onChange={handleChange}
                     disabled={isLoading}
                     rows={2}
@@ -527,7 +548,7 @@ export default function DeviceModal({
                     </label>
                     <select
                       name="local_site_id"
-                      value={formData.local_site_id || ""}
+                      value={data.local_site_id || ""}
                       onChange={handleChange}
                       disabled={isLoading}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text text-sm"
@@ -547,7 +568,7 @@ export default function DeviceModal({
                     </label>
                     <select
                       name="os_id"
-                      value={formData.os_id || ""}
+                      value={data.os_id || ""}
                       onChange={handleChange}
                       disabled={isLoading}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text text-sm"
@@ -564,7 +585,7 @@ export default function DeviceModal({
                 <Input
                   label="Device Model"
                   name="device_model"
-                  value={formData.device_model || ""}
+                  value={data.device_model || ""}
                   onChange={handleChange}
                   error={errors.device_model || ""}
                   disabled={isLoading}

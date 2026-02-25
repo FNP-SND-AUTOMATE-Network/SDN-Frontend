@@ -2,23 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Paper, Box, Typography, Alert, Skeleton } from "@mui/material";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ProtectedRoute } from "@/components/auth/AuthGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
-import {
-  deviceNetworkService,
-  DeviceNetwork,
-} from "@/services/deviceNetworkService";
+import { useQueryClient } from "@tanstack/react-query";
+import { $api } from "@/lib/apiv2/fetch";
+import { paths } from "@/lib/apiv2/schema";
 import { tagService, Tag } from "@/services/tagService";
 import { siteService, LocalSite } from "@/services/siteService";
 import {
   operatingSystemService,
   OperatingSystem,
 } from "@/services/operatingSystemService";
-import ConfirmModal from "@/components/modals/ConfirmModal";
-import { DeviceModal } from "@/components/device/device-list";
+import {
+  EditDeviceModal,
+  DeleteDeviceModal,
+} from "@/components/device/device-list";
 import {
   DeviceDetailBreadcrumb,
   DeviceDetailHeader,
@@ -28,208 +30,136 @@ import {
   DeviceInterfacesTab,
 } from "@/components/device/device-detail";
 
+type DeviceNetwork =
+  paths["/device-networks/{device_id}"]["get"]["responses"]["200"]["content"]["application/json"];
 type TabKey = "overview" | "interfaces" | "configuration" | "backup";
 
 export default function DeviceDetailPage() {
   const params = useParams();
   const deviceId = params?.id as string | undefined;
-
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { token } = useAuth();
   const { snackbar, hideSnackbar, showError, showSuccess } = useSnackbar();
-  const router = useRouter();
 
-  const [device, setDevice] = useState<DeviceNetwork | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // --- Tab State ---
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
+
+  // --- Mount/Unmount loading ---
   const [isMounting, setIsMounting] = useState(false);
   const [isUnmounting, setIsUnmounting] = useState(false);
 
-  const [confirmModal, setConfirmModal] = useState<{
-    isOpen: boolean;
-    isDeleting: boolean;
-  }>({
-    isOpen: false,
-    isDeleting: false,
-  });
+  // --- Modal State ---
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  // --- Reference Data ---
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [allSites, setAllSites] = useState<LocalSite[]>([]);
-  const [allOperatingSystems, setAllOperatingSystems] = useState<
-    OperatingSystem[]
-  >([]);
+  const [allOperatingSystems, setAllOperatingSystems] = useState<OperatingSystem[]>([]);
 
-  useEffect(() => {
-    const fetchDevice = async () => {
-      if (!token || !deviceId) return;
-      try {
-        setIsLoading(true);
-        setError(null);
-        const data = await deviceNetworkService.getDeviceById(token, deviceId);
-        setDevice(data);
-      } catch (err: any) {
-        const message = err?.message || "Unable to load device detail";
-        setError(message);
-        showError(message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchDevice();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, deviceId]);
-
-  // โหลด Tag ทั้งหมดสำหรับใช้ใน Edit Modal (ครั้งเดียว)
-  useEffect(() => {
-    const fetchTags = async () => {
-      if (!token) return;
-      try {
-        const response = await tagService.getTags(token, 1, 200, {
-          include_usage: false,
-        });
-        setAllTags(response.tags);
-      } catch (err: any) {
-        const message = err?.message || "Unable to load tags";
-        showError(message);
-      }
-    };
-
-    fetchTags();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
-
-  // โหลด Local Sites สำหรับใช้ใน Edit Modal (ครั้งเดียว)
-  useEffect(() => {
-    const fetchSites = async () => {
-      if (!token) return;
-      try {
-        const response = await siteService.getLocalSites(token, 1, 100);
-        setAllSites(response.sites);
-      } catch (err: any) {
-        const message = err?.message || "Unable to load sites";
-        showError(message);
-      }
-    };
-
-    fetchSites();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
-
-  // โหลด Operating Systems สำหรับใช้ใน Edit Modal (ครั้งเดียว)
-  useEffect(() => {
-    const fetchOperatingSystems = async () => {
-      if (!token) return;
-      try {
-        const response = await operatingSystemService.getOperatingSystems(
-          token,
-          1,
-          100,
-          {
-            include_usage: false,
-          }
-        );
-        setAllOperatingSystems(response.operating_systems);
-      } catch (err: any) {
-        const message = err?.message || "Unable to load operating systems";
-        showError(message);
-      }
-    };
-
-    fetchOperatingSystems();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
-
-  const openDeleteConfirm = () => {
-    if (!device) return;
-    setConfirmModal({
-      isOpen: true,
-      isDeleting: false,
-    });
-  };
-
-  const closeConfirmModal = () => {
-    setConfirmModal({
-      isOpen: false,
-      isDeleting: false,
-    });
-  };
-
-  const handleDeleteDevice = async () => {
-    if (!token || !device) return;
-    try {
-      setConfirmModal((prev) => ({ ...prev, isDeleting: true }));
-      await deviceNetworkService.deleteDevice(token, device.id);
-      router.push("/device/device-list");
-    } catch (err: any) {
-      const message = err?.message || "Unable to delete device";
-      showError(message);
-      setConfirmModal((prev) => ({ ...prev, isDeleting: false }));
+  // --- Fetch device via React Query ---
+  const {
+    data: device,
+    isLoading,
+    error: deviceError,
+  } = $api.useQuery(
+    "get",
+    "/device-networks/{device_id}",
+    {
+      params: {
+        path: { device_id: deviceId! },
+      },
+    },
+    {
+      enabled: !!deviceId,
     }
-  };
+  );
 
-  const handleDeviceUpdate = (updated: DeviceNetwork) => {
-    setDevice(updated);
-  };
+  // --- Load reference data once ---
+  useEffect(() => {
+    const fetchReferenceData = async () => {
+      if (!token) return;
+      try {
+        const [tagsRes, sitesRes, osRes] = await Promise.all([
+          tagService.getTags(token, 1, 100, { include_usage: false }),
+          siteService.getLocalSites(token, 1, 100),
+          operatingSystemService.getOperatingSystems(token, 1, 100),
+        ]);
+        setAllTags(tagsRes.tags);
+        setAllSites(sitesRes.sites);
+        setAllOperatingSystems(osRes.operating_systems);
+      } catch (err: any) {
+        showError(err?.message || "Failed to load reference data");
+      }
+    };
+    fetchReferenceData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
-  const handleEditDevice = () => {
-    if (!device) return;
-    setIsEditModalOpen(true);
-  };
-
+  // --- Mount Device ---
   const handleMount = async () => {
-    console.log("=== handleMount called ===");
-    console.log("Device Node ID:", device?.node_id);
-    console.log("Full Device Object:", device);
-
-    if (!token || !device?.node_id) {
+    if (!device?.node_id) {
       showError("Device does not have a valid Node ID to mount.");
       return;
     }
     try {
       setIsMounting(true);
-      const response = await deviceNetworkService.mountDevice(token, device.node_id);
-      console.log("Mount Response:", response);
-      const msg = response?.message || response?.detail || "Device mounted successfully";
-      showSuccess(msg);
-      // Optionally refresh the device data
-      const data = await deviceNetworkService.getDeviceById(token, device.id);
-      setDevice(data);
+      const { fetchClient } = await import("@/lib/apiv2/fetch");
+      const { data: res, error } = await fetchClient.POST(
+        "/api/v1/nbi/devices/{node_id}/mount",
+        { params: { path: { node_id: device.node_id } } }
+      );
+      if (error) throw error;
+      showSuccess(res?.message || "Device mounted successfully");
+      queryClient.invalidateQueries({
+        queryKey: ["get", "/device-networks/{device_id}"],
+      });
     } catch (err: any) {
-      console.error("Mount Error:", err);
-      const message = err?.message || "Unknown error";
-      showError(`Mount failed: ${message}`);
+      showError(`Mount failed: ${err?.detail || err?.message || "Unknown error"}`);
     } finally {
       setIsMounting(false);
     }
   };
 
+  // --- Unmount Device ---
   const handleUnmount = async () => {
-    console.log("=== handleUnmount called ===");
-    console.log("Device Node ID:", device?.node_id);
-    console.log("Full Device Object:", device);
-
-    if (!token || !device?.node_id) {
+    if (!device?.node_id) {
       showError("Device does not have a valid Node ID to unmount.");
       return;
     }
     try {
       setIsUnmounting(true);
-      const response = await deviceNetworkService.unmountDevice(token, device.node_id);
-      console.log("Unmount Response:", response);
-      const msg = response?.message || response?.detail || "Device unmounted successfully";
-      showSuccess(msg);
-      // Optionally refresh the device data
-      const data = await deviceNetworkService.getDeviceById(token, device.id);
-      setDevice(data);
+      const { fetchClient } = await import("@/lib/apiv2/fetch");
+      const { data: res, error } = await fetchClient.POST(
+        "/api/v1/nbi/devices/{node_id}/unmount",
+        { params: { path: { node_id: device.node_id } } }
+      );
+      if (error) throw error;
+      showSuccess(res?.message || "Device unmounted successfully");
+      queryClient.invalidateQueries({
+        queryKey: ["get", "/device-networks/{device_id}"],
+      });
     } catch (err: any) {
-      console.error("Unmount Error:", err);
-      const message = err?.message || "Unknown error";
-      showError(`Unmount failed: ${message}`);
+      showError(`Unmount failed: ${err?.detail || err?.message || "Unknown error"}`);
     } finally {
       setIsUnmounting(false);
     }
+  };
+
+  // --- Handlers ---
+  const handleEditSuccess = () => {
+    setEditModalOpen(false);
+    queryClient.invalidateQueries({
+      queryKey: ["get", "/device-networks/{device_id}"],
+    });
+    showSuccess("Device updated successfully");
+  };
+
+  const handleDeleteSuccess = () => {
+    setDeleteModalOpen(false);
+    showSuccess("Device deleted successfully");
+    router.push("/device/device-list");
   };
 
   return (
@@ -244,8 +174,8 @@ export default function DeviceDetailPage() {
         {device && (
           <DeviceDetailHeader
             device={device}
-            onEdit={handleEditDevice}
-            onDelete={openDeleteConfirm}
+            onEdit={() => setEditModalOpen(true)}
+            onDelete={() => setDeleteModalOpen(true)}
             onMount={handleMount}
             onUnmount={handleUnmount}
             isMounting={isMounting}
@@ -253,45 +183,64 @@ export default function DeviceDetailPage() {
           />
         )}
 
-        {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <DeviceDetailTabs
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
+        {/* Tabs + Content */}
+        <Paper variant="outlined" sx={{ borderRadius: 0.5 }}>
+          <DeviceDetailTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-          <div className="p-4 sm:p-6">
+          <Box p={{ xs: 2, sm: 3 }}>
             {isLoading ? (
-              <div className="text-sm text-gray-500 font-sf-pro-text">
-                Loading device detail...
-              </div>
-            ) : error ? (
-              <div className="text-sm text-red-600 font-sf-pro-text">
-                {error}
-              </div>
+              <Box>
+                <Skeleton variant="text" width="40%" height={28} />
+                <Skeleton variant="text" width="60%" height={20} sx={{ mt: 1 }} />
+                <Skeleton variant="rounded" width="100%" height={200} sx={{ mt: 2 }} />
+              </Box>
+            ) : deviceError ? (
+              <Alert severity="error">
+                Failed to load device details. Please try again.
+              </Alert>
             ) : !device ? (
-              <div className="text-sm text-gray-500 font-sf-pro-text">
-                Device not found.
-              </div>
+              <Typography color="text.secondary">Device not found.</Typography>
             ) : activeTab === "overview" ? (
               <DeviceDetailCards device={device} />
             ) : activeTab === "interfaces" ? (
-              <DeviceInterfacesTab device={device} token={token} />
+              <DeviceInterfacesTab device={device} />
             ) : activeTab === "configuration" ? (
               <DeviceConfigurationTab
                 device={device}
                 onPreviewTemplate={(templateId) => {
-                  // TODO: Implement template preview modal
                   console.log("Preview template:", templateId);
                 }}
               />
             ) : (
-              <div className="text-sm text-gray-500 font-sf-pro-text">
+              <Typography color="text.secondary">
                 This tab is under development.
-              </div>
+              </Typography>
             )}
-          </div>
-        </div>
+          </Box>
+        </Paper>
+
+        {/* Edit Device Modal */}
+        {device && (
+          <EditDeviceModal
+            open={editModalOpen}
+            device={device}
+            onClose={() => setEditModalOpen(false)}
+            onSuccess={handleEditSuccess}
+            allTags={allTags}
+            allSites={allSites}
+            allOperatingSystems={allOperatingSystems}
+          />
+        )}
+
+        {/* Delete Device Modal */}
+        {device && (
+          <DeleteDeviceModal
+            open={deleteModalOpen}
+            device={device}
+            onClose={() => setDeleteModalOpen(false)}
+            onConfirm={handleDeleteSuccess}
+          />
+        )}
 
         <MuiSnackbar
           open={snackbar.open}
@@ -299,73 +248,6 @@ export default function DeviceDetailPage() {
           severity={snackbar.severity}
           onClose={hideSnackbar}
           title={snackbar.title}
-        />
-
-        <DeviceModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          onSuccess={handleDeviceUpdate}
-          mode="edit"
-          device={device}
-          allTags={allTags}
-          allSites={allSites}
-          allOperatingSystems={allOperatingSystems}
-          onSubmit={async (data, tagIds) => {
-            if (!token || !device) return Promise.reject();
-
-            // อัปเดตข้อมูลพื้นฐานของ Device
-            const res = await deviceNetworkService.updateDevice(
-              token,
-              device.id,
-              data
-            );
-
-            // จัดการ Tags
-            const existingTagIds = device.tags?.map((t) => t.tag_id) ?? [];
-            const toAdd = tagIds.filter((id) => !existingTagIds.includes(id));
-            const toRemove = existingTagIds.filter(
-              (id) => !tagIds.includes(id)
-            );
-
-            if (toAdd.length > 0) {
-              await deviceNetworkService.assignTagsToDevice(
-                token,
-                device.id,
-                toAdd
-              );
-            }
-            if (toRemove.length > 0) {
-              await deviceNetworkService.removeTagsFromDevice(
-                token,
-                device.id,
-                toRemove
-              );
-            }
-
-            // ดึงข้อมูลล่าสุดกลับมา
-            const refreshed = await deviceNetworkService.getDeviceById(
-              token,
-              device.id
-            );
-            showSuccess("Device updated successfully");
-            return refreshed;
-          }}
-        />
-
-        <ConfirmModal
-          isOpen={confirmModal.isOpen}
-          title="Confirm Delete Device"
-          message={
-            device
-              ? `Are you sure you want to delete device "${device.device_name}"?`
-              : "Are you sure you want to delete this device?"
-          }
-          confirmText="Delete"
-          cancelText="Cancel"
-          type="danger"
-          isLoading={confirmModal.isDeleting}
-          onClose={closeConfirmModal}
-          onConfirm={handleDeleteDevice}
         />
       </PageLayout>
     </ProtectedRoute>

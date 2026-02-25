@@ -1,352 +1,274 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faNetworkWired,
-  faEllipsisVertical,
-  faEye,
-  faEdit,
-  faSync,
-  faTrash,
-} from "@fortawesome/free-solid-svg-icons";
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Chip,
+  Divider,
+  Box,
+  Typography,
+} from "@mui/material";
 import {
+  MoreVert,
+  Visibility,
+  Edit,
+  Sync,
+  Delete,
   Router as RouterIcon,
   Shield,
   Wifi,
-  Box,
-  Server,
-} from "lucide-react";
-import { DeviceNetwork } from "@/services/deviceNetworkService";
+  Inventory2,
+  DnsRounded,
+  DeviceHub,
+} from "@mui/icons-material";
+import { paths } from "@/lib/apiv2/schema";
+import DeleteDeviceModal from "./DeleteDeviceModal";
+
+type DeviceNetwork =
+  paths["/device-networks/"]["get"]["responses"]["200"]["content"]["application/json"]["devices"][number];
 
 interface DeviceTableProps {
   devices: DeviceNetwork[];
   onEdit?: (device: DeviceNetwork) => void;
   onSync?: (device: DeviceNetwork) => void;
-  onDelete?: (device: DeviceNetwork) => void;
 }
 
-const getStatusDot = (status: string) => {
-  switch (status) {
-    case "ONLINE":
-      return "bg-green-500";
-    case "OFFLINE":
-      return "bg-red-500";
-    case "MAINTENANCE":
-      return "bg-blue-500";
-    case "WARNING":
-      return "bg-yellow-500";
-    default:
-      return "bg-gray-500";
-  }
+const statusConfig: Record<string, { color: "success" | "error" | "info" | "warning" | "default"; label: string }> = {
+  ONLINE: { color: "success", label: "Online" },
+  OFFLINE: { color: "error", label: "Offline" },
+  MAINTENANCE: { color: "info", label: "Maintenance" },
+  WARNING: { color: "warning", label: "Warning" },
+  OTHER: { color: "default", label: "Other" },
 };
 
-const getTypeBadge = (type: string) => {
-  const base =
-    "inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded whitespace-nowrap font-sf-pro-text";
-  switch (type) {
-    case "SWITCH":
-      return `${base} bg-blue-50 text-blue-700`;
-    case "ROUTER":
-      return `${base} bg-purple-50 text-purple-700`;
-    case "FIREWALL":
-      return `${base} bg-red-50 text-red-700`;
-    case "ACCESS_POINT":
-      return `${base} bg-indigo-50 text-indigo-700`;
-    default:
-      return `${base} bg-gray-50 text-gray-700`;
-  }
+const typeConfig: Record<string, { color: string; icon: React.ReactNode }> = {
+  SWITCH: { color: "#2563EB", icon: <DnsRounded fontSize="small" /> },
+  ROUTER: { color: "#7C3AED", icon: <RouterIcon fontSize="small" /> },
+  FIREWALL: { color: "#DC2626", icon: <Shield fontSize="small" /> },
+  ACCESS_POINT: { color: "#0891B2", icon: <Wifi fontSize="small" /> },
+  OTHER: { color: "#6B7280", icon: <Inventory2 fontSize="small" /> },
 };
 
-const getTypeIcon = (type: string) => {
-  const iconClass = "w-4 h-4";
-  switch (type) {
-    case "SWITCH":
-      return <Server className={iconClass} />;
-    case "ROUTER":
-      return <RouterIcon className={iconClass} />;
-    case "FIREWALL":
-      return <Shield className={iconClass} />;
-    case "ACCESS_POINT":
-      return <Wifi className={iconClass} />;
-    default:
-      return <Box className={iconClass} />;
-  }
-};
-
-export default function DeviceTable({ devices, onEdit, onSync, onDelete }: DeviceTableProps) {
+export default function DeviceTable({ devices, onEdit, onSync }: DeviceTableProps) {
   const router = useRouter();
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; direction: "up" | "down" }>({ top: 0, left: 0, direction: "down" });
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        // Also check if click was on any button
-        let isButtonClick = false;
-        buttonRefs.current.forEach((btn) => {
-          if (btn && btn.contains(event.target as Node)) {
-            isButtonClick = true;
-          }
-        });
-        if (!isButtonClick) {
-          setOpenDropdownId(null);
-        }
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  // Dropdown menu state
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [menuDeviceId, setMenuDeviceId] = useState<string | null>(null);
 
-  const toggleDropdown = (deviceId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DeviceNetwork | null>(null);
 
-    if (openDropdownId === deviceId) {
-      setOpenDropdownId(null);
-      return;
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, deviceId: string) => {
+    setAnchorEl(event.currentTarget);
+    setMenuDeviceId(deviceId);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setMenuDeviceId(null);
+  };
+
+  const getMenuDevice = () => devices.find((d) => d.id === menuDeviceId);
+
+  const handleViewDetail = () => {
+    const device = getMenuDevice();
+    if (device) router.push(`/device/device-list/${device.id}`);
+    handleMenuClose();
+  };
+
+  const handleEdit = () => {
+    const device = getMenuDevice();
+    if (device) {
+      if (onEdit) onEdit(device);
+      else router.push(`/device/device-list/${device.id}?edit=true`);
     }
-
-    // Calculate position for fixed dropdown
-    const button = e.currentTarget as HTMLElement;
-    const rect = button.getBoundingClientRect();
-    const dropdownWidth = 176; // w-44 = 11rem = 176px
-    const dropdownHeight = 180;
-
-    // Calculate if should open up or down
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const direction = spaceBelow < dropdownHeight ? "up" : "down";
-
-    // Position to the left of the button
-    const left = rect.left - dropdownWidth - 8;
-    const top = direction === "up"
-      ? rect.bottom - dropdownHeight
-      : rect.top;
-
-    setDropdownPosition({ top, left, direction });
-    setOpenDropdownId(deviceId);
+    handleMenuClose();
   };
 
-  const handleViewDetail = (device: DeviceNetwork) => {
-    router.push(`/device/device-list/${device.id}`);
-    setOpenDropdownId(null);
+  const handleSync = () => {
+    const device = getMenuDevice();
+    if (device && onSync) onSync(device);
+    handleMenuClose();
   };
 
-  const handleEdit = (device: DeviceNetwork) => {
-    if (onEdit) {
-      onEdit(device);
-    } else {
-      router.push(`/device/device-list/${device.id}?edit=true`);
+  const handleDelete = () => {
+    const device = getMenuDevice();
+    if (device) {
+      setDeleteTarget(device);
+      setDeleteModalOpen(true);
     }
-    setOpenDropdownId(null);
-  };
-
-  const handleSync = (device: DeviceNetwork) => {
-    if (onSync) onSync(device);
-    setOpenDropdownId(null);
-  };
-
-  const handleDelete = (device: DeviceNetwork) => {
-    if (onDelete) onDelete(device);
-    setOpenDropdownId(null);
+    handleMenuClose();
   };
 
   return (
-    <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider first:rounded-tl-lg">
-                Device Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Serial Number
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Model
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                IP MGMT
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Vendor
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Site
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+    <>
+      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 2 }}>
+        <Table sx={{ minWidth: 650 }} aria-label="device table">
+          <TableHead sx={{ bgcolor: "grey.50" }}>
+            <TableRow>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Device Name</TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Serial Number</TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Type</TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Model</TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>IP MGMT</TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Vendor</TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Site</TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Status</TableCell>
+              <TableCell align="right" />
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {devices.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={9}
-                  className="px-6 py-8 text-center text-gray-500 font-sf-pro-text"
-                >
-                  <FontAwesomeIcon
-                    icon={faNetworkWired}
-                    className="w-12 h-12 mx-auto mb-3 text-gray-300"
-                  />
-                  <p>No devices found</p>
-                </td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
+                  <DeviceHub sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
+                  <Typography color="text.secondary">No devices found</Typography>
+                </TableCell>
+              </TableRow>
             ) : (
-              devices.map((device) => (
-                <tr key={device.id} className="hover:bg-gray-50 transition-colors">
-                  {/* Device Name */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Link
-                      href={`/device/device-list/${device.id}`}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-800 font-sf-pro-text"
-                    >
-                      {device.device_name}
-                    </Link>
-                  </td>
+              devices.map((device) => {
+                const status = statusConfig[device.status] || statusConfig.OTHER;
+                const deviceType = typeConfig[device.type] || typeConfig.OTHER;
 
-                  {/* Serial Number */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500 font-sf-pro-text">
+                return (
+                  <TableRow key={device.id} hover>
+                    {/* Device Name */}
+                    <TableCell>
+                      <Link
+                        href={`/device/device-list/${device.id}`}
+                        style={{ color: "#2563EB", textDecoration: "none", fontWeight: 500 }}
+                      >
+                        {device.device_name}
+                      </Link>
+                    </TableCell>
+
+                    {/* Serial Number */}
+                    <TableCell sx={{ color: "text.secondary" }}>
                       {device.serial_number || "-"}
-                    </div>
-                  </td>
+                    </TableCell>
 
-                  {/* Type */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={getTypeBadge(device.type)}>
-                      <span>{getTypeIcon(device.type)}</span>
-                      {device.type.replace("_", " ")}
-                    </span>
-                  </td>
+                    {/* Type */}
+                    <TableCell>
+                      <Box
+                        sx={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 0.5,
+                          color: deviceType.color,
+                          fontSize: 13,
+                          fontWeight: 500,
+                        }}
+                      >
+                        {deviceType.icon}
+                        {device.type.replace("_", " ")}
+                      </Box>
+                    </TableCell>
 
-                  {/* Model */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 font-sf-pro-text">
-                      {device.device_model || "-"}
-                    </div>
-                  </td>
+                    {/* Model */}
+                    <TableCell>{device.device_model || "-"}</TableCell>
 
-                  {/* IP MGMT */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 font-sf-pro-text">
-                      {device.ip_address || "-"}
-                    </div>
-                  </td>
+                    {/* IP MGMT */}
+                    <TableCell>
+                      <Typography variant="body2" >
+                        {device.ip_address || "-"}
+                      </Typography>
+                    </TableCell>
 
-                  {/* Vendor */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 font-sf-pro-text">
-                      {device.vendor || "-"}
-                    </div>
-                  </td>
+                    {/* Vendor */}
+                    <TableCell>{device.vendor || "-"}</TableCell>
 
-                  {/* Site */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 font-sf-pro-text">
+                    {/* Site */}
+                    <TableCell>
                       {device.localSite
                         ? device.localSite.site_name || device.localSite.site_code
                         : "-"}
-                    </div>
-                  </td>
+                    </TableCell>
 
-                  {/* Status */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className={`w-2 h-2 rounded-full ${getStatusDot(device.status)}`} />
-                      <span className="text-sm font-medium text-gray-700">
-                        {device.status}
-                      </span>
-                    </span>
-                  </td>
+                    {/* Status */}
+                    <TableCell>
+                      <Chip
+                        label={status.label}
+                        color={status.color}
+                        size="small"
+                        variant="filled"
+                        sx={{ fontWeight: 500 }}
+                      />
+                    </TableCell>
 
-                  {/* Actions */}
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {/* Ellipsis Button */}
-                    <button
-                      ref={(el) => {
-                        if (el) buttonRefs.current.set(device.id, el);
-                      }}
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-                      onClick={(e) => toggleDropdown(device.id, e)}
-                      title="Actions"
-                    >
-                      <FontAwesomeIcon icon={faEllipsisVertical} className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))
+                    {/* Actions */}
+                    <TableCell align="right">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleMenuOpen(e, device.id)}
+                      >
+                        <MoreVert fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-      {/* Portal Dropdown Menu - Renders outside table DOM */}
-      {openDropdownId && typeof window !== "undefined" && createPortal(
-        <div
-          ref={dropdownRef}
-          className="fixed w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[9999]"
-          style={{
-            top: dropdownPosition.top,
-            left: dropdownPosition.left,
+      {/* MUI Menu — replaces custom portal dropdown */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <MenuItem onClick={handleViewDetail}>
+          <ListItemIcon><Visibility fontSize="small" color="primary" /></ListItemIcon>
+          <ListItemText>View Details</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleEdit}>
+          <ListItemIcon><Edit fontSize="small" color="success" /></ListItemIcon>
+          <ListItemText>Edit Device</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleSync}>
+          <ListItemIcon><Sync fontSize="small" color="secondary" /></ListItemIcon>
+          <ListItemText>Sync Config</ListItemText>
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleDelete}>
+          <ListItemIcon><Delete fontSize="small" color="error" /></ListItemIcon>
+          <ListItemText sx={{ color: "error.main" }}>Delete</ListItemText>
+        </MenuItem>
+      </Menu>
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <DeleteDeviceModal
+          open={deleteModalOpen}
+          device={deleteTarget}
+          onClose={() => {
+            setDeleteModalOpen(false);
+            setDeleteTarget(null);
           }}
-        >
-          <button
-            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
-            onClick={() => {
-              const device = devices.find(d => d.id === openDropdownId);
-              if (device) handleViewDetail(device);
-            }}
-          >
-            <FontAwesomeIcon icon={faEye} className="w-4 h-4 text-blue-600" />
-            View Details
-          </button>
-          <button
-            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
-            onClick={() => {
-              const device = devices.find(d => d.id === openDropdownId);
-              if (device) handleEdit(device);
-            }}
-          >
-            <FontAwesomeIcon icon={faEdit} className="w-4 h-4 text-green-600" />
-            Edit Device
-          </button>
-          <button
-            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
-            onClick={() => {
-              const device = devices.find(d => d.id === openDropdownId);
-              if (device) handleSync(device);
-            }}
-          >
-            <FontAwesomeIcon icon={faSync} className="w-4 h-4 text-purple-600" />
-            Sync Config
-          </button>
-          <hr className="my-1 border-gray-200" />
-          <button
-            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
-            onClick={() => {
-              const device = devices.find(d => d.id === openDropdownId);
-              if (device) handleDelete(device);
-            }}
-          >
-            <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
-            Delete
-          </button>
-        </div>,
-        document.body
+          onConfirm={() => {
+            setDeleteModalOpen(false);
+            setDeleteTarget(null);
+          }}
+        />
       )}
-    </div>
+    </>
   );
 }

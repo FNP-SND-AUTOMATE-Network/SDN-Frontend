@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { Breadcrumbs, Typography, Link as MuiLink } from "@mui/material";
+import { NavigateNext } from "@mui/icons-material";
 
 interface DeviceDetailBreadcrumbProps {
   deviceName: string;
@@ -10,15 +12,22 @@ export default function DeviceDetailBreadcrumb({
   deviceName,
 }: DeviceDetailBreadcrumbProps) {
   return (
-    <div className="mb-4 text-sm text-gray-500 font-sf-pro-text">
-      <Link
+    <Breadcrumbs
+      separator={<NavigateNext fontSize="small" />}
+      sx={{ mb: 2 }}
+    >
+      <MuiLink
+        component={Link}
         href="/device/device-list"
-        className="text-blue-600 hover:text-blue-800 hover:underline font-sf-pro-text"
+        underline="hover"
+        color="primary"
+        fontSize={14}
       >
-        Device
-      </Link>
-      {" / "}
-      <span className="text-gray-800 font-medium">{deviceName}</span>
-    </div>
+        Devices
+      </MuiLink>
+      <Typography fontSize={14} color="text.primary" fontWeight={500}>
+        {deviceName}
+      </Typography>
+    </Breadcrumbs>
   );
 }
