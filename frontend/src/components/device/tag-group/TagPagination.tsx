@@ -1,5 +1,7 @@
 "use client";
 
+import { Box, Typography, Pagination } from "@mui/material";
+
 interface TagPaginationProps {
   currentPage: number;
   pageSize: number;
@@ -13,46 +15,46 @@ export default function TagPagination({
   total,
   onPageChange,
 }: TagPaginationProps) {
+  const totalPages = Math.ceil(total / pageSize);
+  const startIndex = (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, total);
+
   return (
-    <div className="mt-4 flex items-center justify-between text-sm text-gray-600 font-sf-pro-text">
-      <div>
+    <Box
+      sx={{
+        mt: 3,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexDirection: { xs: "column", sm: "row" },
+        gap: 2,
+      }}
+    >
+      <Typography variant="body2" color="text.secondary">
         Showing{" "}
-        {total === 0
-          ? 0
-          : (currentPage - 1) * pageSize + 1}{" "}
+        <Box component="span" fontWeight="medium" color="text.primary">
+          {total === 0 ? 0 : startIndex}
+        </Box>{" "}
         to{" "}
-        {Math.min(
-          currentPage * pageSize,
-          total
-        )}{" "}
-        of {total} results
-      </div>
-      <div className="flex gap-2">
-        <button
-          disabled={currentPage === 1}
-          onClick={() => onPageChange(currentPage - 1)}
-          className={`px-3 py-1 rounded border ${
-            currentPage === 1
-              ? "text-gray-400 border-gray-200 cursor-not-allowed"
-              : "text-gray-700 border-gray-300 hover:bg-gray-50"
-          }`}
-        >
-          Previous
-        </button>
-        <button
-          disabled={
-            currentPage * pageSize >= total
-          }
-          onClick={() => onPageChange(currentPage + 1)}
-          className={`px-3 py-1 rounded border ${
-            currentPage * pageSize >= total
-              ? "text-gray-400 border-gray-200 cursor-not-allowed"
-              : "text-gray-700 border-gray-300 hover:bg-gray-50"
-          }`}
-        >
-          Next
-        </button>
-      </div>
-    </div>
+        <Box component="span" fontWeight="medium" color="text.primary">
+          {endIndex}
+        </Box>{" "}
+        of{" "}
+        <Box component="span" fontWeight="medium" color="text.primary">
+          {total}
+        </Box>{" "}
+        results
+      </Typography>
+
+      <Pagination
+        count={totalPages}
+        page={currentPage}
+        onChange={(_, page) => onPageChange(page)}
+        color="primary"
+        shape="rounded"
+        showFirstButton
+        showLastButton
+      />
+    </Box>
   );
 }

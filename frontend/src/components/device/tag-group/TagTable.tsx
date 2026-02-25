@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faEllipsisVertical,
@@ -9,19 +8,37 @@ import {
   faTrash,
   faTag,
 } from "@fortawesome/free-solid-svg-icons";
-import { Tag, TypeTag } from "@/services/tagService";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Menu,
+  MenuItem,
+  Typography,
+  Box,
+  Badge,
+} from "@mui/material";
+import { components } from "@/lib/apiv2/schema";
+
+type TagResponse = components["schemas"]["TagResponse"];
+type TypeTag = components["schemas"]["TypeTag"];
 
 interface TagTableProps {
-  tags: Tag[];
-  onEditTag: (tag: Tag) => void;
+  tags: TagResponse[];
+  onEditTag: (tag: TagResponse) => void;
   onDeleteTag: (tagId: string, tagName: string) => void;
 }
 
-const getTypeBadge = (type: TypeTag) => {
-  const badges: Record<TypeTag, { label: string; className: string }> = {
-    tag: { label: "Tag", className: "bg-blue-100 text-blue-800" },
-    group: { label: "Group", className: "bg-purple-100 text-purple-800" },
-    other: { label: "Other", className: "bg-gray-100 text-gray-800" },
+const getTypeBadgeProps = (type: TypeTag) => {
+  const badges: Record<TypeTag, { label: string; color: string; bgcolor: string }> = {
+    tag: { label: "Tag", color: "#1e40af", bgcolor: "#dbeafe" }, // blue-800, blue-100
+    group: { label: "Group", color: "#6b21a8", bgcolor: "#f3e8ff" }, // purple-800, purple-100
+    other: { label: "Other", color: "#1f2937", bgcolor: "#f3f4f6" }, // gray-800, gray-100
   };
   return badges[type] || badges.other;
 };
@@ -40,206 +57,157 @@ export default function TagTable({
   onEditTag,
   onDeleteTag,
 }: TagTableProps) {
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedTag, setSelectedTag] = useState<TagResponse | null>(null);
+  const open = Boolean(anchorEl);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpenDropdownId(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, tag: TagResponse) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedTag(tag);
+  };
 
-  const handleDropdownClick = (e: React.MouseEvent, tagId: string) => {
-    e.stopPropagation();
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedTag(null);
+  };
 
-    if (openDropdownId === tagId) {
-      setOpenDropdownId(null);
-      return;
+  const handleEdit = () => {
+    if (selectedTag) {
+      onEditTag(selectedTag);
     }
-
-    const button = e.currentTarget as HTMLElement;
-    const rect = button.getBoundingClientRect();
-
-    setDropdownPosition({
-      top: rect.bottom + 4,
-      left: rect.right - 176, // 176px = w-44 (11rem)
-    });
-    setOpenDropdownId(tagId);
+    handleMenuClose();
   };
 
-  const handleEdit = (tag: Tag) => {
-    onEditTag(tag);
-    setOpenDropdownId(null);
-  };
-
-  const handleDelete = (tag: Tag) => {
-    onDeleteTag(tag.tag_id, tag.tag_name);
-    setOpenDropdownId(null);
+  const handleDelete = () => {
+    if (selectedTag) {
+      onDeleteTag(selectedTag.tag_id, selectedTag.tag_name);
+    }
+    handleMenuClose();
   };
 
   return (
-    <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider first:rounded-tl-lg">
-                Tag
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Description
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                OS
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Devices
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Templates
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Updated
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {tags.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={8}
-                  className="px-6 py-12 text-center text-gray-500 font-sf-pro-text"
-                >
-                  <FontAwesomeIcon
-                    icon={faTag}
-                    className="w-12 h-12 mx-auto mb-3 text-gray-300"
-                  />
-                  <p className="text-lg font-medium">No tags found</p>
-                  <p className="text-sm text-gray-400">Add a new tag to get started</p>
-                </td>
-              </tr>
-            ) : (
-              tags.map((tag) => {
-                const typeBadge = getTypeBadge(tag.type);
-                return (
-                  <tr key={tag.tag_id} className="hover:bg-gray-50 transition-colors">
-                    {/* Tag Name with color indicator */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: tag.color }}
-                        />
-                        <span className="text-sm font-medium text-gray-900 font-sf-pro-text">
-                          {tag.tag_name}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Type Column */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${typeBadge.className}`}>
-                        {typeBadge.label}
-                      </span>
-                    </td>
-
-                    {/* Description Column */}
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-500 font-sf-pro-text truncate max-w-xs block">
-                        {tag.description || "-"}
-                      </span>
-                    </td>
-
-                    {/* OS Column */}
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className="text-sm font-medium text-gray-900 font-sf-pro-text">
-                        {tag.os_count || 0}
-                      </span>
-                    </td>
-
-                    {/* Devices Column */}
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className="text-sm font-medium text-gray-900 font-sf-pro-text">
-                        {tag.device_count || 0}
-                      </span>
-                    </td>
-
-                    {/* Templates Column */}
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className="text-sm font-medium text-gray-900 font-sf-pro-text">
-                        {tag.template_count || 0}
-                      </span>
-                    </td>
-
-                    {/* Updated Column */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-500 font-sf-pro-text">
-                        {formatDate(tag.updated_at)}
-                      </span>
-                    </td>
-
-                    {/* Actions Column */}
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <button
-                        onClick={(e) => handleDropdownClick(e, tag.tag_id)}
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                      >
-                        <FontAwesomeIcon icon={faEllipsisVertical} className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Portal Dropdown Menu - Renders outside table DOM */}
-      {openDropdownId && typeof window !== "undefined" && createPortal(
-        <div
-          ref={dropdownRef}
-          className="fixed w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[9999]"
-          style={{
-            top: dropdownPosition.top,
-            left: dropdownPosition.left,
-          }}
-        >
-          <button
-            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
-            onClick={() => {
-              const tag = tags.find(t => t.tag_id === openDropdownId);
-              if (tag) handleEdit(tag);
-            }}
-          >
-            <FontAwesomeIcon icon={faPencil} className="w-4 h-4 text-blue-600" />
-            Edit
-          </button>
-          <hr className="my-1 border-gray-200" />
-          <button
-            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
-            onClick={() => {
-              const tag = tags.find(t => t.tag_id === openDropdownId);
-              if (tag) handleDelete(tag);
-            }}
-          >
-            <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
-            Delete
-          </button>
-        </div>,
-        document.body
-      )}
-    </div>
+    <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 2 }}>
+      <Table sx={{ minWidth: 650 }} aria-label="tag table">
+        <TableHead sx={{ bgcolor: "grey.50" }}>
+          <TableRow>
+            <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Tag</TableCell>
+            <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Type</TableCell>
+            <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Description</TableCell>
+            <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>OS</TableCell>
+            <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Devices</TableCell>
+            <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Templates</TableCell>
+            <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Updated</TableCell>
+            <TableCell align="right"></TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {tags.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
+                <FontAwesomeIcon icon={faTag} style={{ width: 48, height: 48, color: "var(--mui-palette-grey-300)", marginBottom: 16 }} />
+                <Typography variant="h6" color="text.primary" fontWeight="medium">
+                  No tags found
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Add a new tag to get started
+                </Typography>
+              </TableCell>
+            </TableRow>
+          ) : (
+            tags.map((tag) => {
+              const typeProps = getTypeBadgeProps(tag.type);
+              return (
+                <TableRow key={tag.tag_id} hover sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: tag.color, flexShrink: 0 }} />
+                      <Typography variant="body2" fontWeight="medium">
+                        {tag.tag_name}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box
+                      sx={{
+                        px: 1.5,
+                        py: 0.5,
+                        borderRadius: 4,
+                        display: 'inline-block',
+                        bgcolor: typeProps.bgcolor,
+                        color: typeProps.color,
+                        fontSize: '0.75rem',
+                        fontWeight: 'medium',
+                      }}
+                    >
+                      {typeProps.label}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {tag.description || "-"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Typography variant="body2" fontWeight="medium">{tag.os_count || 0}</Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Typography variant="body2" fontWeight="medium">{tag.device_count || 0}</Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Typography variant="body2" fontWeight="medium">{tag.template_count || 0}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {formatDate(tag.updated_at)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton
+                      aria-label="more"
+                      id={`tag-button-${tag.tag_id}`}
+                      aria-controls={open ? `tag-menu-${tag.tag_id}` : undefined}
+                      aria-expanded={open ? 'true' : undefined}
+                      aria-haspopup="true"
+                      onClick={(e) => handleMenuClick(e, tag)}
+                      size="small"
+                    >
+                      <FontAwesomeIcon icon={faEllipsisVertical} style={{ width: 16 }} />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+      
+      {/* Action Menu */}
+      <Menu
+        id="tag-menu"
+        MenuListProps={{
+          'aria-labelledby': 'tag-button',
+        }}
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleMenuClose}
+        slotProps={{
+          paper: {
+            elevation: 2,
+            sx: { minWidth: 160, borderRadius: 2, mt: 0.5 },
+          },
+        }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        <MenuItem onClick={handleEdit} sx={{ py: 1.5 }}>
+          <FontAwesomeIcon icon={faPencil} style={{ width: 16, marginRight: 12, color: "var(--mui-palette-primary-main)" }} />
+          <Typography variant="body2">Edit</Typography>
+        </MenuItem>
+        <MenuItem onClick={handleDelete} sx={{ py: 1.5, color: "error.main" }}>
+          <FontAwesomeIcon icon={faTrash} style={{ width: 16, marginRight: 12 }} />
+          <Typography variant="body2">Delete</Typography>
+        </MenuItem>
+      </Menu>
+    </TableContainer>
   );
 }

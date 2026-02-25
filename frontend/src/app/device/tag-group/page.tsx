@@ -6,16 +6,17 @@ import { ProtectedRoute } from "@/components/auth/AuthGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
-import {
-  tagService,
-  Tag,
-  TagCreateRequest,
-  TagUpdateRequest,
-} from "@/services/tagService";
+import { $api, fetchClient } from "@/lib/apiv2/fetch";
+import { components } from "@/lib/apiv2/schema";
+
+type TagResponse = components["schemas"]["TagResponse"];
+type TagCreate = components["schemas"]["TagCreate"];
+type TagUpdate = components["schemas"]["TagUpdate"];
 import {
   TagHeader,
   TagTable,
-  TagModal,
+  CreateTagModal,
+  EditTagModal,
   TagSkeleton,
   TagTableSkeleton,
   TagPagination,
@@ -28,11 +29,7 @@ export default function DeviceTagGroupPage() {
   const { token, user } = useAuth();
   const { snackbar, hideSnackbar, showSuccess, showError } = useSnackbar();
 
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isDataLoading, setIsDataLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const isFirstLoadRef = useRef(true);
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -63,7 +60,7 @@ export default function DeviceTagGroupPage() {
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
     mode: "add" | "edit";
-    tag: Tag | null;
+    tag: TagResponse | null;
   }>({
     isOpen: false,
     mode: "add",
@@ -81,48 +78,33 @@ export default function DeviceTagGroupPage() {
     tagName: "",
   });
 
-  // Fetch tags
-  const fetchTags = useCallback(async () => {
-    if (!token) return;
-
-    try {
-      if (isFirstLoadRef.current) {
-        setIsInitialLoading(true);
-      } else {
-        setIsDataLoading(true);
-      }
-      setError(null);
-      const response = await tagService.getTags(
-        token,
-        pagination.page,
-        pagination.pageSize,
-        {
+  // Fetch tags using React Query
+  const { data, isLoading: isInitialLoading, error, refetch } = $api.useQuery(
+    "get",
+    "/tags/",
+    {
+      params: {
+        query: {
+          page: pagination.page,
+          page_size: pagination.pageSize,
           search: debouncedSearch || undefined,
           include_usage: true,
-        }
-      );
-      setTags(response.tags);
-      setPagination((prev) => ({
-        ...prev,
-        total: response.total,
-      }));
+        },
+      },
+    },
+    { enabled: !!token }
+  );
 
-      // Mark first load as complete
-      if (isFirstLoadRef.current) {
-        isFirstLoadRef.current = false;
-      }
-    } catch (err) {
-      console.error("Error fetching tags:", err);
-      setError("Unable to load tag data");
-    } finally {
-      setIsInitialLoading(false);
-      setIsDataLoading(false);
-    }
-  }, [token, pagination.page, pagination.pageSize, debouncedSearch]);
+  const tags = data?.tags || [];
 
   useEffect(() => {
-    fetchTags();
-  }, [fetchTags]);
+    if (data) {
+      setPagination((prev) => ({
+        ...prev,
+        total: data.total,
+      }));
+    }
+  }, [data]);
 
   // Modal handlers
   const openAddModal = () => {
@@ -133,7 +115,7 @@ export default function DeviceTagGroupPage() {
     });
   };
 
-  const openEditModal = (tag: Tag) => {
+  const openEditModal = (tag: TagResponse) => {
     setModalState({
       isOpen: true,
       mode: "edit",
@@ -150,43 +132,52 @@ export default function DeviceTagGroupPage() {
   };
 
   const handleModalSuccess = () => {
-    fetchTags();
+    refetch();
   };
 
   // CRUD operations
-  const handleCreateTag = async (data: TagCreateRequest) => {
+  const handleCreateTag = async (data: TagCreate) => {
     if (!token) return;
 
     try {
-      await tagService.createTag(token, data);
+      const { error } = await fetchClient.POST("/tags/", {
+        body: data,
+      });
+      if (error) throw error;
+
       showSuccess("Tag created successfully");
-      await fetchTags();
+      refetch();
     } catch (err: any) {
       console.error("Error creating tag:", err);
-      showError(err.message || "Unable to create tag");
+      showError(err?.message || "Unable to create tag");
       throw err;
     }
   };
 
-  const handleUpdateTag = async (data: TagUpdateRequest) => {
+  const handleUpdateTag = async (data: TagUpdate) => {
     if (!token || !modalState.tag) return;
 
     try {
-      await tagService.updateTag(token, modalState.tag.tag_id, data);
+      const { error } = await fetchClient.PUT("/tags/{tag_id}", {
+        params: { path: { tag_id: modalState.tag.tag_id } },
+        body: data,
+      });
+      if (error) throw error;
+
       showSuccess("Tag updated successfully");
-      await fetchTags();
+      refetch();
     } catch (err: any) {
       console.error("Error updating tag:", err);
-      showError(err.message || "Unable to update tag");
+      showError(err?.message || "Unable to update tag");
       throw err;
     }
   };
 
-  const handleModalSubmit = async (data: TagCreateRequest | TagUpdateRequest) => {
+  const handleModalSubmit = async (data: TagCreate | TagUpdate) => {
     if (modalState.mode === "add") {
-      await handleCreateTag(data as TagCreateRequest);
+      await handleCreateTag(data as TagCreate);
     } else {
-      await handleUpdateTag(data as TagUpdateRequest);
+      await handleUpdateTag(data as TagUpdate);
     }
   };
 
@@ -211,13 +202,17 @@ export default function DeviceTagGroupPage() {
     if (!token || !confirmModal.tagId) return;
 
     try {
-      await tagService.deleteTag(token, confirmModal.tagId);
+      const { error } = await fetchClient.DELETE("/tags/{tag_id}", {
+        params: { path: { tag_id: confirmModal.tagId } },
+      });
+      if (error) throw error;
+
       showSuccess("Tag deleted successfully");
       closeConfirmModal();
-      await fetchTags();
+      refetch();
     } catch (err: any) {
       console.error("Error deleting tag:", err);
-      showError(err.message || "Unable to delete tag");
+      showError(err?.message || "Unable to delete tag");
     }
   };
 
@@ -276,7 +271,7 @@ export default function DeviceTagGroupPage() {
                 <h3 className="text-lg font-medium text-gray-900 mb-2 font-sf-pro-display">
                   Error Occurred
                 </h3>
-                <p className="text-gray-600 font-sf-pro-text">{error}</p>
+                <p className="text-gray-600 font-sf-pro-text">{error instanceof Error ? error.message : "Unable to load tag data"}</p>
               </div>
             ) : (
               <>
@@ -299,15 +294,28 @@ export default function DeviceTagGroupPage() {
           </>
         )}
 
-        {/* Tag Modal */}
-        {canCreateOrEdit && (
-          <TagModal
+        {/* Create Tag Modal */}
+        {canCreateOrEdit && modalState.mode === "add" && (
+          <CreateTagModal
             isOpen={modalState.isOpen}
             onClose={closeModal}
-            onSuccess={handleModalSuccess}
-            mode={modalState.mode}
+            onSubmit={async (data) => {
+              await handleModalSubmit(data);
+              handleModalSuccess();
+            }}
+          />
+        )}
+
+        {/* Edit Tag Modal */}
+        {canCreateOrEdit && modalState.mode === "edit" && modalState.tag && (
+          <EditTagModal
+            isOpen={modalState.isOpen}
             tag={modalState.tag}
-            onSubmit={handleModalSubmit}
+            onClose={closeModal}
+            onSubmit={async (data) => {
+              await handleModalSubmit(data);
+              handleModalSuccess();
+            }}
           />
         )}
 

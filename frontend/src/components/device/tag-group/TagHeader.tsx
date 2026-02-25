@@ -11,7 +11,18 @@ import {
   faServer,
   faChartBar,
 } from "@fortawesome/free-solid-svg-icons";
-import { Button } from "@/components/ui/Button";
+import {
+  Box,
+  Typography,
+  TextField,
+  MenuItem,
+  Button,
+  InputAdornment,
+  IconButton,
+  Stack,
+  Paper,
+  Select,
+} from "@mui/material";
 
 interface StatusCardProps {
   label: string;
@@ -21,25 +32,38 @@ interface StatusCardProps {
 }
 
 function StatusCard({ label, count, icon, color }: StatusCardProps) {
-  const iconColorClasses = {
-    blue: "text-blue-500",
-    green: "text-green-500",
-    purple: "text-purple-500",
-    orange: "text-orange-500",
+  const colorMap = {
+    blue: "primary.main",
+    green: "success.main",
+    purple: "secondary.main",
+    orange: "warning.main",
   };
 
   return (
-    <div className="flex-1 min-w-[140px] p-4 rounded-lg border border-gray-200 bg-white">
-      <div className="flex items-center gap-2 mb-1">
-        <FontAwesomeIcon icon={icon} className={`w-4 h-4 ${iconColorClasses[color]}`} />
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+    <Paper
+      elevation={0}
+      sx={{
+        flex: 1,
+        minWidth: 140,
+        p: 2,
+        borderRadius: 2,
+        border: "1px solid",
+        borderColor: "divider",
+        bgcolor: "background.paper",
+      }}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+        <Box sx={{ display: "flex", color: colorMap[color] || "inherit" }}>
+          <FontAwesomeIcon icon={icon} style={{ width: 16 }} />
+        </Box>
+        <Typography variant="overline" color="text.secondary" fontWeight="medium" sx={{ lineHeight: 1 }}>
           {label}
-        </span>
-      </div>
-      <div className="text-2xl font-bold text-gray-900 font-sf-pro-display">
+        </Typography>
+      </Box>
+      <Typography variant="h5" fontWeight="bold" color="text.primary">
         {count.toLocaleString()}
-      </div>
-    </div>
+      </Typography>
+    </Paper>
   );
 }
 
@@ -83,71 +107,83 @@ export default function TagHeader({
     onSearch("");
   };
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onFilterChange(e.target.value);
   };
 
   return (
-    <div className="mb-6">
+    <Box sx={{ mb: 3 }}>
       {/* Header Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 font-sf-pro-display">
-            Tags
-          </h1>
-          <p className="text-sm text-gray-500 font-sf-pro-text">
-            Organize your resources with tags for better management
-          </p>
-        </div>
-      </div>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" fontWeight="bold" color="text.primary" gutterBottom>
+          Tags
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Organize your resources with tags for better management
+        </Typography>
+      </Box>
 
-      {/* Search, Filter, and Add Button - All in one row */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center mb-6">
+      {/* Search, Filter, and Add Button */}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={2}
+        alignItems={{ xs: "stretch", sm: "center" }}
+        sx={{ mb: 3 }}
+      >
         {/* Search Input */}
-        <div className="relative flex-1 max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FontAwesomeIcon icon={faSearch} className="w-4 h-4 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search tags..."
-            value={localSearch}
-            onChange={handleSearchChange}
-            className="w-full pl-9 pr-9 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sf-pro-text"
-          />
-          {localSearch && (
-            <button
-              onClick={handleClearSearch}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-            >
-              <FontAwesomeIcon icon={faTimes} className="w-3 h-3" />
-            </button>
-          )}
-        </div>
+        <TextField
+          placeholder="Search tags..."
+          value={localSearch}
+          onChange={handleSearchChange}
+          size="small"
+          sx={{ flex: 1, maxWidth: 360, "& .MuiOutlinedInput-root": { bgcolor: "white", borderRadius: 2 } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <FontAwesomeIcon icon={faSearch} style={{ width: 14, color: "var(--mui-palette-text-secondary)" }} />
+                </InputAdornment>
+              ),
+              endAdornment: localSearch ? (
+                <InputAdornment position="end">
+                  <IconButton onClick={handleClearSearch} edge="end" size="small">
+                    <FontAwesomeIcon icon={faTimes} style={{ width: 12 }} />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+            },
+          }}
+        />
 
         {/* Type Filter */}
-        <select
+        <Select
           value={selectedType}
-          onChange={handleFilterChange}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-sf-pro-text bg-white min-w-[140px]"
+          onChange={(e) => onFilterChange(e.target.value)}
+          size="small"
+          displayEmpty
+          sx={{ minWidth: 140, bgcolor: "white", borderRadius: 2 }}
         >
-          <option value="">All Types</option>
-          <option value="OS">OS</option>
-          <option value="Device">Device</option>
-        </select>
+          <MenuItem value="">All Types</MenuItem>
+          <MenuItem value="tag">Tag</MenuItem>
+          <MenuItem value="group">Group</MenuItem>
+          <MenuItem value="other">Other</MenuItem>
+        </Select>
 
-        {/* Spacer */}
-        <div className="flex-1" />
+        <Box sx={{ flexGrow: 1 }} />
 
         {/* Add Tag Button */}
-        <Button onClick={onAddTag} className="flex items-center gap-2 whitespace-nowrap">
-          <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+        <Button
+          variant="contained"
+          onClick={onAddTag}
+          startIcon={<FontAwesomeIcon icon={faPlus} style={{ width: 14 }} />}
+          sx={{ whiteSpace: "nowrap", boxShadow: "none" }}
+        >
           Add Tag
         </Button>
-      </div>
+      </Stack>
 
       {/* Status Cards */}
-      <div className="flex gap-4 overflow-x-auto pb-2">
+      <Stack direction="row" spacing={2} sx={{ overflowX: "auto", pb: 1 }}>
         <StatusCard
           label="Total Tags"
           count={totalTags}
@@ -172,7 +208,8 @@ export default function TagHeader({
           icon={faChartBar}
           color="orange"
         />
-      </div>
-    </div>
+      </Stack>
+    </Box>
   );
 }
+

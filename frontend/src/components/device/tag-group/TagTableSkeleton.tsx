@@ -1,86 +1,60 @@
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Skeleton,
+  Box,
+} from "@mui/material";
+
 export default function TagTableSkeleton() {
   return (
-    <div className="animate-pulse">
-      {/* Table Skeleton */}
-      <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3">
-                  <div className="h-4 bg-gray-200 rounded w-24"></div>
-                </th>
-                <th className="px-6 py-3">
-                  <div className="h-4 bg-gray-200 rounded w-32"></div>
-                </th>
-                <th className="px-6 py-3">
-                  <div className="h-4 bg-gray-200 rounded w-20"></div>
-                </th>
-                <th className="px-6 py-3">
-                  <div className="h-4 bg-gray-200 rounded w-20"></div>
-                </th>
-                <th className="px-6 py-3">
-                  <div className="h-4 bg-gray-200 rounded w-28"></div>
-                </th>
-                <th className="px-6 py-3">
-                  <div className="h-4 bg-gray-200 rounded w-16"></div>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {[...Array(5)].map((_, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4">
-                    <div className="h-7 bg-gray-200 rounded-full w-28"></div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-40"></div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="h-6 bg-gray-200 rounded-full w-20"></div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-1">
-                      <div className="h-3 bg-gray-200 rounded w-24"></div>
-                      <div className="h-3 bg-gray-200 rounded w-32"></div>
-                      <div className="h-3 bg-gray-200 rounded w-20"></div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-32"></div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center space-x-3">
-                      <div className="h-4 w-4 bg-gray-200 rounded"></div>
-                      <div className="h-4 w-4 bg-gray-200 rounded"></div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+    <Box sx={{ width: '100%', animation: 'pulse' }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 2 }}>
+        <Table sx={{ minWidth: 650 }}>
+          <TableHead sx={{ bgcolor: "grey.50" }}>
+            <TableRow>
+              <TableCell><Skeleton variant="text" width={60} height={20} /></TableCell>
+              <TableCell><Skeleton variant="text" width={80} height={20} /></TableCell>
+              <TableCell><Skeleton variant="text" width={120} height={20} /></TableCell>
+              <TableCell align="center"><Skeleton variant="text" width={40} height={20} sx={{ mx: 'auto' }} /></TableCell>
+              <TableCell align="center"><Skeleton variant="text" width={40} height={20} sx={{ mx: 'auto' }} /></TableCell>
+              <TableCell align="center"><Skeleton variant="text" width={60} height={20} sx={{ mx: 'auto' }} /></TableCell>
+              <TableCell><Skeleton variant="text" width={80} height={20} /></TableCell>
+              <TableCell align="right"><Skeleton variant="circular" width={24} height={24} sx={{ ml: 'auto' }} /></TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {[...Array(5)].map((_, index) => (
+              <TableRow key={index}>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Skeleton variant="circular" width={12} height={12} />
+                    <Skeleton variant="text" width={100} height={24} />
+                  </Box>
+                </TableCell>
+                <TableCell><Skeleton variant="rectangular" width={60} height={24} sx={{ borderRadius: 4 }} /></TableCell>
+                <TableCell><Skeleton variant="text" width={180} height={20} /></TableCell>
+                <TableCell align="center"><Skeleton variant="text" width={20} height={20} sx={{ mx: 'auto' }} /></TableCell>
+                <TableCell align="center"><Skeleton variant="text" width={20} height={20} sx={{ mx: 'auto' }} /></TableCell>
+                <TableCell align="center"><Skeleton variant="text" width={20} height={20} sx={{ mx: 'auto' }} /></TableCell>
+                <TableCell><Skeleton variant="text" width={80} height={20} /></TableCell>
+                <TableCell align="right"><Skeleton variant="circular" width={24} height={24} sx={{ ml: 'auto' }} /></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       {/* Pagination Skeleton */}
-      <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg mt-4">
-        <div className="flex-1 flex justify-between sm:hidden">
-          <div className="h-10 bg-gray-200 rounded w-24"></div>
-          <div className="h-10 bg-gray-200 rounded w-24"></div>
-        </div>
-        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-          <div>
-            <div className="h-4 bg-gray-200 rounded w-48"></div>
-          </div>
-          <div>
-            <div className="flex gap-2">
-              <div className="h-10 bg-gray-200 rounded w-24"></div>
-              <div className="h-10 bg-gray-200 rounded w-24"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Skeleton variant="text" width={200} height={20} />
+        <Skeleton variant="rectangular" width={300} height={32} sx={{ borderRadius: 1 }} />
+      </Box>
+    </Box>
   );
 }
 
