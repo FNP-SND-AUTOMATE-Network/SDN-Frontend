@@ -3,8 +3,8 @@
 import { PageLayout } from "@/components/layout/PageLayout";
 import { useState } from "react";
 import ProfilePage from "./profile/page";
-import { AccountContent } from "./account/page";
-import { MFAContent as MFAContentComponent } from "./mfa/page";
+import AccountContent from "./account/page";
+import MFAContentComponent from "./mfa/page";
 import { ProtectedRoute } from "@/components/auth/AuthGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import { faExclamationCircle } from "@fortawesome/free-solid-svg-icons";
@@ -60,10 +60,10 @@ export default function SettingPage() {
                                 </svg>
                             </div>
                             <h3 className="text-lg font-medium text-gray-900 mb-2 font-sf-pro-display">
-                                ไม่มีสิทธิ์เข้าถึง
+                                No Permission
                             </h3>
                             <p className="text-gray-600 font-sf-pro-text">
-                                คุณไม่มีสิทธิ์เข้าถึงหน้านี้ ต้องมีบทบาท ADMIN หรือ OWNER เท่านั้น
+                                You do not have permission to access this page. You must have the role of ADMIN.
                             </p>
                         </div>
                     );
@@ -91,8 +91,8 @@ export default function SettingPage() {
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
-                                            ? "border-primary-500 text-primary-600"
-                                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                        ? "border-primary-500 text-primary-600"
+                                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                                         }`}
                                 >
                                     {tab.label}

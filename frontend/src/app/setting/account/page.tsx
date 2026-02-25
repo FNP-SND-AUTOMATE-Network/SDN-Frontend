@@ -21,7 +21,7 @@ import {
     AccountSkeleton,
 } from "@/components/account";
 
-export function AccountContent() {
+export default function AccountPage() {
     const { token } = useAuth();
     const { snackbar, showSuccess, showError, hideSnackbar } = useSnackbar();
     const [users, setUsers] = useState<UserProfile[]>([]);
@@ -180,20 +180,20 @@ export function AccountContent() {
         return <AccountSkeleton />;
     }
 
-  return (
+    return (
         <Fragment>
             <div className="space-y-6 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
                 <AccountHeader onAddUser={openAddModal} />
-                
+
                 <AccountErrorMessage error={error} />
-                
-                <UserTable 
+
+                <UserTable
                     users={users}
                     onEditUser={openEditModal}
                     onDeleteUser={openDeleteConfirm}
                 />
-                
-                <AccountPagination 
+
+                <AccountPagination
                     pagination={pagination}
                     onPageChange={handlePageChange}
                 />

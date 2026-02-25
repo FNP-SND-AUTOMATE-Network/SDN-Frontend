@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import MuiProvider from "@/components/providers/MuiProvider";
+import QueryProvider from "@/components/providers/QueryProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 const geistSans = Geist({
@@ -34,9 +35,11 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AuthProvider>
-          <MuiProvider>
-            {children}
-          </MuiProvider>
+          <QueryProvider>
+            <MuiProvider>
+              {children}
+            </MuiProvider>
+          </QueryProvider>
         </AuthProvider>
       </body>
     </html>

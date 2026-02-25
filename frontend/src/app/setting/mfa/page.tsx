@@ -17,7 +17,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { userService } from "@/services/userService";
 
-export function MFAContent() {
+export default function MFAPage() {
   const { user, token, updateUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
