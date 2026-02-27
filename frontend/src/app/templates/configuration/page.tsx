@@ -25,8 +25,11 @@ import {
   InputAdornment,
   Grid,
   Pagination as MuiPagination,
-  Alert
+  Alert,
+  IconButton,
+  Stack
 } from "@mui/material";
+import { Close, Search } from "@mui/icons-material";
 
 export default function TemplatesConfigurationPage() {
   const { token } = useAuth();
@@ -87,9 +90,15 @@ export default function TemplatesConfigurationPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setSearchQuery(searchInput);
+    setCurrentPage(1);
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput("");
+    setSearchQuery("");
     setCurrentPage(1);
   };
 
@@ -148,50 +157,61 @@ export default function TemplatesConfigurationPage() {
     <ProtectedRoute>
       <PageLayout>
         {/* Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
-          <Typography
-            variant="h4"
-            fontWeight="bold"
-            sx={{
-              background: 'linear-gradient(to right, #06b6d4, #0891b2)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}
-          >
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h5" fontWeight={700}>
             Configuration
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant="contained"
-              color="success"
-              startIcon={<FontAwesomeIcon icon={faPlus} />}
-              onClick={handleOpenNewTemplate}
-              sx={{ textTransform: "none", boxShadow: "none" }}
-            >
-              New Template
-            </Button>
-          </Box>
+          <Typography variant="body2" color="text.secondary">
+            configuration templates
+          </Typography>
         </Box>
 
-        {/* Search Bar */}
-        <Box component="form" onSubmit={handleSearchSubmit} sx={{ mb: 4, maxWidth: 400 }}>
+        {/* Search + Add Button */}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems={{ sm: "center" }}
+          sx={{ mb: 4 }}
+          component="form"
+          onSubmit={handleSearchSubmit}
+        >
+          {/* Search Bar */}
           <TextField
-            fullWidth
+            size="small"
             placeholder="Search templates..."
             value={searchInput}
             onChange={handleSearchChange}
-            variant="outlined"
-            size="small"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <FontAwesomeIcon icon={faSearch} style={{ color: "text.disabled" }} />
-                </InputAdornment>
-              ),
-              sx: { bgcolor: "white" }
+            sx={{ flex: 1, maxWidth: 360, "& .MuiOutlinedInput-root": { bgcolor: "white", borderRadius: 2 } }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search fontSize="small" color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: searchInput ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={handleClearSearch}>
+                      <Close fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+              },
             }}
           />
-        </Box>
+
+          <Box flex={1} />
+
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<FontAwesomeIcon icon={faPlus} />}
+            onClick={handleOpenNewTemplate}
+            sx={{ textTransform: "none", boxShadow: "none", whiteSpace: "nowrap", borderRadius: 2 }}
+          >
+            New Template
+          </Button>
+        </Stack>
 
         {/* Content */}
         {isLoading ? (

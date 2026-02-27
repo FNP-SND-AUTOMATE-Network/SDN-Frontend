@@ -33,6 +33,8 @@ import {
     ListItemText,
     Chip,
 } from "@mui/material";
+
+import { Inventory2, DnsRounded } from "@mui/icons-material";
 import ConfigPreviewModal from "./ConfigPreviewModal";
 import TopologyConfigModal from "./TopologyConfigModal";
 import { components } from "@/lib/apiv2/schema";
@@ -61,19 +63,12 @@ const getTypeIcon = (type: string, className = "w-4 h-4") => {
     }
 };
 
-const getTypeChipProps = (type: string) => {
-    switch (type) {
-        case "SWITCH":
-            return { bgcolor: "info.50", color: "info.700" };
-        case "ROUTER":
-            return { bgcolor: "secondary.50", color: "secondary.700" };
-        case "FIREWALL":
-            return { bgcolor: "error.50", color: "error.700" };
-        case "ACCESS_POINT":
-            return { bgcolor: "primary.50", color: "primary.700" };
-        default:
-            return { bgcolor: "grey.50", color: "grey.700" };
-    }
+const typeConfig: Record<string, { color: string; icon: React.ReactNode }> = {
+    SWITCH: { color: "#2563EB", icon: <DnsRounded fontSize="small" /> },
+    ROUTER: { color: "#7C3AED", icon: <RouterIcon fontSize="small" /> },
+    FIREWALL: { color: "#DC2626", icon: <Shield fontSize="small" /> },
+    ACCESS_POINT: { color: "#0891B2", icon: <Wifi fontSize="small" /> },
+    OTHER: { color: "#6B7280", icon: <Inventory2 fontSize="small" /> },
 };
 
 const getStatusChipProps = (status: StatusDevice) => {
@@ -138,7 +133,8 @@ export default function TopologyDeviceTable({
                     <TableBody>
                         {devices.map((device) => {
                             const isSelected = selectedDeviceId === device.id;
-                            const typeProps = getTypeChipProps(device.type as string);
+                            const deviceType = (device.type as string) || "OTHER";
+                            const typeProps = typeConfig[deviceType] || typeConfig.OTHER;
                             const statusProps = getStatusChipProps(device.status as StatusDevice);
 
                             return (
@@ -161,18 +157,19 @@ export default function TopologyDeviceTable({
                                         </Typography>
                                     </TableCell>
                                     <TableCell>
-                                        <Chip
-                                            icon={<Box sx={{ display: 'flex', alignItems: 'center', pl: 1 }}>{getTypeIcon(device.type as string)}</Box>}
-                                            label={(device.type as string).replace("_", " ")}
-                                            size="small"
+                                        <Box
                                             sx={{
-                                                bgcolor: typeProps.bgcolor,
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: 0.5,
                                                 color: typeProps.color,
+                                                fontSize: 13,
                                                 fontWeight: 500,
-                                                borderRadius: 1,
-                                                "& .MuiChip-icon": { color: typeProps.color }
                                             }}
-                                        />
+                                        >
+                                            {typeProps.icon}
+                                            {deviceType.replace("_", " ")}
+                                        </Box>
                                     </TableCell>
                                     <TableCell>
                                         <Typography variant="body2" color="text.primary">
