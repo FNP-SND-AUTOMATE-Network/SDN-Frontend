@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faTimes,
-    faSpinner,
     faUpload,
     faEdit,
     faFile,
@@ -15,8 +14,27 @@ import {
     ConfigurationTemplate,
     TemplateType,
 } from "@/services/configurationTemplateService";
-import { tagService, Tag } from "@/services/tagService";
 import { useAuth } from "@/contexts/AuthContext";
+import { $api } from "@/lib/apiv2/fetch";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import {
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Button,
+    TextField,
+    MenuItem,
+    Typography,
+    Box,
+    IconButton,
+    Chip,
+    Paper,
+    Stack,
+    CircularProgress,
+    ToggleButton,
+    ToggleButtonGroup,
+} from "@mui/material";
 
 interface EditTemplateModalProps {
     isOpen: boolean;
@@ -39,6 +57,7 @@ export default function EditTemplateModal({
 }: EditTemplateModalProps) {
     const { token } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const queryClient = useQueryClient();
 
     // Form state
     const [templateName, setTemplateName] = useState("");
@@ -50,13 +69,67 @@ export default function EditTemplateModal({
     const [isDragOver, setIsDragOver] = useState(false);
     const [contentMode, setContentMode] = useState<"keep" | "edit" | "upload">("keep");
 
-    // Tags state
-    const [tags, setTags] = useState<Tag[]>([]);
-    const [isLoadingTags, setIsLoadingTags] = useState(false);
+    // Fetch tags via React Query
+    const { data: tagsData, isLoading: isLoadingTags } = $api.useQuery(
+        "get",
+        "/tags/",
+        {
+            params: {
+                query: {
+                    page: 1,
+                    page_size: 100,
+                },
+            },
+        },
+        {
+            enabled: !!token && isOpen,
+        }
+    );
 
-    // UI state
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const tags = tagsData?.tags || [];
+
+    // Edit Mutation
+    const editMutation = useMutation({
+        mutationFn: async () => {
+            if (!token || !template) throw new Error("Missing requirements");
+
+            // 1. Update metadata
+            await configurationTemplateService.updateTemplate(
+                token,
+                template.id,
+                {
+                    template_name: templateName.trim(),
+                    description: description.trim() || null,
+                    template_type: templateType,
+                    tag_names: selectedTags.length > 0 ? selectedTags : null,
+                }
+            );
+
+            // 2. Upload content
+            if (contentMode === "upload" && selectedFile) {
+                await configurationTemplateService.uploadTemplateContent(
+                    token,
+                    template.id,
+                    selectedFile
+                );
+            } else if (contentMode === "edit") {
+                await configurationTemplateService.uploadTemplateContent(
+                    token,
+                    template.id,
+                    configContent
+                );
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["get", "/configuration-templates/"] });
+            // Also invalidate single template fetch just in case
+            if (template?.id) {
+                queryClient.invalidateQueries({ queryKey: ["get", `/configuration-templates/${template.id}` as any] });
+            }
+            onSuccess();
+            handleClose();
+        }
+    });
 
     // Initialize form when template changes
     useEffect(() => {
@@ -68,31 +141,12 @@ export default function EditTemplateModal({
             setSelectedTags(template.tags?.map(t => t.tag_name) || []);
             setContentMode("keep");
             setSelectedFile(null);
-            setError(null);
+            editMutation.reset();
         }
     }, [isOpen, template]);
 
-    // Fetch tags when modal opens
-    useEffect(() => {
-        const fetchTags = async () => {
-            if (!token || !isOpen) return;
-
-            setIsLoadingTags(true);
-            try {
-                const response = await tagService.getTags(token, 1, 100);
-                setTags(response.tags);
-            } catch (err) {
-                console.error("Failed to fetch tags:", err);
-            } finally {
-                setIsLoadingTags(false);
-            }
-        };
-
-        fetchTags();
-    }, [token, isOpen]);
-
     const handleClose = () => {
-        setError(null);
+        editMutation.reset();
         onClose();
     };
 
@@ -101,13 +155,9 @@ export default function EditTemplateModal({
         const validExtensions = [".txt", ".yaml", ".yml"];
         const extension = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
 
-        if (!validExtensions.includes(extension)) {
-            setError("Only .txt, .yaml, and .yml files are allowed");
-            return;
+        if (validExtensions.includes(extension)) {
+            setSelectedFile(file);
         }
-
-        setSelectedFile(file);
-        setError(null);
     }, []);
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -134,363 +184,308 @@ export default function EditTemplateModal({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (!token || !template) return;
-
-        // Validation
-        if (!templateName.trim()) {
-            setError("Template name is required");
-            return;
-        }
-
-        if (contentMode === "upload" && !selectedFile) {
-            setError("Please select a file to upload");
-            return;
-        }
-
-        if (contentMode === "edit" && !configContent.trim()) {
-            setError("Configuration content cannot be empty");
-            return;
-        }
-
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            // Update template metadata
-            await configurationTemplateService.updateTemplate(
-                token,
-                template.id,
-                {
-                    template_name: templateName.trim(),
-                    description: description.trim() || null,
-                    template_type: templateType,
-                    tag_names: selectedTags.length > 0 ? selectedTags : null,
-                }
-            );
-
-            // Upload new content if changed
-            if (contentMode === "upload" && selectedFile) {
-                await configurationTemplateService.uploadTemplateContent(
-                    token,
-                    template.id,
-                    selectedFile
-                );
-            } else if (contentMode === "edit") {
-                await configurationTemplateService.uploadTemplateContent(
-                    token,
-                    template.id,
-                    configContent
-                );
-            }
-
-            onSuccess();
-            handleClose();
-        } catch (err: unknown) {
-            console.error("Failed to update template:", err);
-            setError(err instanceof Error ? err.message : "Failed to update template");
-        } finally {
-            setIsLoading(false);
-        }
+        editMutation.mutate();
     };
+
+    const isSubmitDisabled = !templateName.trim() ||
+        (contentMode === "upload" && !selectedFile) ||
+        (contentMode === "edit" && !configContent.trim()) ||
+        editMutation.isPending;
 
     if (!isOpen || !template) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <div
-                className="fixed inset-0 transition-opacity bg-gray-800 bg-opacity-75"
-                onClick={handleClose}
-            />
+        <Dialog
+            open={isOpen}
+            onClose={handleClose}
+            maxWidth="md"
+            fullWidth
+            PaperProps={{
+                sx: { borderRadius: 2, overflow: 'visible' }
+            }}
+        >
+            <DialogTitle sx={{ pb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ p: 1, bgcolor: "primary.50", borderRadius: 1, display: 'flex' }}>
+                        <FontAwesomeIcon icon={faEdit} style={{ color: "#2563eb", width: 20 }} />
+                    </Box>
+                    <Box>
+                        <Typography variant="h6" component="div" fontWeight="bold" lineHeight={1.2}>Edit Template</Typography>
+                        <Typography variant="body2" component="div" color="text.secondary">Update template details and content</Typography>
+                    </Box>
+                </Box>
+                <IconButton onClick={handleClose} size="small" sx={{ color: "text.secondary", alignSelf: 'flex-start' }}>
+                    <FontAwesomeIcon icon={faTimes} style={{ width: 16 }} />
+                </IconButton>
+            </DialogTitle>
 
-            {/* Modal */}
-            <div className="relative w-full max-w-3xl bg-white shadow-xl rounded-xl max-h-[90vh] flex flex-col">
-                {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                            <FontAwesomeIcon icon={faEdit} className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-semibold text-gray-900">Edit Template</h3>
-                            <p className="text-sm text-gray-500">Update template details and content</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleClose}
-                        disabled={isLoading}
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                        <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
-                    </button>
-                </div>
-
-                {/* Content */}
-                <form onSubmit={handleSubmit} className="flex-1 overflow-auto p-6">
-                    {/* Error message */}
-                    {error && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-                            {error}
-                        </div>
-                    )}
-
+            <form onSubmit={handleSubmit}>
+                <DialogContent sx={{ pt: 2, pb: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {/* Basic Info */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        {/* Template Name */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Template Name <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={templateName}
-                                onChange={(e) => setTemplateName(e.target.value)}
-                                placeholder="Enter template name"
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                        </div>
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
+                        <TextField
+                            label="Template Name"
+                            value={templateName}
+                            onChange={(e) => setTemplateName(e.target.value)}
+                            placeholder="Enter template name"
+                            fullWidth
+                            required
+                            size="small"
+                            variant="outlined"
+                            sx={{ flex: 1 }}
+                        />
+                        <TextField
+                            select
+                            label="Template Type"
+                            value={templateType}
+                            onChange={(e) => setTemplateType(e.target.value as TemplateType)}
+                            fullWidth
+                            size="small"
+                            variant="outlined"
+                            sx={{ flex: 1 }}
+                        >
+                            {TEMPLATE_TYPES.map((type) => (
+                                <MenuItem key={type.value} value={type.value}>
+                                    {type.label}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                    </Box>
+                    <TextField
+                        label="Description"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Enter template description"
+                        fullWidth
+                        multiline
+                        minRows={2}
+                        size="small"
+                        variant="outlined"
+                    />
 
-                        {/* Template Type */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Template Type
-                            </label>
-                            <select
-                                value={templateType}
-                                onChange={(e) => setTemplateType(e.target.value as TemplateType)}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                            >
-                                {TEMPLATE_TYPES.map((type) => (
-                                    <option key={type.value} value={type.value}>
-                                        {type.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Description */}
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Description
-                            </label>
-                            <textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                placeholder="Enter template description"
-                                rows={2}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Tags */}
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {/* Tag Selection */}
+                    <Box>
+                        <Typography variant="body2" fontWeight="medium" sx={{ mb: 1, color: "text.secondary" }}>
                             Tags (optional)
-                        </label>
+                        </Typography>
                         {isLoadingTags ? (
-                            <p className="text-xs text-gray-400">Loading tags...</p>
+                            <Typography variant="caption" color="text.secondary">Loading tags...</Typography>
                         ) : tags.length === 0 ? (
-                            <p className="text-xs text-gray-400">
+                            <Typography variant="caption" color="text.secondary">
                                 No tags available.
-                            </p>
+                            </Typography>
                         ) : (
-                            <div className="space-y-3">
+                            <Stack spacing={1.5}>
                                 {(["tag", "group", "other"] as const).map((typeKey) => {
                                     const tagsOfType = tags.filter((t) => t.type === typeKey);
                                     if (tagsOfType.length === 0) return null;
 
-                                    const typeLabel =
-                                        typeKey === "tag"
-                                            ? "Tag"
-                                            : typeKey === "group"
-                                                ? "Group"
-                                                : "Other";
+                                    const typeLabel = typeKey === "tag" ? "Tag" : typeKey === "group" ? "Group" : "Other";
 
                                     return (
-                                        <div key={typeKey}>
-                                            <div className="text-xs font-medium text-gray-500 mb-1">
+                                        <Box key={typeKey}>
+                                            <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mb: 0.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                                 {typeLabel}
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
+                                            </Typography>
+                                            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                                                 {tagsOfType.map((tag) => {
                                                     const isSelected = selectedTags.includes(tag.tag_name);
                                                     return (
-                                                        <button
-                                                            key={tag.tag_id}
-                                                            type="button"
-                                                            onClick={() =>
+                                                        <Chip
+                                                            key={tag.tag_id || tag.tag_name}
+                                                            label={tag.tag_name}
+                                                            size="small"
+                                                            onClick={() => {
                                                                 setSelectedTags((prev) =>
                                                                     prev.includes(tag.tag_name)
                                                                         ? prev.filter((t) => t !== tag.tag_name)
                                                                         : [...prev, tag.tag_name]
-                                                                )
+                                                                );
+                                                            }}
+                                                            sx={{
+                                                                bgcolor: isSelected ? `${tag.color}20` : "grey.100",
+                                                                color: isSelected ? tag.color : "text.secondary",
+                                                                borderColor: isSelected ? tag.color : "transparent",
+                                                                borderWidth: 1,
+                                                                borderStyle: "solid",
+                                                                fontWeight: isSelected ? "bold" : "regular",
+                                                                "&:hover": {
+                                                                    bgcolor: isSelected ? `${tag.color}30` : "grey.200",
+                                                                }
+                                                            }}
+                                                            icon={
+                                                                <Box
+                                                                    sx={{
+                                                                        width: 8,
+                                                                        height: 8,
+                                                                        borderRadius: "50%",
+                                                                        bgcolor: tag.color,
+                                                                        ml: 1
+                                                                    }}
+                                                                />
                                                             }
-                                                            disabled={isLoading}
-                                                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border transition-colors ${isSelected
-                                                                ? "border-blue-500 bg-blue-100 text-blue-800"
-                                                                : "border-gray-200 bg-gray-50 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
-                                                                }`}
-                                                        >
-                                                            <span
-                                                                className="w-2 h-2 rounded-full mr-2"
-                                                                style={{ backgroundColor: tag.color }}
-                                                            />
-                                                            {tag.tag_name}
-                                                        </button>
+                                                        />
                                                     );
                                                 })}
-                                            </div>
-                                        </div>
+                                            </Box>
+                                        </Box>
                                     );
                                 })}
-                            </div>
+                            </Stack>
                         )}
-                    </div>
+                    </Box>
 
                     {/* Content Mode Selection */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Box>
+                        <Typography variant="body2" fontWeight="medium" sx={{ mb: 1.5, color: "text.secondary" }}>
                             Configuration Content
-                        </label>
-                        <div className="flex gap-2 mb-4">
-                            <button
-                                type="button"
-                                onClick={() => setContentMode("keep")}
-                                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${contentMode === "keep"
-                                    ? "bg-blue-500 text-white"
-                                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                    }`}
-                            >
+                        </Typography>
+                        <ToggleButtonGroup
+                            color="primary"
+                            value={contentMode}
+                            exclusive
+                            onChange={(_, newMode) => { if (newMode !== null) setContentMode(newMode); }}
+                            size="small"
+                            sx={{ mb: 2 }}
+                        >
+                            <ToggleButton value="keep" sx={{ width: 140, textTransform: "none", fontWeight: "medium" }}>
                                 Keep Current
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setContentMode("edit")}
-                                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${contentMode === "edit"
-                                    ? "bg-blue-500 text-white"
-                                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                    }`}
-                            >
-                                <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
-                                Edit Content
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setContentMode("upload")}
-                                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${contentMode === "upload"
-                                    ? "bg-blue-500 text-white"
-                                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                    }`}
-                            >
-                                <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
-                                Upload New File
-                            </button>
-                        </div>
-                    </div>
+                            </ToggleButton>
+                            <ToggleButton value="edit" sx={{ width: 140, gap: 1, textTransform: "none", fontWeight: "medium" }}>
+                                <FontAwesomeIcon icon={faEdit} /> Edit Content
+                            </ToggleButton>
+                            <ToggleButton value="upload" sx={{ width: 170, gap: 1, textTransform: "none", fontWeight: "medium" }}>
+                                <FontAwesomeIcon icon={faUpload} /> Upload New File
+                            </ToggleButton>
+                        </ToggleButtonGroup>
 
-                    {/* Content Area based on mode */}
-                    {contentMode === "keep" && (
-                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                            <p className="text-sm text-gray-500 mb-2">Current content will be preserved:</p>
-                            <pre className="text-xs text-gray-700 font-mono whitespace-pre-wrap max-h-[150px] overflow-auto">
-                                {template.detail?.config_content?.slice(0, 500) || "No content"}
-                                {(template.detail?.config_content?.length || 0) > 500 && "..."}
-                            </pre>
-                        </div>
-                    )}
+                        {/* Content Area based on mode */}
+                        {contentMode === "keep" && (
+                            <Paper variant="outlined" sx={{ bgcolor: "grey.50", p: 2, borderRadius: 1 }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                                    Current content will be preserved:
+                                </Typography>
+                                <Box
+                                    component="pre"
+                                    sx={{
+                                        m: 0,
+                                        typography: "caption",
+                                        fontFamily: "monospace",
+                                        color: "text.primary",
+                                        whiteSpace: "pre-wrap",
+                                        maxHeight: 150,
+                                        overflow: "auto"
+                                    }}
+                                >
+                                    {template.detail?.config_content?.slice(0, 500) || "No content"}
+                                    {(template.detail?.config_content?.length || 0) > 500 && "\n..."}
+                                </Box>
+                            </Paper>
+                        )}
 
-                    {contentMode === "edit" && (
-                        <div>
-                            <textarea
+                        {contentMode === "edit" && (
+                            <TextField
+                                label="Edit Content"
                                 value={configContent}
                                 onChange={(e) => setConfigContent(e.target.value)}
                                 placeholder="Enter your configuration content here..."
-                                rows={10}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm bg-gray-50"
+                                multiline
+                                minRows={8}
+                                maxRows={12}
+                                fullWidth
+                                variant="outlined"
+                                slotProps={{
+                                    htmlInput: {
+                                        sx: {
+                                            fontFamily: "monospace",
+                                            fontSize: "0.875rem",
+                                            lineHeight: 1.5
+                                        }
+                                    }
+                                }}
                             />
-                        </div>
-                    )}
-
-                    {contentMode === "upload" && (
-                        <div>
-                            {!selectedFile ? (
-                                <div
-                                    onDragOver={handleDragOver}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={handleDrop}
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragOver
-                                        ? "border-blue-500 bg-blue-50"
-                                        : "border-gray-300 hover:border-gray-400"
-                                        }`}
-                                >
-                                    <FontAwesomeIcon
-                                        icon={faUpload}
-                                        className="w-8 h-8 text-gray-400 mb-3"
-                                    />
-                                    <p className="text-sm text-gray-600 mb-1">
-                                        Drag and drop your file here, or click to browse
-                                    </p>
-                                    <p className="text-xs text-gray-400">
-                                        Supported formats: .txt, .yaml, .yml
-                                    </p>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept=".txt,.yaml,.yml"
-                                        onChange={handleFileInputChange}
-                                        className="hidden"
-                                    />
-                                </div>
-                            ) : (
-                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                    <div className="flex items-center gap-3">
-                                        <FontAwesomeIcon icon={faFile} className="w-5 h-5 text-blue-500" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
-                                            <p className="text-xs text-gray-500">
-                                                {(selectedFile.size / 1024).toFixed(1)} KB
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedFile(null)}
-                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                    >
-                                        <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </form>
-
-                {/* Footer */}
-                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-                    <button
-                        type="button"
-                        onClick={handleClose}
-                        disabled={isLoading}
-                        className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        onClick={handleSubmit}
-                        disabled={isLoading}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium disabled:opacity-50"
-                    >
-                        {isLoading && (
-                            <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" />
                         )}
+
+                        {contentMode === "upload" && (
+                            <Box>
+                                {!selectedFile ? (
+                                    <Box
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                        onClick={() => fileInputRef.current?.click()}
+                                        sx={{
+                                            border: 2,
+                                            borderStyle: "dashed",
+                                            borderColor: isDragOver ? "primary.main" : "grey.300",
+                                            bgcolor: isDragOver ? "primary.50" : "grey.50",
+                                            borderRadius: 2,
+                                            p: 4,
+                                            textAlign: "center",
+                                            cursor: "pointer",
+                                            transition: "all 0.2s",
+                                            "&:hover": { borderColor: "primary.main", bgcolor: "primary.50" }
+                                        }}
+                                    >
+                                        <FontAwesomeIcon icon={faUpload} style={{ width: 40, height: 40, color: "#9ca3af", marginBottom: 12 }} />
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                            Drag and drop your file here, or click to browse
+                                        </Typography>
+                                        <Typography variant="caption" color="text.disabled">
+                                            Supported formats: .txt, .yaml, .yml
+                                        </Typography>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept=".txt,.yaml,.yml"
+                                            onChange={handleFileInputChange}
+                                            style={{ display: "none" }}
+                                        />
+                                    </Box>
+                                ) : (
+                                    <Paper variant="outlined" sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", p: 2, bgcolor: "grey.50" }}>
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                                            <Box sx={{ p: 1, bgcolor: "primary.50", borderRadius: 1 }}>
+                                                <FontAwesomeIcon icon={faFile} style={{ color: "#2563eb", width: 20, height: 20 }} />
+                                            </Box>
+                                            <Box>
+                                                <Typography variant="body2" fontWeight="medium">{selectedFile.name}</Typography>
+                                                <Typography variant="caption" color="text.secondary">{(selectedFile.size / 1024).toFixed(1)} KB</Typography>
+                                            </Box>
+                                        </Box>
+                                        <Button size="small" color="error" onClick={() => setSelectedFile(null)} sx={{ minWidth: 0, p: 1 }}>
+                                            <FontAwesomeIcon icon={faTrash} />
+                                        </Button>
+                                    </Paper>
+                                )}
+                            </Box>
+                        )}
+                    </Box>
+
+                    {/* Error Display */}
+                    {editMutation.isError && (
+                        <Typography color="error" variant="body2">
+                            {editMutation.error instanceof Error ? editMutation.error.message : "Failed to save changes"}
+                        </Typography>
+                    )}
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, pb: 3, bgcolor: 'grey.50', pt: 2, borderTop: 1, borderColor: "divider" }}>
+                    <Button onClick={handleClose} disabled={editMutation.isPending} color="inherit" sx={{ textTransform: "none" }}>
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        disabled={isSubmitDisabled}
+                        variant="contained"
+                        color="primary"
+                        startIcon={editMutation.isPending ? <CircularProgress size={16} color="inherit" /> : null}
+                        sx={{ textTransform: "none", boxShadow: "none" }}
+                    >
                         Save Changes
-                    </button>
-                </div>
-            </div>
-        </div>
+                    </Button>
+                </DialogActions>
+            </form>
+        </Dialog>
     );
 }

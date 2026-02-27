@@ -14,6 +14,21 @@ import {
     faFile,
 } from "@fortawesome/free-solid-svg-icons";
 import { ConfigurationTemplate } from "@/services/configurationTemplateService";
+import {
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Typography,
+    Box,
+    Button,
+    IconButton,
+    Chip,
+    Skeleton,
+    Paper,
+    Stack,
+    Divider,
+} from "@mui/material";
 
 interface TemplateDetailModalProps {
     isOpen: boolean;
@@ -68,12 +83,10 @@ export default function TemplateDetailModal({
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString("th-TH", {
+        return new Date(dateString).toLocaleDateString("en-EN", {
             year: "numeric",
             month: "short",
             day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
         });
     };
 
@@ -87,158 +100,197 @@ export default function TemplateDetailModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <div
-                className="fixed inset-0 transition-opacity bg-gray-800 bg-opacity-75"
-                onClick={handleClose}
-            />
+        <Dialog
+            open={isOpen}
+            onClose={handleClose}
+            maxWidth="md"
+            fullWidth
+            PaperProps={{
+                sx: { borderRadius: 2, maxHeight: "90vh" }
+            }}
+        >
+            {/* Header */}
+            <DialogTitle sx={{ p: 3, pb: 2, display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: 1, borderColor: "divider" }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="h6" component="div" fontWeight="bold" noWrap>
+                        {template.template_name}
+                    </Typography>
+                    <Typography variant="body2" component="div" color="text.secondary" sx={{ mt: 0.5 }}>
+                        {template.description || "No description"}
+                    </Typography>
+                </Box>
+                <IconButton
+                    aria-label="close"
+                    onClick={handleClose}
+                    sx={{ color: "text.secondary", ml: 2 }}
+                >
+                    <FontAwesomeIcon icon={faTimes} style={{ width: 16 }} />
+                </IconButton>
+            </DialogTitle>
 
-            {/* Modal */}
-            <div className="relative w-full max-w-4xl bg-white shadow-xl rounded-xl max-h-[90vh] flex flex-col">
-                {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                    <div className="flex-1 min-w-0">
-                        <h3 className="text-xl font-semibold text-gray-900 truncate">
-                            {template.template_name}
-                        </h3>
-                        <p className="text-sm text-gray-500 mt-1">
-                            {template.description || "No description"}
-                        </p>
-                    </div>
-                    <button
-                        onClick={handleClose}
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors ml-4"
-                    >
-                        <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
-                    </button>
-                </div>
+            {/* Meta Info */}
+            <Box sx={{ px: 3, py: 2, bgcolor: "grey.50", borderBottom: 1, borderColor: "divider" }}>
+                <Stack direction="row" spacing={3} flexWrap="wrap" useFlexGap sx={{ rowGap: 2 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <FontAwesomeIcon icon={faFile} style={{ width: 16, color: "#6b7280" }} />
+                        <Typography variant="body2" fontWeight="medium" color="text.secondary">Type:</Typography>
+                        <Chip size="small" label={getTypeLabel(template.template_type)} color="primary" sx={{ height: 24, fontSize: "0.75rem", fontWeight: "medium" }} />
+                    </Box>
 
-                {/* Meta Info */}
-                <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                    <div className="flex flex-wrap items-center gap-4 text-sm">
-                        <div className="flex items-center gap-2 text-gray-600">
-                            <FontAwesomeIcon icon={faFile} className="w-4 h-4" />
-                            <span className="font-medium">Type:</span>
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                                {getTypeLabel(template.template_type)}
-                            </span>
-                        </div>
-                        {template.tags && template.tags.length > 0 && (
-                            <div className="flex items-center gap-2 text-gray-600">
-                                <FontAwesomeIcon icon={faTag} className="w-4 h-4" />
-                                <span className="font-medium">Tags:</span>
-                                <div className="flex flex-wrap gap-1">
-                                    {template.tags.map((tag) => (
-                                        <span
-                                            key={tag.id || tag.tag_name}
-                                            className="px-2 py-0.5 rounded text-xs font-medium"
-                                            style={{
-                                                backgroundColor: `${tag.color}20`,
-                                                color: tag.color,
-                                            }}
-                                        >
-                                            {tag.tag_name}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        <div className="flex items-center gap-2 text-gray-600">
-                            <FontAwesomeIcon icon={faCalendar} className="w-4 h-4" />
-                            <span className="font-medium">Updated:</span>
-                            <span>{formatDate(template.updated_at)}</span>
-                        </div>
-                    </div>
-                </div>
+                    {template.tags && template.tags.length > 0 && (
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            <FontAwesomeIcon icon={faTag} style={{ width: 16, color: "#6b7280" }} />
+                            <Typography variant="body2" fontWeight="medium" color="text.secondary">Tags:</Typography>
+                            <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                                {template.tags.map((tag) => (
+                                    <Chip
+                                        key={tag.id || tag.tag_name}
+                                        label={tag.tag_name}
+                                        size="small"
+                                        sx={{
+                                            bgcolor: `${tag.color}20`,
+                                            color: tag.color,
+                                            height: 24,
+                                            fontSize: "0.75rem",
+                                            fontWeight: "medium"
+                                        }}
+                                    />
+                                ))}
+                            </Stack>
+                        </Box>
+                    )}
 
-                {/* Content */}
-                <div className="flex-1 overflow-auto p-6">
-                    <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-medium text-gray-700">Configuration Content</h4>
-                        {configContent && (
-                            <button
-                                onClick={handleCopyContent}
-                                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                            >
-                                <FontAwesomeIcon
-                                    icon={copied ? faCheck : faCopy}
-                                    className={`w-3 h-3 ${copied ? "text-green-500" : ""}`}
-                                />
-                                {copied ? "Copied!" : "Copy"}
-                            </button>
-                        )}
-                    </div>
-                    <div className="bg-gray-900 rounded-lg p-4 min-h-[300px] max-h-[400px] overflow-auto">
-                        {isLoadingContent ? (
-                            <div className="animate-pulse space-y-2">
-                                <div className="h-3 bg-gray-700 rounded w-[85%]" />
-                                <div className="h-3 bg-gray-700 rounded w-[70%]" />
-                                <div className="h-3 bg-gray-700 rounded w-[90%]" />
-                                <div className="h-3 bg-gray-700 rounded w-[60%]" />
-                                <div className="h-3 bg-gray-700 rounded w-[80%]" />
-                                <div className="h-3 bg-gray-700 rounded w-[75%]" />
-                                <div className="h-3 bg-gray-700 rounded w-[65%]" />
-                                <div className="h-3 bg-gray-700 rounded w-[85%]" />
-                            </div>
-                        ) : configContent ? (
-                            <pre className="text-sm text-gray-100 font-mono whitespace-pre-wrap leading-relaxed">
-                                {configContent}
-                            </pre>
-                        ) : (
-                            <p className="text-gray-500 text-sm italic">No content available</p>
-                        )}
-                    </div>
-                </div>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <FontAwesomeIcon icon={faCalendar} style={{ width: 16, color: "#6b7280" }} />
+                        <Typography variant="body2" fontWeight="medium" color="text.secondary">Updated:</Typography>
+                        <Typography variant="body2" color="text.primary">{formatDate(template.updated_at)}</Typography>
+                    </Box>
+                </Stack>
+            </Box>
 
-                {/* Footer Actions */}
-                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-                    {showDeleteConfirm ? (
-                        <div className="flex items-center gap-3 text-sm">
-                            <span className="text-red-600 font-medium">Are you sure you want to delete?</span>
-                            <button
+            {/* Content */}
+            <DialogContent sx={{ p: 3, display: "flex", flexDirection: "column" }}>
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
+                    <Typography variant="subtitle2" fontWeight="bold">Configuration Content</Typography>
+                    {configContent && (
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<FontAwesomeIcon icon={copied ? faCheck : faCopy} />}
+                            onClick={handleCopyContent}
+                            color={copied ? "success" : "inherit"}
+                            sx={{ textTransform: "none", py: 0.5 }}
+                        >
+                            {copied ? "Copied!" : "Copy"}
+                        </Button>
+                    )}
+                </Box>
+
+                <Paper
+                    variant="outlined"
+                    sx={{
+                        bgcolor: "#1e293b", // slate-800 or near black
+                        p: 2,
+                        borderRadius: 2,
+                        overflowX: "auto",
+                        minHeight: 200,
+                        maxHeight: 400,
+                    }}
+                >
+                    {isLoadingContent ? (
+                        <Stack spacing={1}>
+                            <Skeleton variant="rectangular" height={16} width="85%" sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+                            <Skeleton variant="rectangular" height={16} width="70%" sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+                            <Skeleton variant="rectangular" height={16} width="90%" sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+                            <Skeleton variant="rectangular" height={16} width="60%" sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+                            <Skeleton variant="rectangular" height={16} width="80%" sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+                            <Skeleton variant="rectangular" height={16} width="75%" sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+                        </Stack>
+                    ) : configContent ? (
+                        <Box
+                            component="pre"
+                            sx={{
+                                color: "grey.100",
+                                typography: "body2",
+                                fontFamily: "monospace",
+                                m: 0,
+                                whiteSpace: "pre-wrap",
+                                wordBreak: "break-all"
+                            }}
+                        >
+                            {configContent}
+                        </Box>
+                    ) : (
+                        <Typography variant="body2" sx={{ color: "grey.500", fontStyle: "italic" }}>
+                            No content available
+                        </Typography>
+                    )}
+                </Paper>
+            </DialogContent>
+
+            {/* Footer Actions */}
+            <DialogActions sx={{ px: 3, py: 2, bgcolor: "grey.50", borderTop: 1, borderColor: "divider", justifyContent: "space-between" }}>
+                {showDeleteConfirm ? (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                        <Typography variant="body2" color="error.main" fontWeight="medium">
+                            Are you sure you want to delete?
+                        </Typography>
+                        <Stack direction="row" spacing={1}>
+                            <Button
+                                variant="contained"
+                                color="error"
+                                size="small"
                                 onClick={handleConfirmDelete}
                                 disabled={isDeleting}
-                                className="px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                                startIcon={isDeleting ? <FontAwesomeIcon icon={faSpinner} spin /> : null}
+                                sx={{ textTransform: "none", boxShadow: "none" }}
                             >
-                                {isDeleting && (
-                                    <FontAwesomeIcon icon={faSpinner} className="w-3 h-3 animate-spin" />
-                                )}
                                 Yes, Delete
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                color="inherit"
+                                size="small"
                                 onClick={() => setShowDeleteConfirm(false)}
                                 disabled={isDeleting}
-                                className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium disabled:opacity-50"
+                                sx={{ textTransform: "none" }}
                             >
                                 Cancel
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={handleDeleteClick}
-                            className="flex items-center gap-2 px-4 py-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
-                        >
-                            <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
-                        </button>
-                    )}
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={handleClose}
-                            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                        >
-                            Close
-                        </button>
-                        <button
-                            onClick={() => onEdit(template)}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
-                        >
-                            <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
-                            Edit Template
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+                            </Button>
+                        </Stack>
+                    </Box>
+                ) : (
+                    <Button
+                        variant="text"
+                        color="error"
+                        onClick={handleDeleteClick}
+                        startIcon={<FontAwesomeIcon icon={faTrash} />}
+                        sx={{ textTransform: "none" }}
+                    >
+                        Delete
+                    </Button>
+                )}
+
+                <Stack direction="row" spacing={1.5}>
+                    <Button
+                        variant="outlined"
+                        color="inherit"
+                        onClick={handleClose}
+                        sx={{ textTransform: "none" }}
+                    >
+                        Close
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => onEdit(template)}
+                        startIcon={<FontAwesomeIcon icon={faEdit} />}
+                        sx={{ textTransform: "none", boxShadow: "none" }}
+                    >
+                        Edit Template
+                    </Button>
+                </Stack>
+            </DialogActions>
+        </Dialog>
     );
 }

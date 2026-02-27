@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ProtectedRoute } from "@/components/auth/AuthGuard";
 import TemplateCard from "@/components/templates/TemplateCard";
@@ -8,92 +8,112 @@ import TemplateCardSkeleton from "@/components/templates/TemplateCardSkeleton";
 import CreateTemplateModal from "@/components/templates/CreateTemplateModal";
 import EditTemplateModal from "@/components/templates/EditTemplateModal";
 import TemplateDetailModal from "@/components/templates/TemplateDetailModal";
-import Pagination from "@/components/ui/Pagination";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faUpload, faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faSearch } from "@fortawesome/free-solid-svg-icons";
 import {
   configurationTemplateService,
   ConfigurationTemplate
 } from "@/services/configurationTemplateService";
 import { useAuth } from "@/contexts/AuthContext";
+import { $api } from "@/lib/apiv2/fetch";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import {
+  Box,
+  Typography,
+  Button,
+  TextField,
+  InputAdornment,
+  Grid,
+  Pagination as MuiPagination,
+  Alert
+} from "@mui/material";
 
 export default function TemplatesConfigurationPage() {
   const { token } = useAuth();
-  const [templates, setTemplates] = useState<ConfigurationTemplate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
 
-  // Modal state
+  // Search & Pagination state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState(""); // to debounce or hold input before search
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
+
+  // Modals state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createModalMode, setCreateModalMode] = useState<"upload" | "write">("write");
 
-  // Detail modal state
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ConfigurationTemplate | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [isFetchingDetail, setIsFetchingDetail] = useState(false);
 
-  // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editTemplate, setEditTemplate] = useState<ConfigurationTemplate | null>(null);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const pageSize = 8;
-
-  // Fetch templates function
-  const fetchTemplates = async () => {
-    if (!token) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await configurationTemplateService.getTemplates(
-        token,
-        currentPage,
-        pageSize,
-        { search: searchQuery || undefined }
-      );
-      setTemplates(response.templates);
-      setTotal(response.total);
-      setTotalPages(Math.ceil(response.total / pageSize));
-    } catch (err) {
-      console.error("Failed to fetch templates:", err);
-      setError(err instanceof Error ? err.message : "Failed to load templates");
-    } finally {
-      setIsLoading(false);
+  // Queries
+  const { data, isLoading, error } = $api.useQuery(
+    "get",
+    "/configuration-templates/",
+    {
+      params: {
+        query: {
+          page: currentPage,
+          page_size: pageSize,
+          search: searchQuery || undefined,
+        }
+      }
+    },
+    {
+      enabled: !!token,
     }
-  };
+  );
 
-  // Fetch templates on mount and when dependencies change
-  useEffect(() => {
-    fetchTemplates();
-  }, [token, currentPage, searchQuery]);
+  const templates = (data?.templates || []) as unknown as ConfigurationTemplate[];
+  const totalPages = data?.total ? Math.ceil(data.total / pageSize) : 1;
 
-  const handlePageChange = (page: number) => {
+  // Mutations
+  const deleteMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      if (!token) throw new Error("Not authenticated");
+      await configurationTemplateService.deleteTemplate(token, templateId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["get", "/configuration-templates/"] });
+      handleCloseDetailModal();
+    }
+  });
+
+  const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchQuery(searchInput);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchInput(e.target.value);
+    // Auto-search if cleared
+    if (!e.target.value) {
+      setSearchQuery("");
+      setCurrentPage(1);
+    }
   };
 
   const handleTemplateClick = async (template: ConfigurationTemplate) => {
     if (!token) return;
 
-    // Show modal immediately with loading state
     setSelectedTemplate(template);
     setShowDetailModal(true);
     setIsFetchingDetail(true);
 
     try {
-      // Fetch full template detail including config_content
       const fullTemplate = await configurationTemplateService.getTemplate(token, template.id);
       setSelectedTemplate(fullTemplate);
     } catch (err) {
       console.error("Failed to fetch template detail:", err);
-      // Keep the basic template info if fetch fails
     } finally {
       setIsFetchingDetail(false);
     }
@@ -115,28 +135,8 @@ export default function TemplatesConfigurationPage() {
     setEditTemplate(null);
   };
 
-  const handleEditSuccess = () => {
-    fetchTemplates();
-  };
-
   const handleDeleteTemplate = async (template: ConfigurationTemplate) => {
-    if (!token) return;
-
-    setIsDeleting(true);
-    try {
-      await configurationTemplateService.deleteTemplate(token, template.id);
-      handleCloseDetailModal();
-      fetchTemplates();
-    } catch (err) {
-      console.error("Failed to delete template:", err);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCurrentPage(1);
+    deleteMutation.mutateAsync(template.id);
   };
 
   const handleOpenNewTemplate = () => {
@@ -144,78 +144,85 @@ export default function TemplatesConfigurationPage() {
     setShowCreateModal(true);
   };
 
-  const handleOpenUploadTemplate = () => {
-    setCreateModalMode("upload");
-    setShowCreateModal(true);
-  };
-
-  const handleCreateSuccess = () => {
-    fetchTemplates();
-  };
-
   return (
     <ProtectedRoute>
       <PageLayout>
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-500 to-cyan-600 bg-clip-text text-transparent font-sf-pro-display">
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
+          <Typography
+            variant="h4"
+            fontWeight="bold"
+            sx={{
+              background: 'linear-gradient(to right, #06b6d4, #0891b2)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}
+          >
             Configuration
-          </h1>
-          <div className="flex items-center gap-3">
-            <button
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={<FontAwesomeIcon icon={faPlus} />}
               onClick={handleOpenNewTemplate}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium text-sm"
+              sx={{ textTransform: "none", boxShadow: "none" }}
             >
-              <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
               New Template
-            </button>
-          </div>
-        </div>
+            </Button>
+          </Box>
+        </Box>
 
         {/* Search Bar */}
-        <form onSubmit={handleSearch} className="mb-6">
-          <div className="relative max-w-md">
-            <FontAwesomeIcon
-              icon={faSearch}
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="Search templates..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
-          </div>
-        </form>
+        <Box component="form" onSubmit={handleSearchSubmit} sx={{ mb: 4, maxWidth: 400 }}>
+          <TextField
+            fullWidth
+            placeholder="Search templates..."
+            value={searchInput}
+            onChange={handleSearchChange}
+            variant="outlined"
+            size="small"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <FontAwesomeIcon icon={faSearch} style={{ color: "text.disabled" }} />
+                </InputAdornment>
+              ),
+              sx: { bgcolor: "white" }
+            }}
+          />
+        </Box>
 
         {/* Content */}
         {isLoading ? (
           <TemplateCardSkeleton count={8} />
         ) : error ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <p className="text-red-600">{error}</p>
-            <button
-              onClick={() => setCurrentPage(1)}
-              className="mt-2 text-sm text-red-500 hover:text-red-700 underline"
-            >
-              Try again
-            </button>
-          </div>
+          <Alert severity="error" sx={{ mb: 4 }}>
+            {error instanceof Error ? error.message : "Failed to load templates."}
+          </Alert>
         ) : templates.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-            <p className="text-gray-500 text-lg mb-4">No templates found</p>
-            <button
+          <Box sx={{ bgcolor: "white", borderRadius: 2, p: 6, textAlign: "center", boxShadow: 1 }}>
+            <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+              No templates found
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
               onClick={handleOpenNewTemplate}
-              className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+              sx={{ textTransform: "none" }}
             >
               Create your first template
-            </button>
-          </div>
+            </Button>
+          </Box>
         ) : (
           <>
             {/* Templates Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+            <Box sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
+              gap: 3,
+              mb: 4
+            }}>
               {templates.map((template) => (
                 <TemplateCard
                   key={template.id}
@@ -223,16 +230,19 @@ export default function TemplatesConfigurationPage() {
                   onClick={handleTemplateClick}
                 />
               ))}
-            </div>
+            </Box>
 
             {/* Pagination */}
-            <div className="flex justify-center">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            </div>
+            {totalPages > 1 && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 4 }}>
+                <MuiPagination
+                  count={totalPages}
+                  page={currentPage}
+                  onChange={handlePageChange}
+                  color="primary"
+                />
+              </Box>
+            )}
           </>
         )}
 
@@ -240,7 +250,7 @@ export default function TemplatesConfigurationPage() {
         <CreateTemplateModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
-          onSuccess={handleCreateSuccess}
+          onSuccess={() => {/* handled by invalidation */ }}
           defaultMode={createModalMode}
         />
 
@@ -251,7 +261,7 @@ export default function TemplatesConfigurationPage() {
           onClose={handleCloseDetailModal}
           onEdit={handleEditTemplate}
           onDelete={handleDeleteTemplate}
-          isDeleting={isDeleting}
+          isDeleting={deleteMutation.isPending}
           isLoadingContent={isFetchingDetail}
         />
 
@@ -260,7 +270,7 @@ export default function TemplatesConfigurationPage() {
           isOpen={showEditModal}
           template={editTemplate}
           onClose={handleCloseEditModal}
-          onSuccess={handleEditSuccess}
+          onSuccess={() => {/* handled by invalidation */ }}
         />
       </PageLayout>
     </ProtectedRoute>
