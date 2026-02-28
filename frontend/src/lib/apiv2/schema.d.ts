@@ -792,6 +792,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/device-networks/sync-openflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Openflow Devices */
+        post: operations["sync_openflow_devices_device_networks_sync_openflow_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/interfaces/": {
         parameters: {
             query?: never;
@@ -1123,14 +1140,20 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/nbi/intent": {
+    "/api/v1/nbi/intents": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Supported Intents
+         * @description Get all supported intents grouped by OS
+         *
+         *     **Always returns 200**
+         */
+        get: operations["list_supported_intents_api_v1_nbi_intents_get"];
         put?: never;
         /**
          * Handle Intent
@@ -1154,29 +1177,7 @@ export interface paths {
          *     }
          *     ```
          */
-        post: operations["handle_intent_api_v1_nbi_intent_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/nbi/intents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Supported Intents
-         * @description Get all supported intents grouped by OS
-         *
-         *     **Always returns 200**
-         */
-        get: operations["list_supported_intents_api_v1_nbi_intents_get"];
-        put?: never;
-        post?: never;
+        post: operations["handle_intent_api_v1_nbi_intents_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1313,7 +1314,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/nbi/sync": {
+    "/api/v1/nbi/odl/sync": {
         parameters: {
             query?: never;
             header?: never;
@@ -1330,7 +1331,31 @@ export interface paths {
          *     - `ODL_CONNECTION_FAILED`: ไม่สามารถเชื่อมต่อ ODL ได้
          *     - `DATABASE_ERROR`: Database update failed
          */
-        post: operations["sync_devices_from_odl_api_v1_nbi_sync_post"];
+        post: operations["sync_devices_from_odl_api_v1_nbi_odl_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nbi/odl/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Odl Config
+         * @description ดึงค่า Config ของ ODL จากระบบ (ดึงจาก Cache/DB)
+         */
+        get: operations["get_odl_config_api_v1_nbi_odl_config_get"];
+        /**
+         * Update Odl Config
+         * @description บันทึกค่า ODL Config ใหม่ลง Database และอัปเดต Cache
+         */
+        put: operations["update_odl_config_api_v1_nbi_odl_config_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1362,21 +1387,6 @@ export interface paths {
          *     - `MOUNT_TIMEOUT`: รอ connection timeout
          */
         post: operations["mount_device_api_v1_nbi_devices__node_id__mount_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/nbi/devices/{node_id}/unmount": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
         /**
          * Unmount Device
          * @description 🔌 Unmount device จาก ODL
@@ -1386,8 +1396,7 @@ export interface paths {
          *     - `DEVICE_NOT_MOUNTED`: Device ไม่ได้ mount อยู่
          *     - `ODL_UNMOUNT_FAILED`: Unmount failed
          */
-        post: operations["unmount_device_api_v1_nbi_devices__node_id__unmount_post"];
-        delete?: never;
+        delete: operations["unmount_device_api_v1_nbi_devices__node_id__mount_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2210,20 +2219,20 @@ export interface components {
              * Node Id
              * @description ODL node-id (unique, URL-safe). ใช้เป็น path parameter ใน API. ตัวอย่าง: CSR1, router-core-01
              */
-            node_id: string;
+            node_id?: string | null;
             /**
              * @description Vendor สำหรับเลือก driver
              * @default OTHER
              */
             vendor: components["schemas"]["DeviceVendor"];
             /**
-             * @description Protocol สำหรับจัดการ (NETCONF หรือ OPENFLOW)
+             * @description โปรโตคอลการจัดการ (NETCONF หรือ OPENFLOW)
              * @default NETCONF
              */
             management_protocol: components["schemas"]["ManagementProtocol"];
             /**
              * Datapath Id
-             * @description OpenFlow datapath_id (เช่น 0000000000000001)
+             * @description สำหรับ OpenFlow (เช่น '0000000000000001')
              */
             datapath_id?: string | null;
             /**
@@ -2322,12 +2331,13 @@ export interface components {
             vendor?: string | null;
             /**
              * Management Protocol
-             * @description Protocol สำหรับจัดการ
+             * @description โปรโตคอลการจัดการ
+             * @default NETCONF
              */
-            management_protocol?: string | null;
+            management_protocol: string;
             /**
              * Datapath Id
-             * @description OpenFlow datapath_id
+             * @description สำหรับ OpenFlow
              */
             datapath_id?: string | null;
             /**
@@ -3260,6 +3270,56 @@ export interface components {
             /** Message */
             message: string;
             file: components["schemas"]["OSFileResponse"];
+        };
+        /**
+         * OdlConfigRequest
+         * @description Request body สำหรับแก้ไข ODL Config
+         */
+        OdlConfigRequest: {
+            /**
+             * Odl Base Url
+             * @description Base URL ของ OpenDaylight
+             */
+            odl_base_url: string;
+            /**
+             * Odl Username
+             * @description Username สำหรับ ODL
+             */
+            odl_username: string;
+            /**
+             * Odl Password
+             * @description Password สำหรับ ODL
+             */
+            odl_password: string;
+            /**
+             * Odl Timeout Sec
+             * @description Timeout (วินาที)
+             * @default 10
+             */
+            odl_timeout_sec: number;
+            /**
+             * Odl Retry
+             * @description จำนวนครั้งที่ Retry
+             * @default 1
+             */
+            odl_retry: number;
+        };
+        /**
+         * OdlConfigResponse
+         * @description Response สำหรับแบบ ODL Config
+         */
+        OdlConfigResponse: {
+            /** Success */
+            success: boolean;
+            /**
+             * Message
+             * @default Success
+             */
+            message: string;
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            };
         };
         /** OperatingSystemCreate */
         OperatingSystemCreate: {
@@ -6897,6 +6957,28 @@ export interface operations {
             };
         };
     };
+    sync_openflow_devices_device_networks_sync_openflow_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     get_interfaces_interfaces__get: {
         parameters: {
             query?: {
@@ -7787,7 +7869,27 @@ export interface operations {
             };
         };
     };
-    handle_intent_api_v1_nbi_intent_post: {
+    list_supported_intents_api_v1_nbi_intents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    handle_intent_api_v1_nbi_intents_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -7816,26 +7918,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_supported_intents_api_v1_nbi_intents_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
                 };
             };
         };
@@ -7987,7 +8069,7 @@ export interface operations {
             };
         };
     };
-    sync_devices_from_odl_api_v1_nbi_sync_post: {
+    sync_devices_from_odl_api_v1_nbi_odl_sync_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -8003,6 +8085,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncResponse"];
+                };
+            };
+        };
+    };
+    get_odl_config_api_v1_nbi_odl_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OdlConfigResponse"];
+                };
+            };
+        };
+    };
+    update_odl_config_api_v1_nbi_odl_config_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OdlConfigRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OdlConfigResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -8042,7 +8177,7 @@ export interface operations {
             };
         };
     };
-    unmount_device_api_v1_nbi_devices__node_id__unmount_post: {
+    unmount_device_api_v1_nbi_devices__node_id__mount_delete: {
         parameters: {
             query?: never;
             header?: never;

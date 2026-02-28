@@ -131,8 +131,8 @@ export default function DeviceDetailPage() {
     try {
       setIsUnmounting(true);
       const { fetchClient } = await import("@/lib/apiv2/fetch");
-      const { data: res, error } = await fetchClient.POST(
-        "/api/v1/nbi/devices/{node_id}/unmount",
+      const { data: res, error } = await fetchClient.DELETE(
+        "/api/v1/nbi/devices/{node_id}/mount",
         { params: { path: { node_id: device.node_id } } }
       );
       if (error) throw error;
