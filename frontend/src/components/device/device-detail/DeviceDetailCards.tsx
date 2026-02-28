@@ -175,14 +175,23 @@ export default function DeviceDetailCards({ device }: DeviceDetailCardsProps) {
                         sx={{
                             display: "flex",
                             justifyContent: "space-between",
-                            alignItems: "center",
+                            alignItems: "flex-start",
                             py: 1.25,
                         }}
                     >
-                        <Typography variant="body2" color="text.secondary">
-                            ODL Mounted
-                        </Typography>
-                        <StatusBadge status={device.odl_mounted} />
+                        <Box>
+                            <Typography variant="body2" color="text.secondary">
+                                ODL Mounted
+                            </Typography>
+                            {device.odl_mounted && device.odl_connection_status && device.odl_connection_status.toLowerCase() !== "connected" && (
+                                <Typography variant="caption" color="warning.main" sx={{ display: "block", mt: 0.5, maxWidth: 220, wordBreak: "break-word" }}>
+                                    {device.odl_connection_status}
+                                </Typography>
+                            )}
+                        </Box>
+                        <StatusBadge
+                            status={device.odl_mounted && (!device.odl_connection_status || device.odl_connection_status.toLowerCase() === "connected")}
+                        />
                     </Box>
                 </Box>
             </Paper>
