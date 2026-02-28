@@ -1,9 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { UserProfile } from "@/services/userService";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserPen } from "@fortawesome/free-solid-svg-icons";
+import {
+  Box,
+  Button,
+  Grid,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 
 interface PersonalInformationProps {
   userProfile: UserProfile | null;
@@ -31,110 +39,158 @@ export default function PersonalInformation({
   saving,
 }: PersonalInformationProps) {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium text-gray-900">
+    <Paper variant="outlined" sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+      >
+        <Typography variant="h6" fontWeight={500}>
           Personal Information
-        </h3>
+        </Typography>
         {!isEditing && (
-          <button
+          <Button
+            startIcon={<FontAwesomeIcon icon={faUserPen} />}
             onClick={() => setIsEditing(true)}
-            className="flex items-center gap-2 text-primary-600 hover:text-primary-700 transition-colors"
+            sx={{ textTransform: "none" }}
           >
-            <FontAwesomeIcon icon={faUserPen} className="h-4 w-4" />
-            <span className="text-sm font-medium">Edit</span>
-          </button>
+            Edit
+          </Button>
         )}
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            First Name
-          </label>
+      </Stack>
+
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 6 }}>
           {isEditing ? (
-            <input
-              type="text"
+            <TextField
+              fullWidth
+              label="First Name"
               name="name"
               value={formData.name}
               onChange={onInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Enter your first name"
+              variant="outlined"
             />
           ) : (
-            <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
-              {userProfile?.name || "N/A"}
-            </div>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                First Name
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  p: 1.5,
+                  bgcolor: "grey.50",
+                  borderRadius: 1,
+                  border: 1,
+                  borderColor: "grey.300",
+                }}
+              >
+                {userProfile?.name || "N/A"}
+              </Typography>
+            </Box>
           )}
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Last Name
-          </label>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 6 }}>
           {isEditing ? (
-            <input
-              type="text"
+            <TextField
+              fullWidth
+              label="Last Name"
               name="surname"
               value={formData.surname}
               onChange={onInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Enter your last name"
+              variant="outlined"
             />
           ) : (
-            <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
-              {userProfile?.surname || "N/A"}
-            </div>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Last Name
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  p: 1.5,
+                  bgcolor: "grey.50",
+                  borderRadius: 1,
+                  border: 1,
+                  borderColor: "grey.300",
+                }}
+              >
+                {userProfile?.surname || "N/A"}
+              </Typography>
+            </Box>
           )}
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Email
-          </label>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 6 }}>
           {isEditing ? (
-            <input
-              type="email"
+            <TextField
+              fullWidth
+              label="Email"
               name="email"
+              type="email"
               value={formData.email}
               onChange={onInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Enter your email"
+              variant="outlined"
             />
           ) : (
-            <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
-              {userProfile?.email || "N/A"}
-            </div>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Email
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  p: 1.5,
+                  bgcolor: "grey.50",
+                  borderRadius: 1,
+                  border: 1,
+                  borderColor: "grey.300",
+                }}
+              >
+                {userProfile?.email || "N/A"}
+              </Typography>
+            </Box>
           )}
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Role
-          </label>
-          <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
-            {userProfile?.role || "N/A"}
-          </div>
-        </div>
-      </div>
-      
+        </Grid>
+
+        <Grid size={{  xs: 12, md: 6 }}>
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              Role
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                p: 1.5,
+                bgcolor: "grey.50",
+                borderRadius: 1,
+                border: 1,
+                borderColor: "grey.300",
+              }}
+            >
+              {userProfile?.role || "N/A"}
+            </Typography>
+          </Box>
+        </Grid>
+      </Grid>
+
       {isEditing && (
-        <div className="mt-6 flex gap-3">
-          <button
+        <Stack direction="row" spacing={2} mt={4}>
+          <Button
+            variant="contained"
+            color="primary"
             onClick={onSave}
             disabled={saving}
-            className="bg-primary-600 text-white px-6 py-2 rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? "Saving..." : "Save Changes"}
-          </button>
-          <button
-            onClick={onCancel}
-            className="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 transition-colors"
-          >
+          </Button>
+          <Button variant="outlined" color="inherit" onClick={onCancel}>
             Cancel
-          </button>
-        </div>
+          </Button>
+        </Stack>
       )}
-    </div>
+    </Paper>
   );
 }

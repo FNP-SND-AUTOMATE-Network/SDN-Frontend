@@ -3,6 +3,16 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import {
+  Box,
+  Button,
+  Grid,
+  IconButton,
+  InputAdornment,
+  Paper,
+  TextField,
+  Typography,
+} from "@mui/material";
 
 interface ChangePasswordSectionProps {
   passwordData: {
@@ -35,100 +45,104 @@ export default function ChangePasswordSection({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">
+    <Paper variant="outlined" sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+      <Typography variant="h6" fontWeight={500} mb={3}>
         Change Password
-      </h3>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Current Password
-          </label>
-          <div className="relative">
-            <input
-              type={showPasswords.current ? "text" : "password"}
-              name="current_password"
-              value={passwordData.current_password}
-              onChange={onPasswordChange}
-              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Enter current password"
-            />
-            <button
-              type="button"
-              onClick={() => togglePasswordVisibility("current")}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-            >
-              <FontAwesomeIcon
-                icon={showPasswords.current ? faEyeSlash : faEye}
-                className="h-4 w-4"
-              />
-            </button>
-          </div>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            New Password
-          </label>
-          <div className="relative">
-            <input
-              type={showPasswords.new ? "text" : "password"}
-              name="new_password"
-              value={passwordData.new_password}
-              onChange={onPasswordChange}
-              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Enter new password"
-            />
-            <button
-              type="button"
-              onClick={() => togglePasswordVisibility("new")}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-            >
-              <FontAwesomeIcon
-                icon={showPasswords.new ? faEyeSlash : faEye}
-                className="h-4 w-4"
-              />
-            </button>
-          </div>
-        </div>
-        
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Confirm New Password
-          </label>
-          <div className="relative">
-            <input
-              type={showPasswords.confirm ? "text" : "password"}
-              name="confirm_password"
-              value={passwordData.confirm_password}
-              onChange={onPasswordChange}
-              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Confirm new password"
-            />
-            <button
-              type="button"
-              onClick={() => togglePasswordVisibility("confirm")}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-            >
-              <FontAwesomeIcon
-                icon={showPasswords.confirm ? faEyeSlash : faEye}
-                className="h-4 w-4"
-              />
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      <div className="mt-6">
-        <button
+      </Typography>
+
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <TextField
+            fullWidth
+            label="Current Password"
+            name="current_password"
+            type={showPasswords.current ? "text" : "password"}
+            value={passwordData.current_password}
+            onChange={onPasswordChange}
+            variant="outlined"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => togglePasswordVisibility("current")}
+                    edge="end"
+                  >
+                    <FontAwesomeIcon
+                      icon={showPasswords.current ? faEye : faEyeSlash}
+                      size="sm"
+                    />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 6 }}>
+          <TextField
+            fullWidth
+            label="New Password"
+            name="new_password"
+            type={showPasswords.new ? "text" : "password"}
+            value={passwordData.new_password}
+            onChange={onPasswordChange}
+            variant="outlined"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => togglePasswordVisibility("new")}
+                    edge="end"
+                  >
+                    <FontAwesomeIcon
+                      icon={showPasswords.new ? faEye : faEyeSlash}
+                      size="sm"
+                    />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12 }}>
+          <TextField
+            fullWidth
+            label="Confirm New Password"
+            name="confirm_password"
+            type={showPasswords.confirm ? "text" : "password"}
+            value={passwordData.confirm_password}
+            onChange={onPasswordChange}
+            variant="outlined"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => togglePasswordVisibility("confirm")}
+                    edge="end"
+                  >
+                    <FontAwesomeIcon
+                      icon={showPasswords.confirm ? faEye : faEyeSlash}
+                      size="sm"
+                    />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+      </Grid>
+
+      <Box mt={4}>
+        <Button
+          variant="contained"
+          color="primary"
           onClick={onChangePassword}
           disabled={saving}
-          className="bg-primary-600 text-white px-6 py-2 rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? "Changing Password..." : "Change Password"}
-        </button>
-      </div>
-    </div>
+        </Button>
+      </Box>
+    </Paper>
   );
 }

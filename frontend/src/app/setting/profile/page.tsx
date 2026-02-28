@@ -1,78 +1,65 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { userService, UserProfile, APIError } from "@/services/userService";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 import { useSnackbar } from "@/hooks/useSnackbar";
+import { $api, fetchClient } from "@/lib/apiv2/fetch";
+import { useQueryClient } from "@tanstack/react-query";
+import { Container, Stack } from "@mui/material";
 import {
     ProfileHeader,
     ErrorMessage,
     PersonalInformation,
     ChangePasswordSection,
     ProfileSkeleton,
+    DeviceCredentialsSection,
 } from "@/components/profile";
+import { UserProfile } from "@/services/userService";
 
 export default function ProfilePage() {
     const { token, updateUser } = useAuth();
-    const { snackbar, showSuccess, showError, showWarning, hideSnackbar } =
-        useSnackbar();
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [saving, setSaving] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
+    const { snackbar, showSuccess, showError, showWarning, hideSnackbar } = useSnackbar();
+    const queryClient = useQueryClient();
 
-    // Form data state
+    // Form states
+    const [isEditing, setIsEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
+
     const [formData, setFormData] = useState({
         name: "",
         surname: "",
         email: "",
     });
 
-    // Password change state
     const [passwordData, setPasswordData] = useState({
         current_password: "",
         new_password: "",
         confirm_password: "",
     });
 
-    // Fetch user profile data
-    useEffect(() => {
-        const fetchUserProfile = async () => {
-            if (!token) {
-                setError("No authentication token found");
-                setLoading(false);
-                return;
-            }
-
-            try {
-                setLoading(true);
-                setError(null);
-                const profile = await userService.getMyProfile(token);
-                setUserProfile(profile);
+    // Query User Profile
+    const { data: userProfile, isLoading, error: queryError } = $api.useQuery(
+        "get",
+        "/users/profile/me",
+        {
+            params: {},
+        },
+        {
+            enabled: !!token,
+            onSuccess: (data: Record<string, unknown>) => {
                 setFormData({
-                    name: profile.name || "",
-                    surname: profile.surname || "",
-                    email: profile.email || "",
+                    name: (data?.name as string) || "",
+                    surname: (data?.surname as string) || "",
+                    email: (data?.email as string) || "",
                 });
-            } catch (err) {
-                console.error("Error fetching user profile:", err);
-                if (err instanceof APIError) {
-                    setError(err.message);
-                } else {
-                    setError("Failed to fetch user profile");
-                }
-                showError("Failed to fetch user profile");
-            } finally {
-                setLoading(false);
-            }
-        };
+            },
+        }
+    );
 
-        fetchUserProfile();
-    }, [token]); // ลบ showError ออกจาก dependency array
+    const error = queryError ? (queryError as Error).message || "Failed to fetch user profile" : null;
 
-    // Handle input changes for personal information
+    // Handle inputs
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({
@@ -81,7 +68,6 @@ export default function ProfilePage() {
         }));
     };
 
-    // Handle password input changes
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setPasswordData((prev) => ({
@@ -90,76 +76,74 @@ export default function ProfilePage() {
         }));
     };
 
-    // Update user profile
+    // Update logic using fetchClient
     const updateUserProfile = async () => {
-        if (!token || !userProfile) {
-            setError("No authentication token or user profile found");
-            return;
-        }
+        if (!token || !userProfile) return;
 
         try {
             setSaving(true);
-            setError(null);
 
-            await userService.updateProfile(token, userProfile.id, {
-                name: formData.name,
-                surname: formData.surname,
-                email: formData.email,
+            const { error: updateError } = await fetchClient.PUT("/users/{user_id}", {
+                params: {
+                    path: { user_id: userProfile.id as string },
+                },
+                body: {
+                    name: formData.name,
+                    surname: formData.surname,
+                    email: formData.email,
+                }
             });
+
+            if (updateError) throw updateError;
 
             showSuccess("Profile updated successfully!");
 
-            // Update AuthContext with new data
+            // Update AuthContext explicitly (if needed by context, otherwise query invalidation handles state)
             updateUser({
                 name: formData.name,
                 surname: formData.surname,
                 email: formData.email,
             });
 
-            // Reload data after successful update
-            const updatedProfile = await userService.getMyProfile(token);
-            setUserProfile(updatedProfile);
-        } catch (err) {
+            // Refetch
+            queryClient.invalidateQueries({ queryKey: ["get", "/users/me"] });
+
+            setIsEditing(false);
+        } catch (err: unknown) {
             console.error("Error updating profile:", err);
-            if (err instanceof APIError) {
-                setError(err.message);
-                showError(err.message);
-            } else {
-                setError("Failed to update profile");
-                showError("Failed to update profile");
-            }
+            showError(err instanceof Error ? err.message : (err as { detail?: { msg?: string }[] })?.detail?.[0]?.msg || "Failed to update profile");
         } finally {
             setSaving(false);
         }
     };
 
-    // Change password
     const changePassword = async () => {
-        if (!token || !userProfile) {
-            setError("No authentication token or user profile found");
-            return;
-        }
+        if (!token || !userProfile) return;
 
         if (passwordData.new_password !== passwordData.confirm_password) {
-            setError("New passwords do not match");
             showWarning("New passwords do not match");
             return;
         }
 
         if (passwordData.new_password.length < 8) {
-            setError("New password must be at least 8 characters long");
             showWarning("New password must be at least 8 characters long");
             return;
         }
 
         try {
             setSaving(true);
-            setError(null);
 
-            await userService.changePassword(token, userProfile.id, {
-                current_password: passwordData.current_password,
-                new_password: passwordData.new_password,
+            const { error: updateError } = await fetchClient.POST("/users/{user_id}/change-password", {
+                params: {
+                    path: { user_id: userProfile.id as string },
+                },
+                body: {
+                    current_password: passwordData.current_password,
+                    new_password: passwordData.new_password,
+                }
             });
+
+            if (updateError) throw updateError;
 
             showSuccess("Password changed successfully!");
 
@@ -169,34 +153,17 @@ export default function ProfilePage() {
                 new_password: "",
                 confirm_password: "",
             });
-        } catch (err) {
+
+        } catch (err: unknown) {
             console.error("Error changing password:", err);
-            if (err instanceof APIError) {
-                setError(err.message);
-                showError(err.message);
-            } else {
-                setError("Failed to change password");
-                showError("Failed to change password");
-            }
+            showError(err instanceof Error ? err.message : (err as { detail?: { msg?: string }[] })?.detail?.[0]?.msg || "Failed to change password");
         } finally {
             setSaving(false);
         }
     };
 
-    // Handle save personal information
-    const handleSavePersonalInfo = async () => {
-        try {
-            await updateUserProfile();
-            setIsEditing(false);
-        } catch (err) {
-            console.error("Error updating profile:", err);
-        }
-    };
-
-    // Handle cancel editing
     const handleCancelEditing = () => {
         setIsEditing(false);
-        // Reset form data to original values
         if (userProfile) {
             setFormData({
                 name: userProfile.name || "",
@@ -206,13 +173,17 @@ export default function ProfilePage() {
         }
     };
 
-    if (loading) {
-        return <ProfileSkeleton />;
+    if (isLoading) {
+        return (
+            <Container maxWidth="lg" sx={{ py: 4 }}>
+                <ProfileSkeleton />
+            </Container>
+        );
     }
 
     return (
-        <div>
-            <div className="space-y-6 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+            <Stack spacing={4}>
                 <ProfileHeader
                     title="Profile Settings"
                     description="Manage your personal information and account settings"
@@ -221,12 +192,12 @@ export default function ProfilePage() {
                 <ErrorMessage error={error} />
 
                 <PersonalInformation
-                    userProfile={userProfile}
+                    userProfile={userProfile as UserProfile}
                     isEditing={isEditing}
                     setIsEditing={setIsEditing}
                     formData={formData}
                     onInputChange={handleInputChange}
-                    onSave={handleSavePersonalInfo}
+                    onSave={updateUserProfile}
                     onCancel={handleCancelEditing}
                     saving={saving}
                 />
@@ -237,15 +208,16 @@ export default function ProfilePage() {
                     onChangePassword={changePassword}
                     saving={saving}
                 />
-            </div>
 
-            {/* MuiSnackbar for notifications */}
+                <DeviceCredentialsSection />
+            </Stack>
+
             <MuiSnackbar
                 open={snackbar.open}
                 message={snackbar.message}
                 severity={snackbar.severity}
                 onClose={hideSnackbar}
             />
-        </div>
+        </Container>
     );
 }

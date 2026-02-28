@@ -1,5 +1,7 @@
 "use client";
 
+import { Box, Typography } from "@mui/material";
+
 interface ProfileHeaderProps {
   title: string;
   description: string;
@@ -7,13 +9,13 @@ interface ProfileHeaderProps {
 
 export default function ProfileHeader({ title, description }: ProfileHeaderProps) {
   return (
-    <div>
-      <h2 className="text-2xl font-semibold text-gray-900 font-sf-pro-display">
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="h5" component="h2" fontWeight={600} color="text.primary">
         {title}
-      </h2>
-      <p className="mt-1 text-sm text-gray-600">
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
         {description}
-      </p>
-    </div>
+      </Typography>
+    </Box>
   );
 }

@@ -2237,16 +2237,6 @@ export interface components {
              * @default 830
              */
             netconf_port: number;
-            /**
-             * Netconf Username
-             * @description Username สำหรับ NETCONF
-             */
-            netconf_username?: string | null;
-            /**
-             * Netconf Password
-             * @description Password สำหรับ NETCONF
-             */
-            netconf_password?: string | null;
         };
         /** DeviceNetworkCreateResponse */
         DeviceNetworkCreateResponse: {
@@ -2351,16 +2341,6 @@ export interface components {
              * @default 830
              */
             netconf_port: number;
-            /**
-             * Netconf Username
-             * @description Username สำหรับ NETCONF
-             */
-            netconf_username?: string | null;
-            /**
-             * Netconf Password
-             * @description Password - will be null for security
-             */
-            netconf_password?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -2499,16 +2479,6 @@ export interface components {
              * @description NETCONF port
              */
             netconf_port?: number | null;
-            /**
-             * Netconf Username
-             * @description Username สำหรับ NETCONF
-             */
-            netconf_username?: string | null;
-            /**
-             * Netconf Password
-             * @description Password สำหรับ NETCONF
-             */
-            netconf_password?: string | null;
         };
         /** DeviceNetworkUpdateResponse */
         DeviceNetworkUpdateResponse: {

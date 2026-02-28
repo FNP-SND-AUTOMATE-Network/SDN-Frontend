@@ -1,76 +1,78 @@
 "use client";
 
+import { Box, Paper, Skeleton, Stack, Grid } from "@mui/material";
+
 export default function ProfileSkeleton() {
     return (
-        <div className="space-y-6 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+        <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto" }}>
             {/* Header Skeleton */}
-            <div className="space-y-2">
-                <div className="h-8 bg-gray-200 rounded animate-pulse w-48"></div>
-                <div className="h-4 bg-gray-200 rounded animate-pulse w-96"></div>
-            </div>
+            <Box sx={{ mb: 3 }}>
+                <Skeleton variant="text" width={200} height={40} />
+                <Skeleton variant="text" width={400} height={20} />
+            </Box>
 
             {/* Personal Information Skeleton */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex justify-between items-center mb-4">
-                    <div className="h-6 bg-gray-200 rounded animate-pulse w-40"></div>
-                    <div className="h-8 bg-gray-200 rounded animate-pulse w-16"></div>
-                </div>
+            <Paper variant="outlined" sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+                    <Skeleton variant="text" width={160} height={32} />
+                    <Skeleton variant="rounded" width={80} height={36} />
+                </Stack>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Grid container spacing={3}>
                     {/* First Name */}
-                    <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
-                        <div className="h-10 bg-gray-200 rounded animate-pulse w-full"></div>
-                    </div>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <Skeleton variant="text" width={80} height={20} sx={{ mb: 1 }} />
+                        <Skeleton variant="rounded" width="100%" height={40} />
+                    </Grid>
 
                     {/* Last Name */}
-                    <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
-                        <div className="h-10 bg-gray-200 rounded animate-pulse w-full"></div>
-                    </div>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <Skeleton variant="text" width={80} height={20} sx={{ mb: 1 }} />
+                        <Skeleton variant="rounded" width="100%" height={40} />
+                    </Grid>
 
                     {/* Email */}
-                    <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-16"></div>
-                        <div className="h-10 bg-gray-200 rounded animate-pulse w-full"></div>
-                    </div>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <Skeleton variant="text" width={60} height={20} sx={{ mb: 1 }} />
+                        <Skeleton variant="rounded" width="100%" height={40} />
+                    </Grid>
 
                     {/* Role */}
-                    <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-12"></div>
-                        <div className="h-10 bg-gray-200 rounded animate-pulse w-full"></div>
-                    </div>
-                </div>
-            </div>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <Skeleton variant="text" width={40} height={20} sx={{ mb: 1 }} />
+                        <Skeleton variant="rounded" width="100%" height={40} />
+                    </Grid>
+                </Grid>
+            </Paper>
 
             {/* Change Password Skeleton */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="h-6 bg-gray-200 rounded animate-pulse w-32 mb-4"></div>
+            <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
+                <Skeleton variant="text" width={140} height={32} sx={{ mb: 3 }} />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Grid container spacing={3}>
                     {/* Current Password */}
-                    <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-28"></div>
-                        <div className="h-10 bg-gray-200 rounded animate-pulse w-full"></div>
-                    </div>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <Skeleton variant="text" width={120} height={20} sx={{ mb: 1 }} />
+                        <Skeleton variant="rounded" width="100%" height={40} />
+                    </Grid>
 
                     {/* New Password */}
-                    <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
-                        <div className="h-10 bg-gray-200 rounded animate-pulse w-full"></div>
-                    </div>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <Skeleton variant="text" width={100} height={20} sx={{ mb: 1 }} />
+                        <Skeleton variant="rounded" width="100%" height={40} />
+                    </Grid>
 
                     {/* Confirm Password */}
-                    <div className="md:col-span-2 space-y-2">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-32"></div>
-                        <div className="h-10 bg-gray-200 rounded animate-pulse w-full"></div>
-                    </div>
-                </div>
+                    <Grid size={{ xs: 12 }}>
+                        <Skeleton variant="text" width={160} height={20} sx={{ mb: 1 }} />
+                        <Skeleton variant="rounded" width="100%" height={40} />
+                    </Grid>
+                </Grid>
 
-                <div className="mt-6">
-                    <div className="h-10 bg-gray-200 rounded animate-pulse w-32"></div>
-                </div>
-            </div>
-        </div>
+                <Box mt={3}>
+                    <Skeleton variant="rounded" width={140} height={40} />
+                </Box>
+            </Paper>
+        </Box>
     );
 }
