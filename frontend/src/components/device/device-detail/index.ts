@@ -4,4 +4,5 @@ export { default as DeviceDetailTabs } from "./DeviceDetailTabs";
 export { default as DeviceDetailCards } from "./DeviceDetailCards";
 export { default as DeviceConfigurationTab } from "./DeviceConfigurationTab";
 export { DeviceInterfacesTab } from "./DeviceInterfacesTab";
+export { default as DeviceBackupTab } from "./DeviceBackupTab";
 export * from "./helpers";

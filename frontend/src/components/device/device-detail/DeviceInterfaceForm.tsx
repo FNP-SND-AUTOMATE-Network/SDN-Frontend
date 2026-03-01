@@ -99,7 +99,7 @@ export function DeviceInterfaceForm({
 
     // Helper to execute an intent via fetchClient
     const executeIntent = async (intent: string, params: Record<string, any>) => {
-        const { error } = await fetchClient.POST("/api/v1/nbi/intent", {
+        const { error } = await fetchClient.POST("/api/v1/nbi/intents", {
             body: {
                 intent,
                 node_id: deviceId,

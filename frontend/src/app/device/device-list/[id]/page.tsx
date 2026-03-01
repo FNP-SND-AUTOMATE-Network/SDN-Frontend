@@ -28,6 +28,7 @@ import {
   DeviceDetailCards,
   DeviceConfigurationTab,
   DeviceInterfacesTab,
+  DeviceBackupTab,
 } from "@/components/device/device-detail";
 
 type DeviceNetwork =
@@ -211,6 +212,8 @@ export default function DeviceDetailPage() {
                   console.log("Preview template:", templateId);
                 }}
               />
+            ) : activeTab === "backup" ? (
+              <DeviceBackupTab device={device} />
             ) : (
               <Typography color="text.secondary">
                 This tab is under development.
