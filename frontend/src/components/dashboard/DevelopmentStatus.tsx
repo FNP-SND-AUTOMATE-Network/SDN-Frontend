@@ -29,13 +29,13 @@ export const DevelopmentStatus = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Link href="/login">
                 <Button variant="primary" className="w-full">
-                  🔑 เข้าสู่ระบบ
+                  🔑 Login
                 </Button>
               </Link>
 
               <Link href="/register">
                 <Button variant="outline" className="w-full">
-                  📝 สมัครสมาชิก
+                  📝 Register
                 </Button>
               </Link>
             </div>

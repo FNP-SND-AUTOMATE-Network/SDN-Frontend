@@ -61,7 +61,7 @@ export default function HomePage() {
                   variant="primary"
                   className="px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                 >
-                  เข้าสู่ระบบ
+                  Login
                   <FontAwesomeIcon
                     icon={faArrowRight}
                     className="ml-2 w-4 h-4"
@@ -73,7 +73,7 @@ export default function HomePage() {
                   variant="outline"
                   className="px-8 py-4 text-lg font-semibold border-2 hover:bg-primary-50 transition-all duration-300"
                 >
-                  สมัครสมาชิก
+                  Register
                 </Button>
               </Link>
             </div>

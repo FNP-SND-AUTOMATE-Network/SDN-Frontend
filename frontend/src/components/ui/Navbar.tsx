@@ -94,12 +94,12 @@ export const Navbar: React.FC<NavbarProps> = ({ className = "" }) => {
             <div className="flex items-center space-x-4 ml-auto">
               <Link href="/login">
                 <Button variant="outline" className="px-4 py-2 text-sm">
-                  เข้าสู่ระบบ
+                  Login
                 </Button>
               </Link>
               <Link href="/register">
                 <Button variant="primary" className="px-4 py-2 text-sm">
-                  สมัครสมาชิก
+                  Register
                 </Button>
               </Link>
             </div>

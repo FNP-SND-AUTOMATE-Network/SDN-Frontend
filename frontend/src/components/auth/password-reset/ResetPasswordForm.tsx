@@ -41,27 +41,27 @@ export function ResetPasswordForm() {
         const newErrors: { [key: string]: string } = {};
 
         if (!email) {
-            newErrors.email = "กรุณากรอกอีเมล";
+            newErrors.email = "Please enter your email";
         } else if (!/\S+@\S+\.\S+/.test(email)) {
-            newErrors.email = "รูปแบบอีเมลไม่ถูกต้อง";
+            newErrors.email = "Invalid email format";
         }
 
         if (!otpCode) {
-            newErrors.otpCode = "กรุณากรอกรหัส OTP";
+            newErrors.otpCode = "Please enter OTP code";
         } else if (otpCode.length !== 6) {
-            newErrors.otpCode = "รหัส OTP ต้องมี 6 หลัก";
+            newErrors.otpCode = "OTP code must be 6 digits";
         }
 
         if (!newPassword) {
-            newErrors.newPassword = "กรุณากรอกรหัสผ่านใหม่";
+            newErrors.newPassword = "Please enter new password";
         } else if (newPassword.length < 8) {
-            newErrors.newPassword = "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร";
+            newErrors.newPassword = "Password must be at least 8 characters";
         }
 
         if (!confirmPassword) {
-            newErrors.confirmPassword = "กรุณายืนยันรหัสผ่าน";
+            newErrors.confirmPassword = "Please confirm new password";
         } else if (newPassword !== confirmPassword) {
-            newErrors.confirmPassword = "รหัสผ่านไม่ตรงกัน";
+            newErrors.confirmPassword = "Passwords do not match";
         }
 
         setErrors(newErrors);
@@ -84,7 +84,7 @@ export function ResetPasswordForm() {
                 new_password: newPassword,
             });
 
-            setSuccessMessage(response.message || "รีเซ็ตรหัสผ่านสำเร็จ");
+            setSuccessMessage(response.message || "Reset password successfully");
 
             // Clear stored email
             localStorage.removeItem("reset_password_email");
@@ -118,11 +118,11 @@ export function ResetPasswordForm() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4 text-black">
                 <Input
-                    label="อีเมล"
+                    label="Email"
                     name="email"
                     type="email"
                     autoComplete="email"
-                    placeholder="กรอกอีเมลของคุณ"
+                    placeholder="Enter your email"
                     value={email}
                     onChange={(e) => {
                         setEmail(e.target.value);
@@ -133,7 +133,7 @@ export function ResetPasswordForm() {
                 />
 
                 <Input
-                    label="รหัส OTP (6 หลัก)"
+                    label="OTP Code (6 digits)"
                     name="otpCode"
                     type="text"
                     autoComplete="one-time-code"
@@ -152,8 +152,8 @@ export function ResetPasswordForm() {
 
                 <PasswordInput
                     id="new-password"
-                    label="รหัสผ่านใหม่"
-                    placeholder="กรอกรหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)"
+                    label="New Password"
+                    placeholder="Enter new password (at least 8 characters)"
                     value={newPassword}
                     onChange={(value) => {
                         setNewPassword(value);
@@ -165,8 +165,8 @@ export function ResetPasswordForm() {
 
                 <PasswordInput
                     id="confirm-password"
-                    label="ยืนยันรหัสผ่านใหม่"
-                    placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
+                    label="Confirm New Password"
+                    placeholder="Confirm new password"
                     value={confirmPassword}
                     onChange={(value) => {
                         setConfirmPassword(value);
@@ -182,7 +182,7 @@ export function ResetPasswordForm() {
                 <MessageDisplay
                     type="success"
                     message={successMessage}
-                    additionalInfo="กำลังนำคุณไปยังหน้าเข้าสู่ระบบ..."
+                    additionalInfo="Redirecting to login..."
                 />
             )}
 
@@ -199,7 +199,7 @@ export function ResetPasswordForm() {
                     loading={isLoading}
                     disabled={isLoading || !!successMessage}
                 >
-                    {isLoading ? "กำลังรีเซ็ตรหัสผ่าน..." : "รีเซ็ตรหัสผ่าน"}
+                    {isLoading ? "Resetting password..." : "Reset Password"}
                 </Button>
 
                 <Link href="/forgot-password">
@@ -210,7 +210,7 @@ export function ResetPasswordForm() {
                         disabled={isLoading || !!successMessage}
                     >
                         <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-                        ส่งรหัส OTP ใหม่
+                        Send new OTP
                     </Button>
                 </Link>
 
@@ -221,7 +221,7 @@ export function ResetPasswordForm() {
                         className="w-full"
                         disabled={isLoading}
                     >
-                        กลับไปหน้าเข้าสู่ระบบ
+                        Return to Login
                     </Button>
                 </Link>
             </div>

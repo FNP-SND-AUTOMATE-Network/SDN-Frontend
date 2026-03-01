@@ -116,7 +116,7 @@ export function ForgotPasswordForm() {
                         disabled={isLoading}
                     >
                         <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-                        กลับไปหน้าเข้าสู่ระบบ
+                        Return to Login
                     </Button>
                 </Link>
             </div>

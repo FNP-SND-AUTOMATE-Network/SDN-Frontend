@@ -47,7 +47,7 @@ export default function MFAPage() {
 
   const handleEnableClick = async () => {
     if (!token) {
-      setError("ไม่พบ token สำหรับผู้ใช้ปัจจุบัน กรุณาเข้าสู่ระบบใหม่");
+      setError("Please login again");
       return;
     }
     setIsLoading(true);
@@ -82,17 +82,17 @@ export default function MFAPage() {
 
   const handleVerifySetup = async () => {
     if (!token) {
-      setError("ไม่พบ token สำหรับผู้ใช้ปัจจุบัน กรุณาเข้าสู่ระบบใหม่");
+      setError("Please login again");
       return;
     }
     if (!secret) {
       setError(
-        'ไม่พบ Secret สำหรับการตั้งค่า กรุณากด "เปิดใช้งาน 2FA" ใหม่อีกครั้ง'
+        'Secret not found. Please click "Enable 2FA" again'
       );
       return;
     }
     if (!otpCode || otpCode.length !== 6) {
-      setError("กรุณากรอกรหัส 6 หลัก");
+      setError("Please enter 6 digits OTP code");
       return;
     }
 
@@ -100,7 +100,7 @@ export default function MFAPage() {
     setError("");
     try {
       await authApi.verifyMfa(token, otpCode, secret);
-      setSuccessMessage("เปิดใช้งาน 2FA เรียบร้อยแล้ว");
+      setSuccessMessage("Enable 2FA successfully");
       setIsSetupMode(false);
       setOtpCode("");
       setSecret("");
@@ -126,11 +126,11 @@ export default function MFAPage() {
 
   const handleConfirmDisable = async () => {
     if (!token) {
-      setError("ไม่พบ token สำหรับผู้ใช้ปัจจุบัน กรุณาเข้าสู่ระบบใหม่");
+      setError("Please login again");
       return;
     }
     if (!password) {
-      setError("กรุณากรอกรหัสผ่าน");
+      setError("Please enter your password");
       return;
     }
 
@@ -138,7 +138,7 @@ export default function MFAPage() {
     setError("");
     try {
       await authApi.disableMfa(token, password);
-      setSuccessMessage("ปิดการใช้งาน 2FA เรียบร้อยแล้ว");
+      setSuccessMessage("Disable 2FA successfully");
       setIsDisableMode(false);
       setPassword("");
 
@@ -208,9 +208,7 @@ export default function MFAPage() {
                       Two-Factor Authentication (TOTP)
                     </h4>
                     <p className="text-sm text-gray-500 mt-1 max-w-md">
-                      เพิ่มความปลอดภัยให้กับบัญชีของคุณด้วยการยืนยันตัวตนผ่านแอปพลิเคชัน
-                      Authenticator (เช่น Google Authenticator, Microsoft
-                      Authenticator)
+                      Add extra security to your account with two-factor authentication using an authenticator app (e.g., Google Authenticator, Microsoft Authenticator).
                     </p>
                     <div className="mt-3">
                       {isMfaEnabled ? (
@@ -219,11 +217,11 @@ export default function MFAPage() {
                             icon={faCheckCircle}
                             className="mr-1"
                           />
-                          เปิดใช้งานแล้ว
+                          Enabled
                         </span>
                       ) : (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          ยังไม่เปิดใช้งาน
+                          Disabled
                         </span>
                       )}
                     </div>
@@ -238,7 +236,7 @@ export default function MFAPage() {
                     variant={isMfaEnabled ? "danger" : "primary"}
                     loading={isLoading}
                   >
-                    {isMfaEnabled ? "ปิดการใช้งาน" : "เปิดใช้งาน 2FA"}
+                    {isMfaEnabled ? "Disable 2FA" : "Enable 2FA"}
                   </Button>
                 )}
               </div>
@@ -247,7 +245,7 @@ export default function MFAPage() {
               {isSetupMode && (
                 <div className="mt-6 border-t border-gray-200 pt-6 animate-in fade-in slide-in-from-top-4 duration-300">
                   <h5 className="font-medium text-gray-900 mb-4">
-                    ตั้งค่า Two-Factor Authentication
+                    Setup Two-Factor Authentication
                   </h5>
 
                   <div className="grid md:grid-cols-2 gap-8">
@@ -276,9 +274,9 @@ export default function MFAPage() {
                         )}
                       </div>
                       <div className="text-sm text-gray-600">
-                        <p className="font-medium mb-2">1. สแกน QR Code</p>
+                        <p className="font-medium mb-2">1. Scan QR Code</p>
                         <p>
-                          ใช้แอป Authenticator ในมือถือของคุณสแกน QR Code นี้
+                          Use the Authenticator app on your mobile device to scan this QR code
                         </p>
                       </div>
                     </div>
@@ -286,14 +284,13 @@ export default function MFAPage() {
                     <div className="space-y-4">
                       <div>
                         <p className="font-medium text-sm text-gray-900 mb-2">
-                          2. กรอกรหัสยืนยัน
+                          2. Enter OTP Code
                         </p>
                         <p className="text-sm text-gray-600 mb-4">
-                          กรอกรหัส 6 หลักที่ได้จากแอป Authenticator
-                          เพื่อยืนยันการตั้งค่า
+                          Enter the 6-digit code from your Authenticator app to verify setup
                         </p>
                         <Input
-                          label="รหัส OTP 6 หลัก"
+                          label="6-digit OTP Code"
                           value={otpCode}
                           onChange={(e) =>
                             setOtpCode(
@@ -314,14 +311,14 @@ export default function MFAPage() {
                           loading={isLoading}
                           disabled={otpCode.length !== 6}
                         >
-                          ยืนยันและเปิดใช้งาน
+                          Verify and Enable
                         </Button>
                         <Button
                           onClick={handleCancel}
                           variant="outline"
                           disabled={isLoading}
                         >
-                          ยกเลิก
+                          Cancel
                         </Button>
                       </div>
                     </div>
@@ -334,21 +331,19 @@ export default function MFAPage() {
                 <div className="mt-6 border-t border-gray-200 pt-6 animate-in fade-in slide-in-from-top-4 duration-300">
                   <div className="max-w-md">
                     <h5 className="font-medium text-gray-900 mb-4 text-red-600">
-                      ยืนยันการปิดใช้งาน 2FA
+                      Confirm Disable 2FA
                     </h5>
                     <p className="text-sm text-gray-600 mb-4">
-                      เพื่อความปลอดภัย
-                      กรุณากรอกรหัสผ่านของคุณเพื่อยืนยันการปิดใช้งาน Two-Factor
-                      Authentication
+                      For security reasons, please enter your password to confirm disabling Two-Factor Authentication
                     </p>
 
                     <div className="space-y-4">
                       <PasswordInput
                         id="disable-password"
-                        label="รหัสผ่านปัจจุบัน"
+                        label="Current Password"
                         value={password}
                         onChange={setPassword}
-                        placeholder="กรอกรหัสผ่านของคุณ"
+                        placeholder="Enter your password"
                       />
 
                       <div className="flex gap-3">
@@ -359,14 +354,14 @@ export default function MFAPage() {
                           loading={isLoading}
                           disabled={!password}
                         >
-                          ยืนยันปิดใช้งาน
+                          Confirm Disable
                         </Button>
                         <Button
                           onClick={handleCancel}
                           variant="outline"
                           disabled={isLoading}
                         >
-                          ยกเลิก
+                          Cancel
                         </Button>
                       </div>
                     </div>
