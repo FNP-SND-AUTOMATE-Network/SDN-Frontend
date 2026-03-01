@@ -335,7 +335,7 @@ export default function CreateTemplateModal({
                             slotProps={{
                                 htmlInput: {
                                     sx: {
-                                        fontFamily: "monospace",
+                                        fontFamily: "SF Pro Text, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
                                         fontSize: "0.875rem",
                                         lineHeight: 1.5
                                     }

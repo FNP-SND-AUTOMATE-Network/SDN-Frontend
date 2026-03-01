@@ -370,7 +370,7 @@ export default function EditTemplateModal({
                                     sx={{
                                         m: 0,
                                         typography: "caption",
-                                        fontFamily: "monospace",
+                                        fontFamily: "SF Pro Text, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
                                         color: "text.primary",
                                         whiteSpace: "pre-wrap",
                                         maxHeight: 150,
@@ -397,7 +397,7 @@ export default function EditTemplateModal({
                                 slotProps={{
                                     htmlInput: {
                                         sx: {
-                                            fontFamily: "monospace",
+                                            fontFamily: "SF Pro Text, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
                                             fontSize: "0.875rem",
                                             lineHeight: 1.5
                                         }

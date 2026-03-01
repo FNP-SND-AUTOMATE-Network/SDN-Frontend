@@ -212,7 +212,7 @@ export default function TemplateDetailModal({
                             sx={{
                                 color: "grey.100",
                                 typography: "body2",
-                                fontFamily: "monospace",
+                                fontFamily: "SF Pro Text, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
                                 m: 0,
                                 whiteSpace: "pre-wrap",
                                 wordBreak: "break-all"

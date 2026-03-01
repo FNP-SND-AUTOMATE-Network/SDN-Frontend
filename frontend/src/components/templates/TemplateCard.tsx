@@ -138,7 +138,7 @@ export default function TemplateCard({ template, onClick }: TemplateCardProps) {
                                 sx={{
                                     m: 0,
                                     typography: "caption",
-                                    fontFamily: "monospace",
+                                    fontFamily: "SF Pro Text, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
                                     color: "text.primary",
                                     whiteSpace: "pre-wrap",
                                     overflow: "hidden",
