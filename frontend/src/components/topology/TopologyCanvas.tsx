@@ -42,18 +42,21 @@ export interface TopologyNode {
     id: string;
     label: string;
     type: string;
-    parent: string | null;
+    management_protocol?: string | null;
+    vendor?: string | null;
+    ip_address?: string | null;
+    status?: string | null;
 }
 
 export interface TopologyLink {
     id: string;
     source: string;
     target: string;
-    sourceHandle: string;
-    targetHandle: string;
+    sourcePort: string;
+    targetPort: string;
+    sourceTP: string;
+    targetTP: string;
     type: string;
-    raw_source: string;
-    raw_target: string;
 }
 
 // --- Device type config ---
@@ -325,11 +328,11 @@ function InterfaceLabelEdge({
 
 // --- Build edges from topology links ---
 function buildEdges(links: TopologyLink[]): Edge[] {
-    // Deduplicate bidirectional links using raw_source/raw_target (interface-level)
+    // Deduplicate bidirectional links using sourceTP/targetTP (interface-level)
     // This way different interface pairs between the same devices are kept as separate edges
     const seen = new Set<string>();
     const uniqueLinks = links.filter((link) => {
-        const dedupKey = [link.raw_source, link.raw_target].sort().join(":::");
+        const dedupKey = [link.sourceTP, link.targetTP].sort().join(":::");
         if (seen.has(dedupKey)) return false;
         seen.add(dedupKey);
         return true;
@@ -364,8 +367,8 @@ function buildEdges(links: TopologyLink[]): Edge[] {
             type: "interfaceLabel",
             animated: false,
             data: {
-                srcPort: link.sourceHandle || "",
-                tgtPort: link.targetHandle || "",
+                srcPort: link.sourcePort || "",
+                tgtPort: link.targetPort || "",
                 pathOptions: { offset },
             },
             style: { stroke: "#94a3b8", strokeWidth: 2 },
@@ -429,8 +432,7 @@ export default function TopologyCanvas({
         if (topologyData) {
             const dataNodes = (topologyData.nodes as unknown as TopologyNode[]) || [];
             const dataLinks = (topologyData.links as unknown as TopologyLink[]) || [];
-            const deviceNodes = dataNodes.filter((n) => n.parent === null);
-            setNodes(layoutNodes(deviceNodes, dataLinks));
+            setNodes(layoutNodes(dataNodes, dataLinks));
             setEdges(buildEdges(dataLinks));
         } else {
             setNodes([]);
