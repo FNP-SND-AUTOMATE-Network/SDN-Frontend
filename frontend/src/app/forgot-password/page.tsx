@@ -8,8 +8,8 @@ export default function ForgotPasswordPage() {
     return (
         <PublicRoute>
             <AuthPageLayout
-                title="ลืมรหัสผ่าน"
-                description="กรอกอีเมลของคุณเพื่อรับรหัส OTP สำหรับรีเซ็ตรหัสผ่าน"
+                title="Forgot Password"
+                description="Enter your email to receive an OTP code to reset your password"
             >
                 <ForgotPasswordForm />
             </AuthPageLayout>

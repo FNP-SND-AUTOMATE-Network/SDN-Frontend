@@ -14,7 +14,7 @@ export default function DebugOtpPage() {
 
   const handleVerifyOtp = async () => {
     if (!email || !otp) {
-      setError("กรุณากรอกอีเมลและ OTP");
+      setError("Please enter email and OTP");
       return;
     }
 
@@ -51,11 +51,11 @@ export default function DebugOtpPage() {
 
           <div className="space-y-4">
             <Input
-              label="อีเมล"
+              label="Email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="กรอกอีเมล"
+              placeholder="Enter your email"
             />
 
             <Input
@@ -63,7 +63,7 @@ export default function DebugOtpPage() {
               type="text"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
-              placeholder="กรอก OTP 6 หลัก"
+              placeholder="Enter OTP 6 digits"
               maxLength={6}
             />
 
@@ -78,7 +78,7 @@ export default function DebugOtpPage() {
               disabled={isLoading}
               className="w-full"
             >
-              {isLoading ? "กำลังตรวจสอบ..." : "ทดสอบ OTP"}
+              {isLoading ? "Verifying..." : "Test OTP"}
             </Button>
           </div>
 
@@ -118,11 +118,11 @@ export default function DebugOtpPage() {
                 </div>
                 
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <h4 className="font-medium text-blue-900 mb-2">💡 OTP Flow คือ:</h4>
+                  <h4 className="font-medium text-blue-900 mb-2">💡 OTP Flow is:</h4>
                   <div className="text-xs text-blue-700 space-y-1">
-                    <p>1. Register → ได้รับ OTP</p>
-                    <p>2. Verify OTP → ยืนยัน email (ไม่ได้ login)</p>
-                    <p>3. Login → ได้รับ access_token และ user data</p>
+                    <p>1. Register → Get OTP</p>
+                    <p>2. Verify OTP → Confirm email (not login)</p>
+                    <p>3. Login → Get access_token and user data</p>
                   </div>
                 </div>
               </div>
@@ -134,7 +134,7 @@ export default function DebugOtpPage() {
               href="/otp"
               className="text-primary-600 hover:text-primary-500 text-sm font-medium"
             >
-              ← กลับไปหน้า OTP
+              ← Back to OTP page
             </a>
           </div>
         </div>

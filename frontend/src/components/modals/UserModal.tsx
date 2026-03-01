@@ -89,30 +89,30 @@ export function UserModal({
     const newErrors: { [key: string]: string } = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = "กรุณากรอกชื่อ";
+      newErrors.name = "Please enter your name";
     }
 
     if (!formData.surname.trim()) {
-      newErrors.surname = "กรุณากรอกนามสกุล";
+      newErrors.surname = "Please enter your last name";
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = "กรุณากรอกอีเมล";
+      newErrors.email = "Please enter your email";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "รูปแบบอีเมลไม่ถูกต้อง";
+      newErrors.email = "Invalid email format";
     }
 
     if (mode === "add") {
       if (!formData.password) {
-        newErrors.password = "กรุณากรอกรหัสผ่าน";
+        newErrors.password = "Please enter your password";
       } else if (formData.password.length < 8) {
-        newErrors.password = "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร";
+        newErrors.password = "Password must be at least 8 characters long";
       }
 
       if (!formData.confirmPassword) {
-        newErrors.confirmPassword = "กรุณายืนยันรหัสผ่าน";
+        newErrors.confirmPassword = "Please confirm your password";
       } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = "รหัสผ่านไม่ตรงกัน";
+        newErrors.confirmPassword = "Passwords do not match";
       }
     }
 
@@ -140,7 +140,7 @@ export function UserModal({
         };
 
         await userService.createUser(token, createData);
-        showSnackbar("เพิ่มผู้ใช้สำเร็จ!", "success");
+        showSnackbar("Add user successfully!", "success");
       } else if (mode === "edit" && user) {
         const updateData: UserUpdateRequest = {
           email: formData.email,
@@ -150,7 +150,7 @@ export function UserModal({
         };
 
         await userService.updateProfile(token, user.id, updateData);
-        showSnackbar("อัพเดทข้อมูลผู้ใช้สำเร็จ!", "success");
+        showSnackbar("Update user profile successfully!", "success");
       }
 
       onSuccess();
@@ -159,7 +159,7 @@ export function UserModal({
       console.error("Error:", error);
       showSnackbar(
         error.message ||
-          `เกิดข้อผิดพลาดในการ${mode === "add" ? "เพิ่ม" : "แก้ไข"}ผู้ใช้`,
+          `Error ${mode === "add" ? "adding" : "updating"} user`,
         "error"
       );
     } finally {

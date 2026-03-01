@@ -20,11 +20,11 @@ export function ForgotPasswordForm() {
 
     const validateEmail = () => {
         if (!email) {
-            setError("กรุณากรอกอีเมล");
+            setError("Please enter your email");
             return false;
         }
         if (!/\S+@\S+\.\S+/.test(email)) {
-            setError("รูปแบบอีเมลไม่ถูกต้อง");
+            setError("Invalid email format");
             return false;
         }
         return true;
@@ -64,11 +64,11 @@ export function ForgotPasswordForm() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4 text-black">
                 <Input
-                    label="อีเมล"
+                    label="Email"
                     name="email"
                     type="email"
                     autoComplete="email"
-                    placeholder="กรอกอีเมลของคุณ"
+                    placeholder="Enter your email"
                     value={email}
                     onChange={(e) => {
                         setEmail(e.target.value);
@@ -86,8 +86,8 @@ export function ForgotPasswordForm() {
                     message={successMessage}
                     additionalInfo={
                         expiresAt
-                            ? `รหัส OTP จะหมดอายุเมื่อ: ${new Date(expiresAt).toLocaleString('th-TH')}\nกำลังนำคุณไปยังหน้ารีเซ็ตรหัสผ่าน...`
-                            : "กำลังนำคุณไปยังหน้ารีเซ็ตรหัสผ่าน..."
+                            ? `OTP will expire at: ${new Date(expiresAt).toLocaleString('th-TH')}\nRedirecting to reset password page...`
+                            : "Redirecting to reset password page..."
                     }
                 />
             )}
@@ -105,7 +105,7 @@ export function ForgotPasswordForm() {
                     loading={isLoading}
                     disabled={isLoading || !!successMessage}
                 >
-                    {isLoading ? "กำลังส่งรหัส OTP..." : "ส่งรหัส OTP"}
+                    {isLoading ? "Sending OTP..." : "Send OTP"}
                 </Button>
 
                 <Link href="/login">
