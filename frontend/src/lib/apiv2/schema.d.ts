@@ -1590,6 +1590,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/devices/backups/stats/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Backup Stats Summary
+         * @description Get backup statistics. Returns the count of devices based on their LATEST backup status.
+         */
+        get: operations["get_backup_stats_summary_api_v1_devices_backups_stats_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger Bulk Backup
+         * @description Trigger an asynchronous backup job for multiple devices.
+         *     Returns 202 Accepted immediately with the created Record IDs for tracking.
+         */
+        post: operations["trigger_bulk_backup_api_v1_devices_backups_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/backups/device/{device_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Device Backup History
+         * @description Get the backup history for a specific device.
+         *     Does not include the full config_content to keep responses fast.
+         */
+        get: operations["get_device_backup_history_api_v1_devices_backups_device__device_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/backups/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Backup Record Details
+         * @description Get the full details of a specific backup record, INCLUDING the raw configuration content.
+         */
+        get: operations["get_backup_record_details_api_v1_devices_backups__record_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/backups/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compare Backup Records
+         * @description Compare two configuration backup records and return the unified diff.
+         */
+        post: operations["compare_backup_records_api_v1_devices_backups_diff_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1708,6 +1810,18 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** BackupDiffRequest */
+        BackupDiffRequest: {
+            /** Record Id 1 */
+            record_id_1: string;
+            /** Record Id 2 */
+            record_id_2: string;
+        };
+        /** BackupDiffResponse */
+        BackupDiffResponse: {
+            /** Diff Output */
+            diff_output: string;
+        };
         /** BackupListResponse */
         BackupListResponse: {
             /**
@@ -1788,11 +1902,31 @@ export interface components {
              */
             device_count: number | null;
         };
+        /** BackupStatsResponse */
+        BackupStatsResponse: {
+            /** Total Devices With Backup */
+            total_devices_with_backup: number;
+            /** Last Success */
+            last_success: number;
+            /** Last Failed */
+            last_failed: number;
+            /** In Progress */
+            in_progress: number;
+        };
         /**
          * BackupStatus
          * @enum {string}
          */
         BackupStatus: "ONLINE" | "OFFLINE" | "MAINTENANCE" | "OTHER";
+        /** BackupTriggerResponse */
+        BackupTriggerResponse: {
+            /** Message */
+            message: string;
+            /** Job Info */
+            job_info: {
+                [key: string]: unknown;
+            };
+        };
         /** BackupUpdate */
         BackupUpdate: {
             /**
@@ -1875,6 +2009,20 @@ export interface components {
             /** File */
             file: string;
         };
+        /** BulkBackupRequest */
+        BulkBackupRequest: {
+            /** Device Ids */
+            device_ids: string[];
+            /** Backup Profile Id */
+            backup_profile_id?: string | null;
+            /** @default RUNNING */
+            config_type: components["schemas"]["ConfigType"];
+        };
+        /**
+         * ConfigType
+         * @enum {string}
+         */
+        ConfigType: "RUNNING" | "STARTUP" | "CANDIDATE" | "OTHER";
         /** ConfigurationTemplateCreateResponse */
         ConfigurationTemplateCreateResponse: {
             /** Message */
@@ -1997,6 +2145,39 @@ export interface components {
             /** Message */
             message: string;
             template: components["schemas"]["ConfigurationTemplateResponse"];
+        };
+        /** DeviceBackupRecordResponse */
+        DeviceBackupRecordResponse: {
+            /** Id */
+            id: string;
+            /** Device Id */
+            device_id: string;
+            /** Backup Profile Id */
+            backup_profile_id: string | null;
+            /** Config Type */
+            config_type: string;
+            /** Config Format */
+            config_format: string;
+            /** Status */
+            status: string;
+            /** Error Message */
+            error_message: string | null;
+            /** File Size */
+            file_size: number | null;
+            /** File Hash */
+            file_hash: string | null;
+            /** Triggered By User */
+            triggered_by_user: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** DeviceCredentialsCreate */
         DeviceCredentialsCreate: {
@@ -8446,6 +8627,157 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_backup_stats_summary_api_v1_devices_backups_stats_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupStatsResponse"];
+                };
+            };
+        };
+    };
+    trigger_bulk_backup_api_v1_devices_backups_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkBackupRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupTriggerResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_device_backup_history_api_v1_devices_backups_device__device_id__get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                page?: number;
+            };
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceBackupRecordResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_backup_record_details_api_v1_devices_backups__record_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_backup_records_api_v1_devices_backups_diff_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BackupDiffRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupDiffResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
