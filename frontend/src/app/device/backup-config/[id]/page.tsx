@@ -10,10 +10,11 @@ import {
     CircularProgress,
     Alert,
     Breadcrumbs,
-    Link,
+    Link as MuiLink,
     Paper,
     Divider
 } from "@mui/material";
+import NextLink from "next/link";
 import {
     DescriptionOutlined,
     CompareArrowsOutlined,
@@ -23,6 +24,8 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { ProtectedRoute } from "@/components/auth/AuthGuard";
 import { $api } from "@/lib/apiv2/fetch";
 import { BackupHistoryTable } from "@/components/device/backup";
+import { CompareDiffModal } from "@/components/device/backup/CompareDiffModal";
+import { BackupConfigModal } from "@/components/device/backup/BackupConfigModal";
 import { components } from "@/lib/apiv2/schema";
 
 export default function DeviceBackupHistoryPage() {
@@ -31,6 +34,8 @@ export default function DeviceBackupHistoryPage() {
     const deviceId = params.id as string;
 
     const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
+    const [isCompareOpen, setIsCompareOpen] = useState(false);
+    const [previewRecordId, setPreviewRecordId] = useState<string | null>(null);
 
     const { data: device, isLoading: deviceLoading } = $api.useQuery(
         "get",
@@ -67,8 +72,7 @@ export default function DeviceBackupHistoryPage() {
     );
 
     const handleViewDetail = (record: components["schemas"]["DeviceBackupRecordResponse"]) => {
-        console.log("View detail for", record.id);
-        // TODO: Implement Detail View / Compare
+        setPreviewRecordId(record.id);
     };
 
     if (deviceLoading || recordsLoading) {
@@ -109,14 +113,15 @@ export default function DeviceBackupHistoryPage() {
 
                     {/* Breadcrumbs */}
                     <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb">
-                        <Link
+                        <MuiLink
+                            component={NextLink}
                             underline="hover"
                             color="inherit"
                             href="/device/backup-config"
                             sx={{ cursor: 'pointer', fontFamily: "SF Pro Text, -apple-system, sans-serif" }}
                         >
                             Device
-                        </Link>
+                        </MuiLink>
                         <Typography color="text.primary" sx={{ fontFamily: "SF Pro Text, -apple-system, sans-serif", fontWeight: 500 }}>
                             {device.device_name}
                         </Typography>
@@ -157,6 +162,7 @@ export default function DeviceBackupHistoryPage() {
                                 variant="outlined"
                                 startIcon={<CompareArrowsOutlined />}
                                 disabled={isCompareDisabled}
+                                onClick={() => setIsCompareOpen(true)}
                                 sx={{
                                     textTransform: 'none',
                                     fontWeight: 500,
@@ -183,6 +189,7 @@ export default function DeviceBackupHistoryPage() {
                                     records={records || []}
                                     onViewDetail={handleViewDetail}
                                     key={deviceId}
+                                    selectedRecords={selectedRecords}
                                     onSelectRecord={(id) => {
                                         setSelectedRecords(prev =>
                                             prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
@@ -194,6 +201,19 @@ export default function DeviceBackupHistoryPage() {
                     </Card>
                 </Box>
             </PageLayout>
+
+            <CompareDiffModal
+                open={isCompareOpen}
+                onClose={() => setIsCompareOpen(false)}
+                record1={records?.find(r => r.id === selectedRecords[0]) || null}
+                record2={records?.find(r => r.id === selectedRecords[1]) || null}
+            />
+
+            <BackupConfigModal
+                open={!!previewRecordId}
+                onClose={() => setPreviewRecordId(null)}
+                recordId={previewRecordId}
+            />
         </ProtectedRoute>
     );
 }

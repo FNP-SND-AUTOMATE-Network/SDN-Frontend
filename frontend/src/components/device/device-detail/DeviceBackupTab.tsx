@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Box, Typography, Alert, CircularProgress } from "@mui/material";
 import { $api } from "@/lib/apiv2/fetch";
 import { paths, components } from "@/lib/apiv2/schema";
 import { BackupHistoryTable } from "@/components/device/backup";
+import { BackupConfigModal } from "@/components/device/backup/BackupConfigModal";
 
 type DeviceNetwork = paths["/device-networks/{device_id}"]["get"]["responses"]["200"]["content"]["application/json"];
 
@@ -30,9 +31,10 @@ export default function DeviceBackupTab({ device }: DeviceBackupTabProps) {
         }
     );
 
+    const [previewRecordId, setPreviewRecordId] = useState<string | null>(null);
+
     const handleViewDetail = (record: components["schemas"]["DeviceBackupRecordResponse"]) => {
-        console.log("View detail for", record.id);
-        // TODO: Implement Detail View / Compare
+        setPreviewRecordId(record.id);
     };
 
     if (isLoading) {
@@ -60,6 +62,12 @@ export default function DeviceBackupTab({ device }: DeviceBackupTabProps) {
                     onViewDetail={handleViewDetail}
                 />
             </Box>
+
+            <BackupConfigModal
+                open={!!previewRecordId}
+                onClose={() => setPreviewRecordId(null)}
+                recordId={previewRecordId}
+            />
         </Box>
     );
 }

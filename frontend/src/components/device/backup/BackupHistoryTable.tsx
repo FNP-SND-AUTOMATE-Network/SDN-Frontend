@@ -9,11 +9,12 @@ import {
     Typography,
     Box,
     Chip,
-    IconButton,
     Paper,
+    IconButton,
 } from "@mui/material";
 import { CheckCircleOutline, ErrorOutline, Visibility, AccessTime } from "@mui/icons-material";
 import { components } from "@/lib/apiv2/schema";
+import { UserNameResolver } from "./UserNameResolver";
 
 type BackupRecord = components["schemas"]["DeviceBackupRecordResponse"];
 
@@ -79,13 +80,23 @@ export default function BackupHistoryTable({ records, onViewDetail, selectedReco
                     {records.map((record) => {
                         const { datePart, timePart } = formatDate(record.created_at);
                         return (
-                            <TableRow key={record.id} hover>
+                            <TableRow
+                                key={record.id}
+                                hover
+                                onClick={() => onSelectRecord && onSelectRecord(record.id)}
+                                sx={{ cursor: onSelectRecord ? 'pointer' : 'default' }}
+                                selected={selectedRecords.includes(record.id)}
+                            >
                                 {onSelectRecord && (
                                     <TableCell padding="checkbox">
                                         <Checkbox
                                             color="primary"
                                             checked={selectedRecords.includes(record.id)}
-                                            onChange={() => onSelectRecord(record.id)}
+                                            onChange={(e) => {
+                                                e.stopPropagation();
+                                                onSelectRecord(record.id);
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
                                         />
                                     </TableCell>
                                 )}
@@ -144,9 +155,7 @@ export default function BackupHistoryTable({ records, onViewDetail, selectedReco
                                     </Typography>
                                 </TableCell>
                                 <TableCell>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {record.triggered_by_user || "-"}
-                                    </Typography>
+                                    <UserNameResolver userId={record.triggered_by_user} fallback="System" />
                                 </TableCell>
                                 <TableCell align="right">
                                     <IconButton size="small" onClick={() => onViewDetail(record)}>

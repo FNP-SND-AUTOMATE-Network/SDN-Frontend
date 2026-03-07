@@ -123,8 +123,11 @@ export default function BackupTable({
                                         <Checkbox
                                             color="primary"
                                             checked={isSelected}
+                                            onChange={(e) => {
+                                                e.stopPropagation();
+                                                onSelectRow(device.id);
+                                            }}
                                             onClick={(e) => e.stopPropagation()}
-                                            onChange={() => onSelectRow(device.id)}
                                         />
                                     </TableCell>
                                     <TableCell>
