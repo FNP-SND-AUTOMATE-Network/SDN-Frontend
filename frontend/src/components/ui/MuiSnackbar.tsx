@@ -3,11 +3,11 @@
 import React from 'react';
 import { Snackbar, Alert as MuiAlert, AlertTitle } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faCheckCircle, 
-  faExclamationTriangle, 
-  faExclamationCircle, 
-  faInfoCircle 
+import {
+  faCheckCircle,
+  faExclamationTriangle,
+  faExclamationCircle,
+  faInfoCircle
 } from '@fortawesome/free-solid-svg-icons';
 import type { AlertColor } from '@/hooks/useSnackbar';
 
@@ -38,7 +38,7 @@ export const MuiSnackbar: React.FC<MuiSnackbarProps> = ({
   title,
   onClose,
   autoHideDuration = 6000,
-  anchorOrigin = { vertical: 'bottom', horizontal: 'right' },
+  anchorOrigin = { vertical: 'top', horizontal: 'right' },
 }) => {
   return (
     <Snackbar
@@ -46,6 +46,7 @@ export const MuiSnackbar: React.FC<MuiSnackbarProps> = ({
       autoHideDuration={autoHideDuration}
       onClose={onClose}
       anchorOrigin={anchorOrigin}
+      sx={{ top: { xs: 72, sm: 80 } }} // Offset to clear the navbar
     >
       <MuiAlert
         onClose={onClose}
@@ -61,6 +62,12 @@ export const MuiSnackbar: React.FC<MuiSnackbarProps> = ({
             fontFamily: 'SF Pro Display, -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
             fontWeight: 600,
           },
+          ...(severity === 'success' && {
+            color: '#fff',
+            '& .MuiAlert-icon': {
+              color: '#fff',
+            },
+          }),
         }}
       >
         {title && <AlertTitle>{title}</AlertTitle>}
