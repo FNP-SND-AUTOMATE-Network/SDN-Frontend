@@ -32,11 +32,17 @@ import {
     ListItemIcon,
     ListItemText,
     Chip,
+    Snackbar,
+    Alert,
+    Stack,
+    CircularProgress,
 } from "@mui/material";
 
+import { fetchClient } from "@/lib/apiv2/fetch";
 import { Inventory2, DnsRounded } from "@mui/icons-material";
 import ConfigPreviewModal from "./ConfigPreviewModal";
 import TopologyConfigModal from "./TopologyConfigModal";
+import BackupStatusOverlay, { BackupJobResult } from "../device/backup/BackupStatusOverlay";
 import { components } from "@/lib/apiv2/schema";
 
 type DeviceNetwork = components["schemas"]["DeviceNetworkResponse"];
@@ -74,13 +80,13 @@ const typeConfig: Record<string, { color: string; icon: React.ReactNode }> = {
 const getStatusChipProps = (status: StatusDevice) => {
     switch (status) {
         case "ONLINE":
-            return { bgcolor: "success.100", color: "success.800", label: "Online" };
+            return { bgcolor: "#22C55E", color: "white", label: "Online" };
         case "OFFLINE":
-            return { bgcolor: "error.100", color: "error.800", label: "Offline" };
+            return { bgcolor: "#EF4444", color: "white", label: "Offline" };
         case "MAINTENANCE":
-            return { bgcolor: "warning.100", color: "warning.800", label: "Maintenance" };
+            return { bgcolor: "#F59E0B", color: "white", label: "Maintenance" };
         default:
-            return { bgcolor: "info.100", color: "info.800", label: "Other" };
+            return { bgcolor: "#6B7280", color: "white", label: "Other" };
     }
 };
 
@@ -94,6 +100,10 @@ export default function TopologyDeviceTable({
     const [configModalDevice, setConfigModalDevice] = useState<any | null>(null);
     const [configEditorDevice, setConfigEditorDevice] = useState<any | null>(null);
 
+    // Backup Task tracking
+    const [backupJobs, setBackupJobs] = useState<BackupJobResult[]>([]);
+    const [showBackupOverlay, setShowBackupOverlay] = useState(false);
+
     const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, deviceId: string) => {
         event.stopPropagation();
         setAnchorEl(event.currentTarget);
@@ -103,6 +113,81 @@ export default function TopologyDeviceTable({
     const handleMenuClose = () => {
         setAnchorEl(null);
         setMenuDeviceId(null);
+    };
+
+    const handleBackupDevice = async (device: DeviceNetwork) => {
+        const localTaskId = `backup-${Date.now()}-${device.id}`;
+
+        setShowBackupOverlay(true);
+        // Optimistically add the pending task
+        setBackupJobs(prev => [...prev, {
+            id: localTaskId,
+            name: device.device_name,
+            status: 'IN_PROGRESS'
+        }]);
+
+        try {
+            const result = await fetchClient.POST("/api/v1/devices/backups", {
+                body: {
+                    device_ids: [device.id],
+                    config_type: "RUNNING"
+                }
+            });
+
+            if (result.error) throw result.error;
+
+            // Extract the generated record ID
+            const records = result.data?.job_info?.record_ids;
+            const recordId = Array.isArray(records) && records.length > 0 ? (records[0] as string) : null;
+
+            if (!recordId) {
+                // Fallback: If no record ID returned, just mark success as we did before
+                setBackupJobs(prev => prev.map(t =>
+                    t.id === localTaskId ? { ...t, status: 'SUCCESS' } : t
+                ));
+                return;
+            }
+
+            // Update local job with the real recordId
+            setBackupJobs(prev => prev.map(t =>
+                t.id === localTaskId ? { ...t, id: recordId, status: 'IN_PROGRESS' } : t
+            ));
+
+            // Polling function for this specific backup
+            const pollStatus = async (idToPoll: string) => {
+                setTimeout(async () => {
+                    try {
+                        const res = await fetchClient.GET("/api/v1/devices/backups/{record_id}", {
+                            params: { path: { record_id: idToPoll } }
+                        });
+                        if (res.data) {
+                            // @ts-ignore - bypassing specific prisma property indexing
+                            const currentStatus = res.data.status || "IN_PROGRESS";
+
+                            setBackupJobs(prev => prev.map(job =>
+                                job.id === idToPoll ? { ...job, status: currentStatus as any } : job
+                            ));
+
+                            if (currentStatus === "IN_PROGRESS") {
+                                pollStatus(idToPoll);
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Polling error for backup", idToPoll, e);
+                    }
+                }, 3000);
+            };
+
+            // Kick off polling
+            pollStatus(recordId);
+
+        } catch (error) {
+            console.error("Backup failed for device", device.device_name, error);
+            // Mark as error
+            setBackupJobs(prev => prev.map(t =>
+                t.id === localTaskId ? { ...t, status: 'FAILED' } : t
+            ));
+        }
     };
 
     if (devices.length === 0) {
@@ -237,7 +322,9 @@ export default function TopologyDeviceTable({
                 <MenuItem onClick={(e) => {
                     e.stopPropagation();
                     handleMenuClose();
-                    // TODO: Implement backup
+                    if (currentDevice) {
+                        handleBackupDevice(currentDevice);
+                    }
                 }}>
                     <ListItemIcon>
                         <FontAwesomeIcon icon={faDatabase} className="text-orange-600 w-4 h-4" />
@@ -258,6 +345,13 @@ export default function TopologyDeviceTable({
                 isOpen={!!configEditorDevice}
                 onClose={() => setConfigEditorDevice(null)}
                 device={configEditorDevice}
+            />
+
+            {/* Bottom-right Backup Tasks Widget */}
+            <BackupStatusOverlay
+                open={showBackupOverlay}
+                jobs={backupJobs}
+                onClose={() => setShowBackupOverlay(false)}
             />
         </Box>
     );

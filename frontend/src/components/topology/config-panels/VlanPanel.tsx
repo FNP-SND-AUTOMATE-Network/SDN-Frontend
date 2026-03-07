@@ -1,80 +1,119 @@
 "use client";
 
 import React, { useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faSpinner, faPlusCircle } from "@fortawesome/free-solid-svg-icons";
+import {
+    Box,
+    Typography,
+    TextField,
+    Button,
+    Stack,
+    IconButton,
+    CircularProgress,
+    Paper,
+    Table,
+    TableHead,
+    TableBody,
+    TableRow,
+    TableCell,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel,
+    Divider,
+} from "@mui/material";
+import { Send, Delete, Add } from "@mui/icons-material";
+import { $api } from "@/lib/apiv2/fetch";
+import { useSnackbar } from "@/hooks/useSnackbar";
+import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 import { ConfigPanelProps } from "./types";
 
-export function VlanPanel({ showData, isPushing, handlePush }: ConfigPanelProps) {
+export function VlanPanel({ nodeId, showData }: ConfigPanelProps) {
+    const { snackbar, showSuccess, showError, hideSnackbar } = useSnackbar();
     const defaultFormState = { vlanId: "", name: "", intf: "", mode: "access" as "access" | "trunk" };
     const [vlans, setVlans] = useState<typeof defaultFormState[]>([defaultFormState]);
 
     const existingVlans = showData?.vlans || [];
 
-    return (
-        <div className="space-y-4">
-            {/* Existing VLANs */}
-            {existingVlans.length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="text-sm font-semibold text-gray-800 mb-3">Current VLANs</h4>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                            <thead className="text-gray-500 uppercase">
-                                <tr>
-                                    <th className="text-left py-1 px-2">ID</th>
-                                    <th className="text-left py-1 px-2">Name</th>
-                                    <th className="text-left py-1 px-2">Status</th>
-                                    <th className="text-right py-1 px-2">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {existingVlans.map((vlan: any, idx: number) => (
-                                    <tr key={idx} className="border-t border-gray-200">
-                                        <td className="py-1.5 px-2 font-medium">{vlan.vlan_id || vlan.id}</td>
-                                        <td className="py-1.5 px-2">{vlan.name || "-"}</td>
-                                        <td className="py-1.5 px-2">{vlan.status || "-"}</td>
-                                        <td className="py-1.5 px-2 text-right">
-                                            <button
-                                                onClick={() =>
-                                                    handlePush("vlan.delete", { vlan_id: vlan.vlan_id || vlan.id })
-                                                }
-                                                disabled={isPushing}
-                                                className="text-red-600 hover:text-red-800"
-                                            >
-                                                <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
+    const { mutate: executeIntent, isPending } = $api.useMutation(
+        "post",
+        "/api/v1/nbi/intents",
+        {
+            onSuccess: (data) => {
+                if (data.success) {
+                    showSuccess("VLAN operation successful");
+                } else {
+                    showError(data.error ? JSON.stringify(data.error) : "Operation failed");
+                }
+            },
+            onError: (err: any) => showError(err.message || "Failed to execute intent"),
+        }
+    );
 
-            {vlans.map((vlan, idx) => (
-                <div key={idx} className="bg-gray-50 rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-gray-800">
-                            VLAN Configuration {idx + 1}
-                        </h4>
-                        <div className="flex gap-2">
+    const handlePush = (intent: string, params: Record<string, any>) => {
+        executeIntent({ body: { intent, node_id: nodeId, params } });
+    };
+
+    return (
+        <>
+            <Stack spacing={2}>
+                {/* Existing VLANs */}
+                {existingVlans.length > 0 && (
+                    <Paper variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
+                        <Box sx={{ px: 2.5, py: 1.5 }}>
+                            <Typography variant="subtitle2" fontWeight={600}>Current VLANs</Typography>
+                        </Box>
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow sx={{ bgcolor: "grey.50" }}>
+                                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>ID</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>Name</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>Status</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: "0.75rem" }}>Action</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {existingVlans.map((vlan: any, idx: number) => (
+                                    <TableRow key={idx}>
+                                        <TableCell sx={{ fontWeight: 600 }}>{vlan.vlan_id || vlan.id}</TableCell>
+                                        <TableCell>{vlan.name || "-"}</TableCell>
+                                        <TableCell>{vlan.status || "-"}</TableCell>
+                                        <TableCell align="right">
+                                            <IconButton
+                                                size="small"
+                                                color="error"
+                                                onClick={() => handlePush("vlan.delete", { vlan_id: vlan.vlan_id || vlan.id })}
+                                                disabled={isPending}
+                                            >
+                                                <Delete fontSize="small" />
+                                            </IconButton>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </Paper>
+                )}
+
+                {vlans.map((vlan, idx) => (
+                    <Paper key={idx} variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
+                        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+                            <Typography variant="subtitle2" fontWeight={600}>
+                                VLAN Configuration {idx + 1}
+                            </Typography>
                             {vlans.length > 1 && (
-                                <button
-                                    onClick={() =>
-                                        setVlans((prev) => prev.filter((_, i) => i !== idx))
-                                    }
-                                    className="text-red-500 hover:text-red-700 text-xs"
+                                <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={() => setVlans((prev) => prev.filter((_, i) => i !== idx))}
                                 >
-                                    <FontAwesomeIcon icon={faTrash} className="w-3.5 h-3.5" />
-                                </button>
+                                    <Delete fontSize="small" />
+                                </IconButton>
                             )}
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="text-xs text-gray-500 mb-1 block">VLAN ID</label>
-                            <input
+                        </Stack>
+                        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5, mb: 1.5 }}>
+                            <TextField
+                                label="VLAN ID"
+                                size="small"
                                 type="number"
                                 value={vlan.vlanId}
                                 onChange={(e) => {
@@ -82,113 +121,121 @@ export function VlanPanel({ showData, isPushing, handlePush }: ConfigPanelProps)
                                     updated[idx].vlanId = e.target.value;
                                     setVlans(updated);
                                 }}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                                 placeholder="e.g. 10"
-                                min="1"
-                                max="4094"
+                                slotProps={{ htmlInput: { min: 1, max: 4094 } }}
                             />
-                        </div>
-                        <div>
-                            <label className="text-xs text-gray-500 mb-1 block">VLAN Name</label>
-                            <input
-                                type="text"
+                            <TextField
+                                label="VLAN Name"
+                                size="small"
                                 value={vlan.name}
                                 onChange={(e) => {
                                     const updated = [...vlans];
                                     updated[idx].name = e.target.value;
                                     setVlans(updated);
                                 }}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                                 placeholder="Optional naming"
                             />
-                        </div>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                        <button
-                            onClick={() => handlePush("vlan.delete", { vlan_id: parseInt(vlan.vlanId) })}
-                            disabled={isPushing || !vlan.vlanId}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                        >
-                            Delete VLAN
-                        </button>
-                        <button
-                            onClick={() => handlePush("vlan.create", { vlan_id: parseInt(vlan.vlanId), ...(vlan.name && { name: vlan.name }) })}
-                            disabled={isPushing || !vlan.vlanId}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                        >
-                            <FontAwesomeIcon icon={isPushing ? faSpinner : faPlusCircle} className={`w-3.5 h-3.5 ${isPushing ? "animate-spin" : ""}`} />
-                            Create VLAN
-                        </button>
-                    </div>
+                        </Box>
+                        <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mb: 2 }}>
+                            <Button
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                onClick={() => handlePush("vlan.delete", { vlan_id: parseInt(vlan.vlanId) })}
+                                disabled={isPending || !vlan.vlanId}
+                                sx={{ textTransform: "none" }}
+                            >
+                                Delete VLAN
+                            </Button>
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={() => handlePush("vlan.create", { vlan_id: parseInt(vlan.vlanId), ...(vlan.name && { name: vlan.name }) })}
+                                disabled={isPending || !vlan.vlanId}
+                                startIcon={isPending ? <CircularProgress size={14} color="inherit" /> : <Send />}
+                                sx={{ textTransform: "none" }}
+                            >
+                                Create VLAN
+                            </Button>
+                        </Stack>
 
-                    <div className="border-t border-gray-200 mt-3 pt-3">
-                        <h4 className="text-sm font-semibold text-gray-800 mb-2">Assign to Interface</h4>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="text-xs text-gray-500 mb-1 block">Interface</label>
-                                <input
-                                    type="text"
-                                    value={vlan.intf}
-                                    onChange={(e) => {
-                                        const updated = [...vlans];
-                                        updated[idx].intf = e.target.value;
-                                        setVlans(updated);
-                                    }}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                    placeholder="e.g. GigabitEthernet1/0/1"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs text-gray-500 mb-1 block">Mode</label>
-                                <select
+                        <Divider sx={{ mb: 2 }} />
+
+                        <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                            Assign to Interface
+                        </Typography>
+                        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5, mb: 1.5 }}>
+                            <TextField
+                                label="Interface"
+                                size="small"
+                                value={vlan.intf}
+                                onChange={(e) => {
+                                    const updated = [...vlans];
+                                    updated[idx].intf = e.target.value;
+                                    setVlans(updated);
+                                }}
+                                placeholder="e.g. GigabitEthernet1/0/1"
+                            />
+                            <FormControl size="small">
+                                <InputLabel>Mode</InputLabel>
+                                <Select
+                                    label="Mode"
                                     value={vlan.mode}
                                     onChange={(e) => {
                                         const updated = [...vlans];
                                         updated[idx].mode = e.target.value as "access" | "trunk";
                                         setVlans(updated);
                                     }}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                                 >
-                                    <option value="access">Access</option>
-                                    <option value="trunk">Trunk</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div className="flex justify-end mt-2">
-                            <button
+                                    <MenuItem value="access">Access</MenuItem>
+                                    <MenuItem value="trunk">Trunk</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Box>
+                        <Stack direction="row" justifyContent="flex-end">
+                            <Button
+                                variant="contained"
+                                color="secondary"
+                                size="small"
                                 onClick={() => handlePush("vlan.assign_port", { interface: vlan.intf, vlan_id: parseInt(vlan.vlanId), mode: vlan.mode })}
-                                disabled={isPushing || !vlan.vlanId || !vlan.intf}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                disabled={isPending || !vlan.vlanId || !vlan.intf}
+                                startIcon={isPending ? <CircularProgress size={14} color="inherit" /> : <Send />}
+                                sx={{ textTransform: "none" }}
                             >
-                                <FontAwesomeIcon icon={isPushing ? faSpinner : faPlusCircle} className={`w-3.5 h-3.5 ${isPushing ? "animate-spin" : ""}`} />
                                 Assign Interface
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            ))}
+                            </Button>
+                        </Stack>
+                    </Paper>
+                ))}
 
-            <button
-                onClick={() =>
-                    setVlans((prev) => [
-                        ...prev,
-                        { vlanId: "", name: "", intf: "", mode: "access" },
-                    ])
-                }
-                className="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 text-sm rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors"
-            >
-                + Add Another VLAN configuration
-            </button>
+                <Button
+                    variant="outlined"
+                    fullWidth
+                    startIcon={<Add />}
+                    onClick={() => setVlans((prev) => [...prev, { vlanId: "", name: "", intf: "", mode: "access" }])}
+                    sx={{ textTransform: "none", borderStyle: "dashed", py: 1 }}
+                >
+                    Add Another VLAN Configuration
+                </Button>
 
-            {/* Show Data */}
-            {showData && (
-                <div className="mt-4 bg-gray-900 rounded-lg p-4 overflow-x-auto">
-                    <h4 className="text-xs font-medium text-gray-400 mb-2 uppercase">VLAN Database</h4>
-                    <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap">
-                        {typeof showData === "string" ? showData : JSON.stringify(showData, null, 2)}
-                    </pre>
-                </div>
-            )}
-        </div>
+                {/* Show Data */}
+                {showData && (
+                    <Paper sx={{ p: 2, bgcolor: "grey.900", borderRadius: 2, mt: 1 }}>
+                        <Typography variant="caption" color="grey.500" fontWeight={600} textTransform="uppercase" gutterBottom display="block">
+                            VLAN Database
+                        </Typography>
+                        <Typography
+                            component="pre"
+                            variant="caption"
+                            sx={{ color: "success.light", fontFamily: "monospace", whiteSpace: "pre-wrap", m: 0 }}
+                        >
+                            {typeof showData === "string" ? showData : JSON.stringify(showData, null, 2)}
+                        </Typography>
+                    </Paper>
+                )}
+            </Stack>
+
+            <MuiSnackbar open={snackbar.open} message={snackbar.message} severity={snackbar.severity} title={snackbar.title} onClose={hideSnackbar} />
+        </>
     );
 }

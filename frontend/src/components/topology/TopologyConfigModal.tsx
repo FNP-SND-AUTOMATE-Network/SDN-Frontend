@@ -1,21 +1,36 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-    faTimes,
-    faChevronRight,
-    faPlusCircle,
-    faSpinner,
-    faCheck,
-    faExclamationTriangle,
-    faTrash,
-    faSave,
-    faNetworkWired,
-} from "@fortawesome/free-solid-svg-icons";
-import { DeviceNetwork, deviceNetworkService, InterfaceDiscoveryResponse } from "@/services/deviceNetworkService";
-import { intentService, IntentExecuteResponse } from "@/services/intentService";
-import { useAuth } from "@/contexts/AuthContext";
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    Box,
+    Typography,
+    IconButton,
+    Tabs,
+    Tab,
+    List,
+    ListItemButton,
+    ListItemText,
+    Collapse,
+    CircularProgress,
+    Button,
+    Chip,
+    Stack,
+    Divider,
+} from "@mui/material";
+import {
+    Close,
+    ExpandMore,
+    ChevronRight,
+    Save,
+    LanOutlined,
+} from "@mui/icons-material";
+import { paths } from "@/lib/apiv2/schema";
+import { fetchClient } from "@/lib/apiv2/fetch";
+import { useSnackbar } from "@/hooks/useSnackbar";
+import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 import { SettingPanel } from "./config-panels/SettingPanel";
 import { StaticRoutePanel } from "./config-panels/StaticRoutePanel";
 import { OspfPanel } from "./config-panels/OspfPanel";
@@ -23,8 +38,35 @@ import { DefaultRoutePanel } from "./config-panels/DefaultRoutePanel";
 import { VlanPanel } from "./config-panels/VlanPanel";
 import { DhcpPanel } from "./config-panels/DhcpPanel";
 import { DeviceInterfaceForm } from "../device/device-detail/DeviceInterfaceForm";
+import { $api } from "@/lib/apiv2/fetch";
+import { ConfigurationTemplateListResponse, ConfigurationTemplateDetailResponse } from "./config-panels/types";
 
-type NetworkInterface = InterfaceDiscoveryResponse["interfaces"][0];
+// DeviceNetwork type derived from schema paths
+type DeviceNetwork =
+    paths["/device-networks/"]["get"]["responses"]["200"]["content"]["application/json"]["devices"][number];
+
+// NetworkInterface type — schema response is `unknown`, so define locally
+interface NetworkInterface {
+    name: string;
+    type: string;
+    number: string;
+    description: string | null;
+    admin_status: string;
+    ipv4: string | null;
+    ipv4_address: string | null;
+    subnet_mask: string | null;
+    ipv6: string | null;
+    mtu: number | null;
+    has_ospf: boolean;
+    ospf: any;
+    oper_status: string;
+    mac_address: string;
+    speed: string;
+    duplex: string;
+    auto_negotiate: boolean;
+    media_type: string;
+    last_change: string;
+}
 
 interface TopologyConfigModalProps {
     isOpen: boolean;
@@ -49,18 +91,14 @@ const ALL_SIDEBAR_ITEMS: SidebarItem[] = [
 function getSidebarItems(deviceType?: string): SidebarItem[] {
     switch (deviceType) {
         case "ROUTER":
-            // Router: Setting, Routing, Interface, DHCP (ไม่มี VLAN)
             return ALL_SIDEBAR_ITEMS.filter((i) => i.key !== "vlan");
         case "SWITCH":
-            // Switch: Setting, Interface, VLAN (ไม่มี Routing, DHCP)
             return ALL_SIDEBAR_ITEMS.filter((i) => i.key !== "routing" && i.key !== "dhcp");
         default:
-            // Other types: show all
             return ALL_SIDEBAR_ITEMS;
     }
 }
 
-// Sub-items for expandable sections
 const SUB_ITEMS: Record<string, { key: string; label: string }[]> = {
     routing: [
         { key: "routing-static", label: "Static Route" },
@@ -69,34 +107,6 @@ const SUB_ITEMS: Record<string, { key: string; label: string }[]> = {
     ],
 };
 
-// ==================== Result Banner ====================
-function ResultBanner({
-    result,
-    onDismiss,
-}: {
-    result: { success: boolean; message: string } | null;
-    onDismiss: () => void;
-}) {
-    if (!result) return null;
-    return (
-        <div
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm mb-4 ${result.success
-                ? "bg-green-50 text-green-700 border border-green-200"
-                : "bg-red-50 text-red-700 border border-red-200"
-                }`}
-        >
-            <FontAwesomeIcon
-                icon={result.success ? faCheck : faExclamationTriangle}
-                className="w-4 h-4 shrink-0"
-            />
-            <span className="flex-1">{result.message}</span>
-            <button onClick={onDismiss} className="text-current opacity-60 hover:opacity-100">
-                <FontAwesomeIcon icon={faTimes} className="w-3 h-3" />
-            </button>
-        </div>
-    );
-}
-
 // ==================== Main Component ====================
 export default function TopologyConfigModal({
     isOpen,
@@ -104,72 +114,96 @@ export default function TopologyConfigModal({
     device,
     onDeviceUpdated,
 }: TopologyConfigModalProps) {
-    const { token } = useAuth();
+    const { snackbar, showSuccess, showError, hideSnackbar } = useSnackbar();
     const [mainTab, setMainTab] = useState<MainTab>("config");
     const [activeSection, setActiveSection] = useState<string>("setting");
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
-    // Global state
-    const [isPushing, setIsPushing] = useState(false);
-    const [pushResult, setPushResult] = useState<{ success: boolean; message: string } | null>(null);
+    // Show data state
+    const [showData, setShowData] = useState<Record<string, any> | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [discoveredInterfaces, setDiscoveredInterfaces] = useState<NetworkInterface[]>([]);
 
     const interfaceSaveRef = React.useRef<(() => Promise<void>) | null>(null);
     const [isInterfaceSaving, setIsInterfaceSaving] = useState(false);
 
-
-
-    // ===== Show data state =====
-    const [showData, setShowData] = useState<Record<string, any> | null>(null);
-    const [discoveredInterfaces, setDiscoveredInterfaces] = useState<NetworkInterface[]>([]);
-
     const nodeId = device?.node_id || "";
+
+    // Template states
+    const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(device?.configuration_template?.id || null);
+    const [editedConfigContent, setEditedConfigContent] = useState<string>("");
+    const [isDeploying, setIsDeploying] = useState(false);
 
     // Initialize when device changes
     useEffect(() => {
         if (device) {
-            setPushResult(null);
             setShowData(null);
             setDiscoveredInterfaces([]);
             setActiveSection("setting");
             setMainTab("config");
+            setSelectedTemplateId(device.configuration_template?.id || null);
+            setEditedConfigContent("");
         }
     }, [device]);
 
-    // Load show data when section changes
+    // Load show data when section changes — uses fetchClient directly
     const loadSectionData = useCallback(
         async (section: string) => {
-            if (!token || !nodeId) return;
+            if (!nodeId) return;
             setIsLoading(true);
             setShowData(null);
             try {
-                let response: IntentExecuteResponse;
+                let intentName: string | null = null;
+
                 switch (section) {
                     case "setting":
-                        response = await intentService.showRunningConfig(token, nodeId);
+                        intentName = "show.running_config";
                         break;
-                    case "interface":
-                        const uiInterfaces = await deviceNetworkService.discoverInterfaces(token, nodeId);
-                        setDiscoveredInterfaces(uiInterfaces.interfaces || []);
-                        response = { success: true, intent: "", node_id: nodeId, strategy_used: "", driver_used: "", result: null, error: null };
-                        break;
+                    case "interface": {
+                        const { data: discoverData } = await fetchClient.GET(
+                            "/api/v1/nbi/devices/{node_id}/interfaces/discover",
+                            { params: { path: { node_id: nodeId } } }
+                        );
+                        if (discoverData) {
+                            const payload = discoverData as { interfaces?: NetworkInterface[] };
+                            setDiscoveredInterfaces(payload.interfaces || []);
+                        }
+                        setIsLoading(false);
+                        return;
+                    }
                     case "routing-static":
                     case "routing-ospf":
                     case "routing-default":
-                        response = await intentService.showIpRoute(token, nodeId);
+                        intentName = "show.ip_route";
                         break;
                     case "vlan":
-                        response = await intentService.showVlans(token, nodeId);
-                        // showData will be set below
+                        intentName = "show.vlans";
                         break;
                     case "dhcp":
-                        response = await intentService.showDhcpPools(token, nodeId);
+                        intentName = "show.dhcp_pools";
                         break;
                     default:
-                        response = { success: true, intent: "", node_id: nodeId, strategy_used: "", driver_used: "", result: null, error: null };
+                        setIsLoading(false);
+                        return;
                 }
-                if (response.success) {
-                    setShowData(response.result);
+
+                if (intentName) {
+                    const { data, error } = await fetchClient.POST("/api/v1/nbi/intents", {
+                        body: { intent: intentName, node_id: nodeId, params: {} },
+                    });
+                    if (error) {
+                        const errDetail = (error as any)?.detail || (error as any)?.message || JSON.stringify(error);
+                        console.warn(`[loadSectionData] Intent "${intentName}" error:`, errDetail);
+                        // Still try to show partial data if available
+                    } else if (data) {
+                        if (data.success) {
+                            setShowData(data.result ?? null);
+                        } else {
+                            // Intent returned success=false — show the error as data
+                            console.warn(`[loadSectionData] Intent "${intentName}" returned success=false:`, data.error);
+                            setShowData(data.result ?? data.error ?? null);
+                        }
+                    }
                 }
             } catch (err: any) {
                 console.error("Failed to load section data:", err);
@@ -177,7 +211,7 @@ export default function TopologyConfigModal({
                 setIsLoading(false);
             }
         },
-        [token, nodeId]
+        [nodeId]
     );
 
     useEffect(() => {
@@ -185,6 +219,50 @@ export default function TopologyConfigModal({
             loadSectionData(activeSection);
         }
     }, [activeSection, isOpen, device, nodeId, loadSectionData]);
+
+    // ==================== Fetch Templates ====================
+    const { data: templatesData, isLoading: isLoadingTemplates } = $api.useQuery(
+        "get",
+        "/configuration-templates/",
+        {
+            params: { query: { page: 1, page_size: 100 } } // Fetch plenty to ensure list shows
+        },
+        { enabled: isOpen && mainTab === "template" }
+    );
+    const templatesList = (templatesData as ConfigurationTemplateListResponse)?.templates || [];
+
+    const { data: templateDetailData, isLoading: isLoadingTemplateDetail } = $api.useQuery(
+        "get",
+        "/configuration-templates/{template_id}",
+        {
+            params: { path: { template_id: selectedTemplateId || "" } }
+        },
+        { enabled: !!selectedTemplateId && isOpen && mainTab === "template" }
+    );
+    const selectedTemplateDetail = templateDetailData as ConfigurationTemplateDetailResponse | undefined;
+
+    useEffect(() => {
+        if (selectedTemplateId) {
+            console.log("Template detail fetched:", selectedTemplateDetail);
+        }
+    }, [selectedTemplateDetail, selectedTemplateId]);
+
+    useEffect(() => {
+        if (selectedTemplateDetail) {
+            // The API response places the content inside a nested 'detail' object
+            const detailObj = (selectedTemplateDetail as any).detail || selectedTemplateDetail;
+
+            let contentStr = "";
+            if (detailObj.config_content) {
+                contentStr = typeof detailObj.config_content === 'string'
+                    ? detailObj.config_content
+                    : JSON.stringify(detailObj.config_content, null, 2);
+            }
+            setEditedConfigContent(contentStr);
+        } else if (!selectedTemplateId) {
+            setEditedConfigContent("");
+        }
+    }, [selectedTemplateDetail, selectedTemplateId]);
 
     if (!isOpen || !device) return null;
 
@@ -222,42 +300,37 @@ export default function TopologyConfigModal({
     };
 
     // ==================== Push Handlers ====================
-    const handlePush = async (intent: string, params: Record<string, any>) => {
-        if (!token || !nodeId) return;
-        setIsPushing(true);
-        setPushResult(null);
-        try {
-            const response = await intentService.executeIntent(token, {
-                intent,
-                node_id: nodeId,
-                params,
-            });
-            if (response.success) {
-                setPushResult({
-                    success: true,
-                    message: `✓ Intent "${intent}" pushed successfully`,
-                });
-                // Reload section data
-                loadSectionData(activeSection);
-            } else {
-                setPushResult({
-                    success: false,
-                    message: response.error
-                        ? JSON.stringify(response.error)
-                        : `Failed to execute "${intent}"`,
-                });
-            }
-        } catch (err: any) {
-            setPushResult({
-                success: false,
-                message: err.message || `Failed to execute "${intent}"`,
-            });
-        } finally {
-            setIsPushing(false);
-        }
-    };
-
     const handleGlobalPush = async () => {
+        if (mainTab === "template") {
+            if (!selectedTemplateId) {
+                showError("Please select a template to deploy.");
+                return;
+            }
+            setIsDeploying(true);
+            try {
+                // Deploy Template via POST /deployments/ (correct path per schema)
+                const { error, response } = await fetchClient.POST("/deployments/", {
+                    body: {
+                        template_id: selectedTemplateId,
+                        device_ids: [device.id],
+                        variables: {},
+                        config_content: editedConfigContent || undefined,
+                    } as any // Using 'as any' since config_content isn't explicitly defined in DeploymentRequest schema
+                });
+
+                if (error) {
+                    showError((error as any)?.detail || "Failed to deploy template.");
+                } else if (response.ok || response.status === 202 || response.status === 200) {
+                    showSuccess("Template deployment job triggered successfully.");
+                }
+            } catch (err: any) {
+                showError(err.message || "Failed to deploy template.");
+            } finally {
+                setIsDeploying(false);
+            }
+            return;
+        }
+
         if (activeSection.startsWith("interface-") && interfaceSaveRef.current) {
             setIsInterfaceSaving(true);
             try {
@@ -266,32 +339,43 @@ export default function TopologyConfigModal({
                 setIsInterfaceSaving(false);
             }
         } else {
-            handlePush("system.save_config", {});
+            try {
+                const { data, error } = await fetchClient.POST("/api/v1/nbi/intents", {
+                    body: { intent: "system.save_config", node_id: nodeId, params: {} },
+                });
+                if (error) {
+                    showError("Failed to save config");
+                } else if (data?.success) {
+                    showSuccess("Configuration saved successfully");
+                } else {
+                    showError(data?.error ? JSON.stringify(data.error) : "Save config failed");
+                }
+            } catch (err: any) {
+                showError(err.message || "Failed to save config");
+            }
         }
     };
 
     // ==================== Section Renderers ====================
-
-    // ==================== Main Content Router ====================
     const renderContent = () => {
-        const commonProps = { device, showData, isPushing, handlePush };
+        const commonProps = { device, nodeId, showData };
 
         if (activeSection.startsWith("interface-")) {
             const ifaceName = activeSection.replace("interface-", "");
             const ifaceData = discoveredInterfaces.find((i) => i.name === ifaceName);
             if (ifaceData) {
                 return (
-                    <div className="w-full">
+                    <Box sx={{ width: "100%" }}>
                         <DeviceInterfaceForm
                             interfaceData={ifaceData}
                             mode="edit"
                             deviceId={nodeId}
-                            onSuccess={() => loadSectionData("interface")} // Refresh on success
+                            onSuccess={() => loadSectionData("interface")}
                             onCancel={() => { }}
                             hideFooter={true}
                             onSaveRef={interfaceSaveRef}
                         />
-                    </div>
+                    </Box>
                 );
             }
         }
@@ -304,117 +388,248 @@ export default function TopologyConfigModal({
             case "routing": return <StaticRoutePanel {...commonProps} />;
             case "interface":
                 return (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-500 font-sf-pro-text p-8 w-full border-2 border-dashed border-gray-200 mt-8 rounded-xl max-w-lg mx-auto">
-                        <FontAwesomeIcon icon={faNetworkWired} className="w-12 h-12 text-gray-300 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Interface Configuration</h3>
-                        <p className="text-sm text-center">
+                    <Box
+                        sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            height: "100%",
+                            p: 4,
+                            border: "2px dashed",
+                            borderColor: "divider",
+                            borderRadius: 3,
+                            mt: 4,
+                            maxWidth: 480,
+                            mx: "auto",
+                        }}
+                    >
+                        <LanOutlined sx={{ fontSize: 48, color: "grey.300", mb: 2 }} />
+                        <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                            Interface Configuration
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" textAlign="center">
                             Please select an interface from the sidebar menu on the left to view and edit its configuration.
-                        </p>
+                        </Typography>
                         {isLoading && (
-                            <div className="mt-4 text-blue-500 flex items-center gap-2">
-                                <FontAwesomeIcon icon={faSpinner} className="animate-spin w-4 h-4" />
-                                <span className="text-sm">Discovering interfaces...</span>
-                            </div>
+                            <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 2 }}>
+                                <CircularProgress size={16} />
+                                <Typography variant="body2" color="primary">Discovering interfaces...</Typography>
+                            </Stack>
                         )}
-                    </div>
+                    </Box>
                 );
             case "vlan": return <VlanPanel {...commonProps} />;
             case "dhcp": return <DhcpPanel {...commonProps} />;
             default:
                 return (
-                    <div className="text-sm text-gray-500 italic p-8 text-center">
+                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic", p: 4, textAlign: "center" }}>
                         Select a section from the sidebar
-                    </div>
+                    </Typography>
                 );
         }
     };
 
+
+    // ==================== Render ====================
     const renderTemplateContent = () => {
-        const template = device.configuration_template;
-        if (!template) {
+        if (isLoadingTemplates) {
             return (
-                <div className="flex items-center justify-center h-full text-gray-500 text-sm p-8">
-                    No configuration template assigned to this device
-                </div>
+                <Box display="flex" alignItems="center" justifyContent="center" height="100%" p={4}>
+                    <CircularProgress />
+                </Box>
             );
         }
+
+        if (templatesList.length === 0) {
+            return (
+                <Box display="flex" alignItems="center" justifyContent="center" height="100%" p={4}>
+                    <Typography variant="body2" color="text.secondary">
+                        No configuration templates available.
+                    </Typography>
+                </Box>
+            );
+        }
+
         return (
-            <div className="p-6 space-y-4">
-                <div className="flex items-center gap-4">
-                    <label className="text-sm font-medium text-gray-700 w-32 shrink-0">Template Name</label>
-                    <span className="text-sm text-gray-900">{template.template_name}</span>
-                </div>
-                <div className="flex items-center gap-4">
-                    <label className="text-sm font-medium text-gray-700 w-32 shrink-0">Template Type</label>
-                    <span className="text-sm text-gray-900">{template.template_type}</span>
-                </div>
-                <div className="flex items-center gap-4">
-                    <label className="text-sm font-medium text-gray-700 w-32 shrink-0">Template ID</label>
-                    <span className="text-sm text-gray-500 font-mono">{template.id}</span>
-                </div>
-            </div>
+            <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
+                {/* Template List Sidebar */}
+                <Box sx={{ width: 250, borderRight: 1, borderColor: "divider", bgcolor: "grey.50", overflowY: "auto", flexShrink: 0, p: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, fontWeight: 700 }}>
+                        Select Template
+                    </Typography>
+                    <Stack spacing={1}>
+                        {templatesList.map(template => (
+                            <Box
+                                key={template.id}
+                                onClick={() => setSelectedTemplateId(template.id || null)}
+                                sx={{
+                                    p: 1.5,
+                                    borderRadius: 2,
+                                    border: '1px solid',
+                                    borderColor: selectedTemplateId === template.id ? 'secondary.main' : 'divider',
+                                    bgcolor: selectedTemplateId === template.id ? 'secondary.50' : 'background.paper',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                        borderColor: 'secondary.light',
+                                        bgcolor: selectedTemplateId === template.id ? 'secondary.50' : 'grey.100'
+                                    }
+                                }}
+                            >
+                                <Typography variant="body2" fontWeight={600} noWrap title={template.template_name}>
+                                    {template.template_name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                    {template.template_type}
+                                </Typography>
+                            </Box>
+                        ))}
+                    </Stack>
+                </Box>
+
+                {/* Template Edit Area */}
+                <Box sx={{ flex: 1, p: 3, overflowY: "auto", bgcolor: "background.paper" }}>
+                    {selectedTemplateId ? (
+                        isLoadingTemplateDetail ? (
+                            <Box display="flex" alignItems="center" justifyContent="center" height="100%">
+                                <CircularProgress />
+                            </Box>
+                        ) : (
+                            <Stack spacing={3} height="100%">
+                                <Box>
+                                    <Typography variant="h6" fontWeight={700} gutterBottom>
+                                        {templatesList.find(t => t.id === selectedTemplateId)?.template_name || "Template Details"}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {templatesList.find(t => t.id === selectedTemplateId)?.description || "Review and edit the configuration content below before deploying to the device."}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                    <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                                        Configuration Content
+                                    </Typography>
+                                    <Box
+                                        component="textarea"
+                                        value={editedConfigContent}
+                                        onChange={(e) => setEditedConfigContent(e.target.value)}
+                                        sx={{
+                                            flex: 1,
+                                            minHeight: '400px',
+                                            width: '100%',
+                                            p: 2,
+                                            fontFamily: 'SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace',
+                                            fontSize: '0.875rem',
+                                            bgcolor: '#1E1E1E',
+                                            color: '#D4D4D4',
+                                            border: 'none',
+                                            borderRadius: 2,
+                                            resize: 'none',
+                                            '&:focus': {
+                                                outline: '2px solid',
+                                                outlineColor: 'secondary.main',
+                                                outlineOffset: '-2px'
+                                            }
+                                        }}
+                                        spellCheck={false}
+                                    />
+                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                                        * Note: Modifying the config here applies only to this deployment. It does not permanently save to the template.
+                                    </Typography>
+                                </Box>
+                            </Stack>
+                        )
+                    ) : (
+                        <Box display="flex" alignItems="center" justifyContent="center" height="100%">
+                            <Typography variant="body1" color="text.secondary">
+                                Select a template from the list to view and edit its configuration.
+                            </Typography>
+                        </Box>
+                    )}
+                </Box>
+            </Box>
         );
     };
 
     // ==================== Render ====================
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose} />
+        <>
+            <Dialog
+                open={isOpen}
+                onClose={onClose}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{ sx: { maxHeight: "85vh", borderRadius: 3 } }}
+            >
+                {/* Header */}
+                <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", pb: 1 }}>
+                    <Stack direction="row" alignItems="center" spacing={1.5}>
+                        <Typography variant="h6" fontWeight={700}>{device.device_name}</Typography>
+                        {device.operatingSystem && (
+                            <Chip label={`OS: ${device.operatingSystem.os_type}`} size="small" color="primary" variant="outlined" />
+                        )}
+                        {nodeId && (
+                            <Chip label={nodeId} size="small" variant="outlined" sx={{ fontFamily: "monospace", fontSize: "0.7rem" }} />
+                        )}
+                    </Stack>
+                    <IconButton onClick={onClose} size="small">
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
 
-            <div className="flex items-center justify-center min-h-screen p-4">
-                <div className="relative bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col">
-                    {/* Header */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-xl font-bold text-gray-900">{device.device_name}</h2>
-                            {device.operatingSystem && (
-                                <span className="text-sm text-blue-600 underline cursor-pointer">
-                                    OS : {device.operatingSystem.os_type}
-                                </span>
-                            )}
-                            {nodeId && (
-                                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
-                                    {nodeId}
-                                </span>
-                            )}
-                        </div>
-                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
-                            <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
-                        </button>
-                    </div>
+                <Divider />
 
-                    {/* Tabs */}
-                    <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 shrink-0">
-                        <div className="flex gap-1">
-                            <button
-                                onClick={() => setMainTab("config")}
-                                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${mainTab === "config" ? "text-blue-600 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}`}
+                {/* Tabs + Push Button */}
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 3, py: 1 }}>
+                    <Tabs
+                        value={mainTab}
+                        onChange={(_, v) => setMainTab(v)}
+                        sx={{ minHeight: 40, "& .MuiTab-root": { minHeight: 40, textTransform: "none" } }}
+                    >
+                        <Tab label="Config" value="config" />
+                        <Tab label="Template" value="template" />
+                    </Tabs>
+                    <Button
+                        variant="contained"
+                        size="small"
+                        onClick={handleGlobalPush}
+                        disabled={mainTab === "config" ? isInterfaceSaving : isDeploying}
+                        startIcon={
+                            (mainTab === "config" && isInterfaceSaving) || (mainTab === "template" && isDeploying)
+                                ? <CircularProgress size={16} color="inherit" />
+                                : <Save />
+                        }
+                        color={mainTab === "template" ? "secondary" : "primary"}
+                        sx={{ textTransform: "none" }}
+                    >
+                        {mainTab === "template"
+                            ? "Deploy Template"
+                            : activeSection.startsWith("interface-")
+                                ? "Save Interface"
+                                : "Save Config"
+                        }
+                    </Button>
+                </Box>
+
+                <Divider />
+
+                {/* Body */}
+                <DialogContent sx={{ p: 0, display: "flex", minHeight: 480 }}>
+                    {mainTab === "config" ? (
+                        <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
+                            {/* Sidebar */}
+                            <Box
+                                sx={{
+                                    width: 200,
+                                    borderRight: 1,
+                                    borderColor: "divider",
+                                    bgcolor: "grey.50",
+                                    overflowY: "auto",
+                                    flexShrink: 0,
+                                }}
                             >
-                                Config
-                            </button>
-                            <button
-                                onClick={() => setMainTab("template")}
-                                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${mainTab === "template" ? "text-blue-600 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}`}
-                            >
-                                Template
-                            </button>
-                        </div>
-                        <button
-                            onClick={handleGlobalPush}
-                            disabled={isPushing || isInterfaceSaving}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 disabled:bg-gray-400 transition-colors shadow-sm"
-                        >
-                            <FontAwesomeIcon icon={(isPushing || isInterfaceSaving) ? faSpinner : faPlusCircle} className={`w-4 h-4 ${(isPushing || isInterfaceSaving) ? "animate-spin" : ""}`} />
-                            {activeSection.startsWith("interface-") ? "Save Interface" : "Push"}
-                        </button>
-                    </div>
-
-                    {/* Body */}
-                    <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                        {mainTab === "config" ? (
-                            <div className="flex flex-1 overflow-hidden" style={{ minHeight: "480px" }}>
-                                {/* Sidebar */}
-                                <div className="w-48 border-r border-gray-200 bg-gray-50 overflow-y-auto shrink-0 rounded-bl-xl">
+                                <List disablePadding dense>
                                     {getSidebarItems(device.type).map((item) => {
                                         const isActive = activeSection === item.key ||
                                             (item.key === "routing" && activeSection.startsWith("routing-")) ||
@@ -425,75 +640,90 @@ export default function TopologyConfigModal({
                                         if (item.key === "interface") {
                                             subItems = discoveredInterfaces.map(iface => ({
                                                 key: `interface-${iface.name}`,
-                                                label: iface.name
+                                                label: iface.name,
                                             }));
                                         }
 
                                         return (
-                                            <div key={item.key}>
-                                                <button
+                                            <React.Fragment key={item.key}>
+                                                <ListItemButton
                                                     onClick={() => handleSidebarClick(item.key, item.expandable)}
-                                                    className={`w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors ${isActive ? "bg-blue-100 text-blue-700" : "text-gray-700 hover:bg-gray-100"}`}
-                                                    style={{
-                                                        borderLeftWidth: "3px",
-                                                        borderLeftColor: isActive ? "#3b82f6" : "transparent",
+                                                    selected={isActive}
+                                                    sx={{
+                                                        borderLeft: 3,
+                                                        borderColor: isActive ? "primary.main" : "transparent",
+                                                        py: 1,
                                                     }}
                                                 >
-                                                    <span>{item.label}</span>
-                                                    {item.expandable && (
-                                                        <FontAwesomeIcon
-                                                            icon={faChevronRight}
-                                                            className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                                                        />
-                                                    )}
-                                                </button>
-                                                {item.expandable && isExpanded && subItems && (
-                                                    <div className="bg-white">
-                                                        {subItems.map((sub) => (
-                                                            <button
-                                                                key={sub.key}
-                                                                onClick={() => setActiveSection(sub.key)}
-                                                                className={`w-full text-left pl-8 pr-4 py-2 text-xs font-medium transition-colors ${activeSection === sub.key
-                                                                    ? "bg-blue-50 text-blue-700"
-                                                                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                                                                    }`}
-                                                            >
-                                                                {sub.label}
-                                                            </button>
-                                                        ))}
-                                                    </div>
+                                                    <ListItemText
+                                                        primary={item.label}
+                                                        primaryTypographyProps={{
+                                                            variant: "caption",
+                                                            fontWeight: 700,
+                                                            letterSpacing: "0.05em",
+                                                        }}
+                                                    />
+                                                    {item.expandable && (isExpanded ? <ExpandMore fontSize="small" /> : <ChevronRight fontSize="small" />)}
+                                                </ListItemButton>
+                                                {item.expandable && subItems && (
+                                                    <Collapse in={isExpanded}>
+                                                        <List disablePadding dense>
+                                                            {subItems.map((sub) => (
+                                                                <ListItemButton
+                                                                    key={sub.key}
+                                                                    onClick={() => setActiveSection(sub.key)}
+                                                                    selected={activeSection === sub.key}
+                                                                    sx={{ pl: 4, py: 0.75 }}
+                                                                >
+                                                                    <ListItemText
+                                                                        primary={sub.label}
+                                                                        primaryTypographyProps={{ variant: "body2", fontSize: "0.75rem" }}
+                                                                    />
+                                                                </ListItemButton>
+                                                            ))}
+                                                        </List>
+                                                    </Collapse>
                                                 )}
-                                            </div>
+                                            </React.Fragment>
                                         );
                                     })}
-                                </div>
+                                </List>
+                            </Box>
 
-                                {/* Content */}
-                                <div className="flex-1 overflow-hidden flex flex-col rounded-br-xl bg-white">
-                                    <div className="border-b border-gray-200 px-6 py-3 shrink-0">
-                                        <h3 className="text-base font-semibold text-gray-900 text-center">
-                                            {getContentTitle()}
-                                        </h3>
-                                    </div>
-                                    <div className="flex-1 overflow-y-auto p-6">
-                                        <ResultBanner result={pushResult} onDismiss={() => setPushResult(null)} />
-                                        {isLoading ? (
-                                            <div className="flex items-center justify-center py-12">
-                                                <FontAwesomeIcon icon={faSpinner} className="w-6 h-6 text-blue-500 animate-spin" />
-                                                <span className="ml-2 text-sm text-gray-500">Loading device data...</span>
-                                            </div>
-                                        ) : (
-                                            renderContent()
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div style={{ minHeight: "480px" }}>{renderTemplateContent()}</div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
+                            {/* Content */}
+                            <Box sx={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                                <Box sx={{ borderBottom: 1, borderColor: "divider", px: 3, py: 1.5 }}>
+                                    <Typography variant="subtitle1" fontWeight={600} textAlign="center">
+                                        {getContentTitle()}
+                                    </Typography>
+                                </Box>
+                                <Box sx={{ flex: 1, overflowY: "auto", p: 3 }}>
+                                    {isLoading ? (
+                                        <Box display="flex" alignItems="center" justifyContent="center" py={6}>
+                                            <CircularProgress size={24} />
+                                            <Typography variant="body2" color="text.secondary" sx={{ ml: 1.5 }}>
+                                                Loading device data...
+                                            </Typography>
+                                        </Box>
+                                    ) : (
+                                        renderContent()
+                                    )}
+                                </Box>
+                            </Box>
+                        </Box>
+                    ) : (
+                        <Box sx={{ minHeight: 480, width: "100%" }}>{renderTemplateContent()}</Box>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            <MuiSnackbar
+                open={snackbar.open}
+                message={snackbar.message}
+                severity={snackbar.severity}
+                title={snackbar.title}
+                onClose={hideSnackbar}
+            />
+        </>
     );
 }

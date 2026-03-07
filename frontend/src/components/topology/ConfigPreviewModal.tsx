@@ -2,8 +2,26 @@
 
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimes, faCircle } from "@fortawesome/free-solid-svg-icons";
-import { DeviceNetwork } from "@/services/deviceNetworkService";
+import { faCircle } from "@fortawesome/free-solid-svg-icons";
+import { components } from "@/lib/apiv2/schema";
+import { $api } from "@/lib/apiv2/fetch";
+import {
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Box,
+    Typography,
+    IconButton,
+    Button,
+    Chip,
+    CircularProgress,
+    Stack,
+    Divider
+} from "@mui/material";
+import { Close } from "@mui/icons-material";
+
+type DeviceNetwork = components["schemas"]["DeviceNetworkResponse"];
 
 interface ConfigPreviewModalProps {
     isOpen: boolean;
@@ -16,97 +34,171 @@ export default function ConfigPreviewModal({
     onClose,
     device,
 }: ConfigPreviewModalProps) {
+    // 1. Fetch backup history for the device to get the latest record_id
+    const { data: historyData, isLoading: isLoadingHistory } = $api.useQuery(
+        "get",
+        "/api/v1/devices/backups/device/{device_id}",
+        {
+            params: { path: { device_id: device?.id || "" } },
+        },
+        { enabled: isOpen && !!device?.id }
+    );
+
+    // Find the latest successful backup record
+    const latestRecordId = historyData && historyData.length > 0
+        ? historyData.find(record => record.status === "SUCCESS")?.id
+        : null;
+
+    // 2. Fetch the actual config_content using the latest record_id
+    const { data: detailData, isLoading: isLoadingDetail } = $api.useQuery(
+        "get",
+        "/api/v1/devices/backups/{record_id}",
+        {
+            params: { path: { record_id: latestRecordId || "" } },
+        },
+        { enabled: isOpen && !!latestRecordId }
+    );
+
     if (!isOpen || !device) return null;
 
-    // Sample config - in real app, fetch from API
-    // const sampleConfig
+    const isLoading = isLoadingHistory || (!!latestRecordId && isLoadingDetail);
+    const noBackupFound = !isLoadingHistory && (!historyData || historyData.length === 0 || !latestRecordId);
 
-    const getStatusBadge = () => {
+    // Determine content text format
+    const configContent = (() => {
+        const detail = detailData as any;
+        if (!detail?.config_content) return "";
+        return typeof detail.config_content === 'string'
+            ? detail.config_content
+            : JSON.stringify(detail.config_content, null, 2);
+    })();
+
+    const getStatusChip = () => {
         const isOnline = device.status === "ONLINE";
         return (
-            <span className={`inline-flex items-center gap-1 ${isOnline ? "text-green-600" : "text-gray-500"}`}>
-                <FontAwesomeIcon icon={faCircle} className="w-2 h-2" />
-                {isOnline ? "Online" : "Offline"}
-            </span>
+            <Chip
+                icon={<FontAwesomeIcon icon={faCircle} className="w-2 h-2 ml-1" />}
+                label={isOnline ? "Online" : "Offline"}
+                size="small"
+                sx={{
+                    bgcolor: isOnline ? "#22C55E" : "#6B7280",
+                    color: "white",
+                    fontWeight: 500,
+                    height: 24,
+                    "& .MuiChip-icon": { color: "white", width: 8, height: 8 }
+                }}
+            />
         );
     };
 
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-            {/* Backdrop */}
-            <div
-                className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-                onClick={onClose}
-            />
+        <Dialog
+            open={isOpen}
+            onClose={onClose}
+            maxWidth="md"
+            fullWidth
+            PaperProps={{ sx: { borderRadius: 3, maxHeight: "85vh" } }}
+        >
+            <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", pb: 1.5 }}>
+                <Typography component="div" variant="h6" fontWeight={700}>
+                    Preview Latest Configuration
+                </Typography>
+                <IconButton onClick={onClose} size="small">
+                    <Close />
+                </IconButton>
+            </DialogTitle>
 
-            {/* Modal */}
-            <div className="flex items-center justify-center min-h-screen p-4">
-                <div className="relative bg-white rounded-lg shadow-xl  w-full max-w-4xl  ">
-                    {/* Header */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                        <h2 className="text-xl font-semibold text-gray-900">
-                            Preview Configuration
-                        </h2>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                            <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
-                        </button>
-                    </div>
+            <Divider />
 
-                    {/* Device Info */}
-                    <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div>
-                                <span className="text-gray-500">Device:</span>
-                                <span className="ml-2 font-medium text-gray-900">{device.device_name}</span>
-                            </div>
-                            <div>
-                                <span className="text-gray-500">IP mgmt:</span>
-                                <span className="ml-2 font-medium text-gray-900">{device.ip_address || "-"}</span>
-                            </div>
-                            <div>
-                                <span className="text-gray-500">Status:</span>
-                                <span className="ml-2">{getStatusBadge()}</span>
-                            </div>
-                            <div>
-                                <span className="text-gray-500">OS:</span>
-                                <span className="ml-2 font-medium text-gray-900">
-                                    {device.operatingSystem?.os_type || "N/A"}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+            {/* Device Info Header */}
+            <Box sx={{ p: 2, bgcolor: "grey.50", borderBottom: 1, borderColor: "divider" }}>
+                <Stack direction="row" spacing={4} sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                    <Box>
+                        <Typography variant="caption" color="text.secondary" display="block">Device</Typography>
+                        <Typography variant="body2" fontWeight={600}>{device.device_name}</Typography>
+                    </Box>
+                    <Box>
+                        <Typography variant="caption" color="text.secondary" display="block">IP mgmt</Typography>
+                        <Typography variant="body2" fontWeight={600}>{device.ip_address || "-"}</Typography>
+                    </Box>
+                    <Box>
+                        <Typography variant="caption" color="text.secondary" display="block">Status</Typography>
+                        <Box sx={{ mt: 0.5 }}>{getStatusChip()}</Box>
+                    </Box>
+                    <Box>
+                        <Typography variant="caption" color="text.secondary" display="block">OS</Typography>
+                        <Typography variant="body2" fontWeight={600}>{device.operatingSystem?.os_type || "N/A"}</Typography>
+                    </Box>
+                </Stack>
+            </Box>
 
-                    {/* Config Preview */}
-                    <div className="p-6">
-                        <div className="border-2 border-blue-400 rounded-lg overflow-hidden">
-                            <div className="bg-gray-100 px-4 py-2 border-b border-blue-400">
-                                <span className="text-sm font-medium text-gray-700">
-                                    Configuration Preview (Read-only)
-                                </span>
-                            </div>
-                            <div className="bg-white min-h-[400px] max-h-[500px] overflow-y-auto">
-                                {/* TODO: ดึง config จาก API endpoint */}
-                                <div className="p-4 text-sm text-gray-500 italic">
-                                    Configuration data will be loaded from API...
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <DialogContent sx={{ p: 3, display: "flex", flexDirection: "column" }}>
+                <Box
+                    sx={{
+                        border: "1px solid",
+                        borderColor: "primary.light",
+                        borderRadius: 2,
+                        overflow: "hidden",
+                        display: "flex",
+                        flexDirection: "column",
+                        flex: 1,
+                        minHeight: 400
+                    }}
+                >
+                    <Box sx={{ bgcolor: "primary.50", px: 2, py: 1, borderBottom: "1px solid", borderColor: "primary.light" }}>
+                        <Typography variant="body2" fontWeight={600} color="primary.dark">
+                            Configuration Preview (Read-only)
+                        </Typography>
+                        {(detailData as any)?.updated_at && (
+                            <Typography variant="caption" color="text.secondary">
+                                Backed up on: {new Date((detailData as any).updated_at).toLocaleString()}
+                            </Typography>
+                        )}
+                    </Box>
 
-                    {/* Footer */}
-                    <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
-                        <button
-                            onClick={onClose}
-                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                            Close
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+                    <Box sx={{ p: 0, flex: 1, bgcolor: "background.paper", position: "relative" }}>
+                        {isLoading ? (
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", minHeight: 400 }}>
+                                <CircularProgress />
+                            </Box>
+                        ) : noBackupFound ? (
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", p: 4, minHeight: 400 }}>
+                                <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                                    No successful backup records found for this device.
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <Box
+                                component="textarea"
+                                value={configContent || "No configuration content available."}
+                                readOnly
+                                sx={{
+                                    width: "100%",
+                                    height: "100%",
+                                    minHeight: 400,
+                                    p: 2,
+                                    bgcolor: "#1E1E1E",
+                                    color: "#D4D4D4",
+                                    fontFamily: 'SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace',
+                                    fontSize: "0.875rem",
+                                    border: "none",
+                                    resize: "none",
+                                    "&:focus": { outline: "none" }
+                                }}
+                                spellCheck={false}
+                            />
+                        )}
+                    </Box>
+                </Box>
+            </DialogContent>
+
+            <Divider />
+
+            <DialogActions sx={{ p: 2 }}>
+                <Button onClick={onClose} variant="outlined" color="inherit" sx={{ textTransform: "none" }}>
+                    Close
+                </Button>
+            </DialogActions>
+        </Dialog>
     );
 }
