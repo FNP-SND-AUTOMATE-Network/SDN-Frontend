@@ -106,22 +106,10 @@ async function apiRequest<T>(
     },
     ...options,
   };
-
-  console.log("API Request:", {
-    url,
-    method: config.method || "GET",
-    headers: config.headers,
-    body: config.body,
-  });
-
   try {
     const response = await fetch(url, config);
 
-    console.log("API Response Status:", response.status);
-    console.log("API Response Headers:", response.headers);
-
     const data = await response.json();
-    console.log("API Response Data:", data);
 
     if (!response.ok) {
       throw {
