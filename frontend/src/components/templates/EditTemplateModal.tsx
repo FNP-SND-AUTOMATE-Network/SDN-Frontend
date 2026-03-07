@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-    faTimes,
     faUpload,
     faEdit,
     faFile,
@@ -27,7 +26,6 @@ import {
     MenuItem,
     Typography,
     Box,
-    IconButton,
     Chip,
     Paper,
     Stack,
@@ -35,6 +33,8 @@ import {
     ToggleButton,
     ToggleButtonGroup,
 } from "@mui/material";
+import { useSnackbar } from "@/hooks/useSnackbar";
+import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 
 interface EditTemplateModalProps {
     isOpen: boolean;
@@ -58,6 +58,7 @@ export default function EditTemplateModal({
     const { token } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const queryClient = useQueryClient();
+    const { snackbar, showError, hideSnackbar } = useSnackbar();
 
     // Form state
     const [templateName, setTemplateName] = useState("");
@@ -128,6 +129,9 @@ export default function EditTemplateModal({
             }
             onSuccess();
             handleClose();
+        },
+        onError: (error: any) => {
+            showError(error instanceof Error ? error.message : "Failed to save changes");
         }
     });
 
@@ -201,7 +205,7 @@ export default function EditTemplateModal({
             maxWidth="md"
             fullWidth
             PaperProps={{
-                sx: { borderRadius: 2, overflow: 'visible' }
+                sx: { borderRadius: 1, overflow: 'visible' }
             }}
         >
             <DialogTitle sx={{ pb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -214,9 +218,6 @@ export default function EditTemplateModal({
                         <Typography variant="body2" component="div" color="text.secondary">Update template details and content</Typography>
                     </Box>
                 </Box>
-                <IconButton onClick={handleClose} size="small" sx={{ color: "text.secondary", alignSelf: 'flex-start' }}>
-                    <FontAwesomeIcon icon={faTimes} style={{ width: 16 }} />
-                </IconButton>
             </DialogTitle>
 
             <form onSubmit={handleSubmit}>
@@ -461,16 +462,9 @@ export default function EditTemplateModal({
                             </Box>
                         )}
                     </Box>
-
-                    {/* Error Display */}
-                    {editMutation.isError && (
-                        <Typography color="error" variant="body2">
-                            {editMutation.error instanceof Error ? editMutation.error.message : "Failed to save changes"}
-                        </Typography>
-                    )}
                 </DialogContent>
 
-                <DialogActions sx={{ px: 3, pb: 3, bgcolor: 'grey.50', pt: 2, borderTop: 1, borderColor: "divider" }}>
+                <DialogActions sx={{ px: 3, pb: 3, bgcolor: 'grey.50', pt: 2, borderTop: 1, borderColor: "divider", borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}>
                     <Button onClick={handleClose} disabled={editMutation.isPending} color="inherit" sx={{ textTransform: "none" }}>
                         Cancel
                     </Button>
@@ -486,6 +480,13 @@ export default function EditTemplateModal({
                     </Button>
                 </DialogActions>
             </form>
+            <MuiSnackbar
+                open={snackbar.open}
+                message={snackbar.message}
+                severity={snackbar.severity}
+                title={snackbar.title}
+                onClose={hideSnackbar}
+            />
         </Dialog>
     );
 }

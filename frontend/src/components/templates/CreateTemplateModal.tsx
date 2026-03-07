@@ -33,6 +33,8 @@ import {
     ToggleButton,
     ToggleButtonGroup,
 } from "@mui/material";
+import { useSnackbar } from "@/hooks/useSnackbar";
+import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 
 interface CreateTemplateModalProps {
     isOpen: boolean;
@@ -56,6 +58,7 @@ export default function CreateTemplateModal({
     const { token } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const queryClient = useQueryClient();
+    const { snackbar, showError, hideSnackbar } = useSnackbar();
 
     // Form state
     const [templateName, setTemplateName] = useState("");
@@ -108,6 +111,9 @@ export default function CreateTemplateModal({
             onSuccess();
             handleClose();
         },
+        onError: (error: any) => {
+            showError(error instanceof Error ? error.message : "Failed to create template");
+        }
     });
 
     const resetForm = () => {
@@ -186,10 +192,15 @@ export default function CreateTemplateModal({
             }}
         >
             <DialogTitle sx={{ pb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Typography variant="h6" component="div" fontWeight="bold">Create New Template</Typography>
-                <IconButton onClick={handleClose} size="small" sx={{ color: "text.secondary" }}>
-                    <FontAwesomeIcon icon={faTimes} style={{ width: 16 }} />
-                </IconButton>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ p: 1, bgcolor: "primary.50", borderRadius: 1, display: 'flex' }}>
+                        <FontAwesomeIcon icon={faFile} style={{ color: "#2563eb", width: 20 }} />
+                    </Box>
+                    <Box>
+                        <Typography variant="h6" component="div" fontWeight="bold" lineHeight={1.2}>Create New Template</Typography>
+                        <Typography variant="body2" component="div" color="text.secondary">Add a new configuration template</Typography>
+                    </Box>
+                </Box>
             </DialogTitle>
 
             <form onSubmit={handleSubmit}>
@@ -210,28 +221,29 @@ export default function CreateTemplateModal({
                             <FontAwesomeIcon icon={faUpload} /> Upload File
                         </ToggleButton>
                     </ToggleButtonGroup>
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
+                        <TextField
+                            label="Template Name"
+                            value={templateName}
+                            onChange={(e) => setTemplateName(e.target.value)}
+                            placeholder="e.g., OSPF Basic Config"
+                            fullWidth
+                            required
+                            size="small"
+                            variant="outlined"
+                        />
 
-                    <TextField
-                        label="Template Name"
-                        value={templateName}
-                        onChange={(e) => setTemplateName(e.target.value)}
-                        placeholder="e.g., OSPF Basic Config"
-                        fullWidth
-                        required
-                        size="small"
-                        variant="outlined"
-                    />
+                        <TextField
+                            label="Description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Brief description of this template"
+                            fullWidth
+                            size="small"
+                            variant="outlined"
+                        />
 
-                    <TextField
-                        label="Description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Brief description of this template"
-                        fullWidth
-                        size="small"
-                        variant="outlined"
-                    />
-
+                    </Box>
                     <TextField
                         select
                         label="Template Type"
@@ -399,13 +411,6 @@ export default function CreateTemplateModal({
                             )}
                         </Box>
                     )}
-
-                    {/* Error Display */}
-                    {createMutation.isError && (
-                        <Typography color="error" variant="body2">
-                            {createMutation.error instanceof Error ? createMutation.error.message : "Failed to create template"}
-                        </Typography>
-                    )}
                 </DialogContent>
 
                 <DialogActions sx={{ px: 3, pb: 3 }}>
@@ -424,6 +429,13 @@ export default function CreateTemplateModal({
                     </Button>
                 </DialogActions>
             </form>
+            <MuiSnackbar
+                open={snackbar.open}
+                message={snackbar.message}
+                severity={snackbar.severity}
+                title={snackbar.title}
+                onClose={hideSnackbar}
+            />
         </Dialog>
     );
 }
