@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TablePagination, Box, Alert } from "@mui/material";
+import { TablePagination, Alert } from "@mui/material";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ProtectedRoute } from "@/components/auth/AuthGuard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,13 +14,8 @@ import {
   CreateDeviceModal,
   EditDeviceModal,
 } from "@/components/device/device-list";
-import { tagService, Tag } from "@/services/tagService";
-import { siteService, LocalSite } from "@/services/siteService";
-import {
-  operatingSystemService,
-  OperatingSystem,
-} from "@/services/operatingSystemService";
-import { $api } from "@/lib/apiv2/fetch";
+
+import { $api, fetchClient } from "@/lib/apiv2/fetch";
 import { paths } from "@/lib/apiv2/schema";
 
 type DeviceNetwork =
@@ -28,6 +23,10 @@ type DeviceNetwork =
 type FilterQuery = NonNullable<
   paths["/device-networks/"]["get"]["parameters"]["query"]
 >;
+
+type Tag = paths["/tags/"]["get"]["responses"]["200"]["content"]["application/json"]["tags"][number];
+type LocalSite = paths["/local-sites/"]["get"]["responses"]["200"]["content"]["application/json"]["sites"][number];
+type OperatingSystem = paths["/operating-systems/"]["get"]["responses"]["200"]["content"]["application/json"]["operating_systems"][number];
 
 export default function DevicePage() {
   const { token, user } = useAuth();
@@ -88,13 +87,18 @@ export default function DevicePage() {
       if (!token) return;
       try {
         const [tagsRes, sitesRes, osRes] = await Promise.all([
-          tagService.getTags(token, 1, 100, { include_usage: false }),
-          siteService.getLocalSites(token, 1, 100),
-          operatingSystemService.getOperatingSystems(token, 1, 100),
+          fetchClient.GET("/tags/", { params: { query: { page: 1, page_size: 100, include_usage: false } } }),
+          fetchClient.GET("/local-sites/", { params: { query: { page: 1, page_size: 100 } } }),
+          fetchClient.GET("/operating-systems/", { params: { query: { page: 1, page_size: 100 } } }),
         ]);
-        setAllTags(tagsRes.tags);
-        setAllSites(sitesRes.sites);
-        setAllOperatingSystems(osRes.operating_systems);
+
+        if (tagsRes.error || sitesRes.error || osRes.error) {
+          throw new Error("Failed to load reference data");
+        }
+
+        setAllTags(tagsRes.data?.tags ?? []);
+        setAllSites(sitesRes.data?.sites ?? []);
+        setAllOperatingSystems(osRes.data?.operating_systems ?? []);
       } catch (err: any) {
         showError(err?.message || "Failed to load reference data");
       }

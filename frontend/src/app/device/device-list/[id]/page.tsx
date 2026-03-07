@@ -9,14 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 import { useQueryClient } from "@tanstack/react-query";
-import { $api } from "@/lib/apiv2/fetch";
+import { $api, fetchClient } from "@/lib/apiv2/fetch";
 import { paths } from "@/lib/apiv2/schema";
-import { tagService, Tag } from "@/services/tagService";
-import { siteService, LocalSite } from "@/services/siteService";
-import {
-  operatingSystemService,
-  OperatingSystem,
-} from "@/services/operatingSystemService";
 import {
   EditDeviceModal,
   DeleteDeviceModal,
@@ -34,6 +28,11 @@ import {
 type DeviceNetwork =
   paths["/device-networks/{device_id}"]["get"]["responses"]["200"]["content"]["application/json"];
 type TabKey = "overview" | "interfaces" | "configuration" | "backup";
+
+type Tag = paths["/tags/"]["get"]["responses"]["200"]["content"]["application/json"]["tags"][number];
+type LocalSite = paths["/local-sites/"]["get"]["responses"]["200"]["content"]["application/json"]["sites"][number];
+type OperatingSystem = paths["/operating-systems/"]["get"]["responses"]["200"]["content"]["application/json"]["operating_systems"][number];
+
 
 export default function DeviceDetailPage() {
   const params = useParams();
@@ -56,8 +55,10 @@ export default function DeviceDetailPage() {
 
   // --- Reference Data ---
   const [allTags, setAllTags] = useState<Tag[]>([]);
-  const [allSites, setAllSites] = useState<LocalSite[]>([]);
-  const [allOperatingSystems, setAllOperatingSystems] = useState<OperatingSystem[]>([]);
+    const [allSites, setAllSites] = useState<LocalSite[]>([]);
+    const [allOperatingSystems, setAllOperatingSystems] = useState<
+      OperatingSystem[]
+    >([]);
 
   // --- Fetch device via React Query ---
   const {
@@ -83,13 +84,13 @@ export default function DeviceDetailPage() {
       if (!token) return;
       try {
         const [tagsRes, sitesRes, osRes] = await Promise.all([
-          tagService.getTags(token, 1, 100, { include_usage: false }),
-          siteService.getLocalSites(token, 1, 100),
-          operatingSystemService.getOperatingSystems(token, 1, 100),
+          fetchClient.GET("/tags/", { params: { query: { page: 1, page_size: 100, include_usage: false } } }),
+          fetchClient.GET("/local-sites/", { params: { query: { page: 1, page_size: 100 } } }),
+          fetchClient.GET("/operating-systems/", { params: { query: { page: 1, page_size: 100 } } }),
         ]);
-        setAllTags(tagsRes.tags);
-        setAllSites(sitesRes.sites);
-        setAllOperatingSystems(osRes.operating_systems);
+        setAllTags(tagsRes.data?.tags ?? []);
+        setAllSites(sitesRes.data?.sites ?? []);
+        setAllOperatingSystems(osRes.data?.operating_systems ?? []);
       } catch (err: any) {
         showError(err?.message || "Failed to load reference data");
       }
