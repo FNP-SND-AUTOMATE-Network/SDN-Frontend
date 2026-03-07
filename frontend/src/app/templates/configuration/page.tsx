@@ -30,10 +30,13 @@ import {
   Stack
 } from "@mui/material";
 import { Close, Search } from "@mui/icons-material";
+import { useSnackbar } from "@/hooks/useSnackbar";
+import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 
 export default function TemplatesConfigurationPage() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
+  const { snackbar, showSuccess, showError, hideSnackbar } = useSnackbar();
 
   // Search & Pagination state
   const [searchQuery, setSearchQuery] = useState("");
@@ -82,6 +85,10 @@ export default function TemplatesConfigurationPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["get", "/configuration-templates/"] });
       handleCloseDetailModal();
+      showSuccess("Template deleted successfully");
+    },
+    onError: (error: any) => {
+      showError(error instanceof Error ? error.message : "Failed to delete template");
     }
   });
 
@@ -270,7 +277,9 @@ export default function TemplatesConfigurationPage() {
         <CreateTemplateModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {/* handled by invalidation */ }}
+          onSuccess={() => {
+            showSuccess("Template created successfully");
+          }}
           defaultMode={createModalMode}
         />
 
@@ -285,12 +294,21 @@ export default function TemplatesConfigurationPage() {
           isLoadingContent={isFetchingDetail}
         />
 
-        {/* Edit Template Modal */}
         <EditTemplateModal
           isOpen={showEditModal}
           template={editTemplate}
           onClose={handleCloseEditModal}
-          onSuccess={() => {/* handled by invalidation */ }}
+          onSuccess={() => {
+            showSuccess("Template updated successfully");
+          }}
+        />
+
+        <MuiSnackbar
+          open={snackbar.open}
+          message={snackbar.message}
+          severity={snackbar.severity}
+          title={snackbar.title}
+          onClose={hideSnackbar}
         />
       </PageLayout>
     </ProtectedRoute>
