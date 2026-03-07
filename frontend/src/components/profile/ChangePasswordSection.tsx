@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import {
   Box,
   Button,
@@ -13,6 +11,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+
+import { VisibilityOff, Visibility} from "@mui/icons-material";
 
 interface ChangePasswordSectionProps {
   passwordData: {
@@ -67,10 +67,11 @@ export default function ChangePasswordSection({
                     onClick={() => togglePasswordVisibility("current")}
                     edge="end"
                   >
-                    <FontAwesomeIcon
-                      icon={showPasswords.current ? faEye : faEyeSlash}
-                      size="sm"
-                    />
+                    {showPasswords.current ? (
+                      <Visibility fontSize="small" />
+                    ) : (
+                      <VisibilityOff fontSize="small" />
+                    )}
                   </IconButton>
                 </InputAdornment>
               ),
@@ -94,10 +95,11 @@ export default function ChangePasswordSection({
                     onClick={() => togglePasswordVisibility("new")}
                     edge="end"
                   >
-                    <FontAwesomeIcon
-                      icon={showPasswords.new ? faEye : faEyeSlash}
-                      size="sm"
-                    />
+                    {showPasswords.new ? (
+                      <Visibility fontSize="small" />
+                    ) : (
+                      <VisibilityOff fontSize="small" />
+                    )}
                   </IconButton>
                 </InputAdornment>
               ),
@@ -121,10 +123,11 @@ export default function ChangePasswordSection({
                     onClick={() => togglePasswordVisibility("confirm")}
                     edge="end"
                   >
-                    <FontAwesomeIcon
-                      icon={showPasswords.confirm ? faEye : faEyeSlash}
-                      size="sm"
-                    />
+                    {showPasswords.confirm ? (
+                      <Visibility fontSize="small" />
+                    ) : (
+                      <VisibilityOff fontSize="small" />
+                    )}
                   </IconButton>
                 </InputAdornment>
               ),

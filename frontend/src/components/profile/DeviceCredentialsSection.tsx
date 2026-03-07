@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSnackbar } from "@/hooks/useSnackbar";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { $api, fetchClient } from "@/lib/apiv2/fetch";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -19,6 +17,7 @@ import {
     TextField,
     Typography,
 } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 
 interface DeviceCredentialsSectionProps {
     onSuccess?: () => void;
@@ -264,14 +263,11 @@ export default function DeviceCredentialsSection({
                                         edge="end"
                                         disabled={isPasswordSaved && !credentialData.device_password}
                                     >
-                                        <FontAwesomeIcon
-                                            icon={
-                                                (isPasswordSaved && !credentialData.device_password)
-                                                    ? faEyeSlash
-                                                    : (showPasswords ? faEyeSlash : faEye)
-                                            }
-                                            size="sm"
-                                        />
+                                        {showPasswords ? (
+                                            <Visibility fontSize="small" />
+                                        ) : (
+                                            <VisibilityOff fontSize="small" />
+                                        )}
                                     </IconButton>
                                 </InputAdornment>
                             ),
