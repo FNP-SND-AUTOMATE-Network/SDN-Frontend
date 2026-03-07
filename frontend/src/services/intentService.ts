@@ -37,7 +37,6 @@ export interface IntentExecuteResponse {
   success: boolean;
   intent: string;
   node_id: string;
-  strategy_used: string;
   driver_used: string;
   result: Record<string, any> | null;
   error: Record<string, any> | null;
@@ -87,7 +86,7 @@ export const intentService = {
     token: string,
     request: IntentExecuteRequest,
   ): Promise<IntentExecuteResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/nbi/intent`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/nbi/intents`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
