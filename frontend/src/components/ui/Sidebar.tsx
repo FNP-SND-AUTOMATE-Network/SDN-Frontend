@@ -48,32 +48,13 @@ const menuItems: MenuItem[] = [
     id: "policies",
     label: "Policies",
     icon: faShieldAlt,
-    children: [
-      {
-        id: "catalog",
-        label: "Catalog",
-        icon: faList,
-        href: "/policies/catalog",
-      },
-      {
-        id: "applied-policies",
-        label: "Applied Policies",
-        icon: faCheckCircle,
-        href: "/policies/applied",
-      },
-    ],
+    href: "/policies",
   },
   {
     id: "templates",
     label: "Templates",
     icon: faFileAlt,
     children: [
-      {
-        id: "policies-template",
-        label: "Policies",
-        icon: faShieldAlt,
-        href: "/templates/policies",
-      },
       {
         id: "configuration-template",
         label: "Configuration",
