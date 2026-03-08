@@ -81,7 +81,7 @@ export default function ConfigPreviewModal({
                 label={isOnline ? "Online" : "Offline"}
                 size="small"
                 sx={{
-                    bgcolor: isOnline ? "#22C55E" : "#6B7280",
+                    bgcolor: isOnline ? "#22C55E" : "#EF4444",
                     color: "white",
                     fontWeight: 500,
                     height: 24,
@@ -132,21 +132,27 @@ export default function ConfigPreviewModal({
                 </Stack>
             </Box>
 
-            <DialogContent sx={{ p: 3, display: "flex", flexDirection: "column" }}>
+            <DialogContent sx={{ p: 0, display: "flex", flexDirection: "column" }}>
                 <Box
                     sx={{
-                        border: "1px solid",
-                        borderColor: "primary.light",
-                        borderRadius: 2,
-                        overflow: "hidden",
+                        flex: 1,
+                        bgcolor: "#1E1E1E",
                         display: "flex",
                         flexDirection: "column",
-                        flex: 1,
-                        minHeight: 400
                     }}
                 >
-                    <Box sx={{ bgcolor: "primary.50", px: 2, py: 1, borderBottom: "1px solid", borderColor: "primary.light" }}>
-                        <Typography variant="body2" fontWeight={600} color="primary.dark">
+                    {/* Header of the config box */}
+                    <Box sx={{
+                        px: 2,
+                        py: 1.5,
+                        bgcolor: "grey.100",
+                        borderBottom: 1,
+                        borderColor: "divider",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                    }}>
+                        <Typography variant="subtitle2" color="primary.main" fontWeight={600}>
                             Configuration Preview (Read-only)
                         </Typography>
                         {(detailData as any)?.updated_at && (
@@ -156,17 +162,27 @@ export default function ConfigPreviewModal({
                         )}
                     </Box>
 
-                    <Box sx={{ p: 0, flex: 1, bgcolor: "background.paper", position: "relative" }}>
+                    {/* Content Area */}
+                    <Box
+                        sx={{
+                            flex: 1,
+                            p: 2,
+                            overflowY: "auto",
+                            fontFamily: 'SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace',
+                            fontSize: "0.875rem",
+                            color: "#E4E4E7",
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-all",
+                        }}
+                    >
                         {isLoading ? (
-                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", minHeight: 400 }}>
-                                <CircularProgress />
+                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: 200 }}>
+                                <CircularProgress size={32} />
                             </Box>
                         ) : noBackupFound ? (
-                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", p: 4, minHeight: 400 }}>
-                                <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                                    No successful backup records found for this device.
-                                </Typography>
-                            </Box>
+                            <Typography color="text.secondary" sx={{ fontStyle: "italic", textAlign: "center", mt: 4 }}>
+                                No configuration backup found for this device.
+                            </Typography>
                         ) : (
                             <Box
                                 component="textarea"
