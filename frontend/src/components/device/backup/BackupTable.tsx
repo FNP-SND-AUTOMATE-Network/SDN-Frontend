@@ -12,6 +12,7 @@ import {
     Box,
     Typography,
     IconButton,
+    Chip,
 } from "@mui/material";
 import {
     Router as RouterIcon,
@@ -20,13 +21,6 @@ import {
     Inventory2,
     DnsRounded,
     History,
-    Search,
-    Close,
-    PlayArrow,
-    Monitor,
-    TaskAlt,
-    AccessTime,
-    HighlightOff,
     DeviceHub
 } from "@mui/icons-material";
 import { paths } from "@/lib/apiv2/schema";
@@ -41,12 +35,12 @@ interface BackupTableProps {
     onSelectRow: (id: string) => void;
 }
 
-const statusConfig: Record<string, { color: string; label: string; dotColor: string }> = {
-    ONLINE: { color: "#22C55E", label: "Online", dotColor: "#22C55E" },
-    OFFLINE: { color: "#EF4444", label: "Offline", dotColor: "#EF4444" },
-    MAINTENANCE: { color: "#3B82F6", label: "Maintenance", dotColor: "#3B82F6" },
-    WARNING: { color: "#F59E0B", label: "Warning", dotColor: "#F59E0B" },
-    OTHER: { color: "#6B7280", label: "Other", dotColor: "#6B7280" },
+const statusConfig: Record<string, { color: "success" | "error" | "info" | "warning" | "default"; label: string }> = {
+    ONLINE: { color: "success", label: "Online" },
+    OFFLINE: { color: "error", label: "Offline" },
+    MAINTENANCE: { color: "info", label: "Maintenance" },
+    WARNING: { color: "warning", label: "Warning" },
+    OTHER: { color: "default", label: "Other" },
 };
 
 const typeConfig: Record<string, { color: string; icon: React.ReactNode }> = {
@@ -161,16 +155,13 @@ export default function BackupTable({
                                         </Typography>
                                     </TableCell>
                                     <TableCell>
-                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: status.color }}>
-                                            {device.status === "ONLINE" ? (
-                                                <TaskAlt />
-                                            ) : (
-                                                <HighlightOff />
-                                            )}
-                                            <Typography variant="body2" fontWeight={500} fontSize={13}>
-                                                {status.label}
-                                            </Typography>
-                                        </Box>
+                                        <Chip
+                                            label={status.label}
+                                            color={status.color}
+                                            size="small"
+                                            variant="filled"
+                                            sx={{ fontWeight: 500 }}
+                                        />
                                     </TableCell>
                                     <TableCell align="right">
                                         <IconButton size="small" onClick={(e) => {
