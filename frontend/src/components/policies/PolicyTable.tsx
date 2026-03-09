@@ -2,7 +2,7 @@ import React from 'react';
 import {
     Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, IconButton, Chip, Typography, CircularProgress, Tooltip, Stack,
-    TablePagination, Menu, MenuItem, ListItemIcon, ListItemText
+    TablePagination, Menu, MenuItem, ListItemIcon, ListItemText, TableSortLabel
 } from '@mui/material';
 import {
     Visibility as VisibilityIcon,
@@ -117,17 +117,51 @@ export const PolicyTable: React.FC<PolicyTableProps> = ({
     data, isLoading, onView, onRetry, onReactivate, onDelete, onHardDelete,
     page, rowsPerPage, onPageChange, onRowsPerPageChange, totalCount
 }) => {
+    const [order, setOrder] = React.useState<'asc' | 'desc'>('asc');
+    const [orderBy, setOrderBy] = React.useState<keyof FlowRule>('id');
+
+    const handleSort = (property: keyof FlowRule) => {
+        const isAsc = orderBy === property && order === 'asc';
+        setOrder(isAsc ? 'desc' : 'asc');
+        setOrderBy(property);
+    };
+
+    const sortedData = React.useMemo(() => {
+        if (!data) return [];
+        return [...data].sort((a, b) => {
+            const aVal = String(a[orderBy] || '');
+            const bVal = String(b[orderBy] || '');
+            if (aVal < bVal) return order === 'asc' ? -1 : 1;
+            if (aVal > bVal) return order === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [data, order, orderBy]);
+
+    const createSortHandler = (property: keyof FlowRule) => () => {
+        handleSort(property);
+    };
+
     return (
         <>
             <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
                 <Table sx={{ minWidth: 750 }} size="medium">
                     <TableHead sx={{ bgcolor: 'grey.50' }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>Flow ID</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>Node ID</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>Table ID</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>Flow Type</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                                <TableSortLabel active={orderBy === 'flow_id'} direction={orderBy === 'flow_id' ? order : 'asc'} onClick={createSortHandler('flow_id')}>Flow ID</TableSortLabel>
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                                <TableSortLabel active={orderBy === 'node_id'} direction={orderBy === 'node_id' ? order : 'asc'} onClick={createSortHandler('node_id')}>Node ID</TableSortLabel>
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                                <TableSortLabel active={orderBy === 'table_id'} direction={orderBy === 'table_id' ? order : 'asc'} onClick={createSortHandler('table_id')}>Table ID</TableSortLabel>
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                                <TableSortLabel active={orderBy === 'flow_type'} direction={orderBy === 'flow_type' ? order : 'asc'} onClick={createSortHandler('flow_type')}>Flow Type</TableSortLabel>
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                                <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? order : 'asc'} onClick={createSortHandler('status')}>Status</TableSortLabel>
+                            </TableCell>
                             <TableCell align="right" sx={{ fontWeight: 'bold', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}></TableCell>
                         </TableRow>
                     </TableHead>
@@ -146,7 +180,7 @@ export const PolicyTable: React.FC<PolicyTableProps> = ({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            data.map((row) => (
+                            sortedData.map((row) => (
                                 <TableRow key={row.id} hover>
                                     <TableCell>
                                         <Typography title={row.id} variant="caption" sx={{ bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1 }}>

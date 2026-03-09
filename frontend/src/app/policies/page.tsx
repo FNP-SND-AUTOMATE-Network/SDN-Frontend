@@ -11,6 +11,7 @@ import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 import { Box, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Typography, CircularProgress } from "@mui/material";
 import { CreatePolicyModal } from "@/components/policies/CreatePolicyModal";
 import { PolicyDetailsDrawer } from "@/components/policies/PolicyDetailsDrawer";
+import { SyncFlowsModal } from "@/components/policies/SyncFlowsModal";
 import { components } from "@/lib/apiv2/schema";
 
 type FlowRuleItem = components["schemas"]["FlowRuleItem"];
@@ -20,6 +21,7 @@ export default function PoliciesPage() {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
     const [selectedRule, setSelectedRule] = useState<FlowRuleItem | null>(null);
 
     const [deleteTarget, setDeleteTarget] = useState<{ id: string, node_id?: string } | null>(null);
@@ -69,8 +71,7 @@ export default function PoliciesPage() {
     };
 
     const handleSyncFlows = () => {
-        // Prompt for node_id? For now just show a message.
-        showError("Sync Flows requires a target Node ID. Please select one (Feature TBA).");
+        setIsSyncModalOpen(true);
     };
 
     const handleResetTable = () => {
@@ -194,6 +195,15 @@ export default function PoliciesPage() {
                     onClose={() => setIsModalOpen(false)}
                     onSuccess={() => {
                         setIsModalOpen(false);
+                        refetch();
+                    }}
+                />
+
+                <SyncFlowsModal
+                    open={isSyncModalOpen}
+                    onClose={() => setIsSyncModalOpen(false)}
+                    onSuccess={() => {
+                        setIsSyncModalOpen(false);
                         refetch();
                     }}
                 />

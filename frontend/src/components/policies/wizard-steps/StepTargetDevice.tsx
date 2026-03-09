@@ -12,6 +12,10 @@ export const StepTargetDevice: React.FC<StepTargetDeviceProps> = ({ nodeId, setN
     // Fetch available devices
     const { data, isLoading, error } = $api.useQuery("get", "/api/v1/nbi/devices");
     const devices = (data as any)?.devices || [];
+    const switchDevices = devices.filter((d: any) =>
+        String(d.node_id).toLowerCase().includes('openflow') ||
+        String(d.device_type).toUpperCase() === 'SWITCH'
+    );
 
     return (
         <Box sx={{ maxWidth: 500, mx: 'auto', mt: 4 }}>
@@ -36,12 +40,12 @@ export const StepTargetDevice: React.FC<StepTargetDeviceProps> = ({ nodeId, setN
                         <MenuItem disabled value="">
                             <CircularProgress size={20} sx={{ mr: 2 }} /> Loading devices...
                         </MenuItem>
-                    ) : devices.length === 0 ? (
+                    ) : switchDevices.length === 0 ? (
                         <MenuItem disabled value="">
-                            No devices available
+                            No switch devices available
                         </MenuItem>
                     ) : (
-                        devices.map((device: any) => (
+                        switchDevices.map((device: any) => (
                             <MenuItem key={device.node_id} value={device.node_id}>
                                 {device.name} ({device.node_id})
                             </MenuItem>
