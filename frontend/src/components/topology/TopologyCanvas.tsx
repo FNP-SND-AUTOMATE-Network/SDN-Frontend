@@ -371,13 +371,7 @@ function buildEdges(links: TopologyLink[]): Edge[] {
                 tgtPort: link.targetPort || "",
                 pathOptions: { offset },
             },
-            style: { stroke: "#94a3b8", strokeWidth: 2 },
-            markerEnd: {
-                type: MarkerType.ArrowClosed,
-                color: "#94a3b8",
-                width: 16,
-                height: 16,
-            },
+            style: { stroke: "#94a3b8", strokeWidth: 2 }
         };
     });
 }
