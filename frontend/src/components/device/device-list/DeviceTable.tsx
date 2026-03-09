@@ -20,6 +20,7 @@ import {
   Divider,
   Box,
   Typography,
+  TableSortLabel,
 } from "@mui/material";
 import {
   MoreVert,
@@ -64,6 +65,34 @@ const typeConfig: Record<string, { color: string; icon: React.ReactNode }> = {
 
 export default function DeviceTable({ devices, onEdit, onSync }: DeviceTableProps) {
   const router = useRouter();
+
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [orderBy, setOrderBy] = useState<keyof DeviceNetwork>("device_name");
+
+  const handleSort = (property: keyof DeviceNetwork) => {
+    const isAsc = orderBy === property && order === "asc";
+    setOrder(isAsc ? "desc" : "asc");
+    setOrderBy(property);
+  };
+
+  const createSortHandler = (property: keyof DeviceNetwork) => () => {
+    handleSort(property);
+  };
+
+  const sortedDevices = [...devices].sort((a, b) => {
+    let aVal: any = a[orderBy] || "";
+    let bVal: any = b[orderBy] || "";
+
+    // For nested properties like localSite.site_name
+    if (orderBy === "localSite" as keyof DeviceNetwork) {
+      aVal = a.localSite ? a.localSite.site_name || a.localSite.site_code : "";
+      bVal = b.localSite ? b.localSite.site_name || b.localSite.site_code : "";
+    }
+
+    if (aVal < bVal) return order === "asc" ? -1 : 1;
+    if (aVal > bVal) return order === "asc" ? 1 : -1;
+    return 0;
+  });
 
   // Dropdown menu state
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -121,14 +150,30 @@ export default function DeviceTable({ devices, onEdit, onSync }: DeviceTableProp
         <Table sx={{ minWidth: 650 }} aria-label="device table">
           <TableHead sx={{ bgcolor: "grey.50" }}>
             <TableRow>
-              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Device Name</TableCell>
-              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Serial Number</TableCell>
-              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Type</TableCell>
-              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Model</TableCell>
-              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>IP MGMT</TableCell>
-              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Vendor</TableCell>
-              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Site</TableCell>
-              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Status</TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'device_name'} direction={orderBy === 'device_name' ? order : 'asc'} onClick={createSortHandler('device_name')}>Device Name</TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'serial_number'} direction={orderBy === 'serial_number' ? order : 'asc'} onClick={createSortHandler('serial_number')}>Serial Number</TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'type'} direction={orderBy === 'type' ? order : 'asc'} onClick={createSortHandler('type')}>Type</TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'device_model'} direction={orderBy === 'device_model' ? order : 'asc'} onClick={createSortHandler('device_model')}>Model</TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'ip_address'} direction={orderBy === 'ip_address' ? order : 'asc'} onClick={createSortHandler('ip_address')}>IP MGMT</TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'vendor'} direction={orderBy === 'vendor' ? order : 'asc'} onClick={createSortHandler('vendor')}>Vendor</TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'localSite' as unknown} direction={orderBy === 'localSite' as unknown ? order : 'asc'} onClick={createSortHandler('localSite' as unknown as keyof DeviceNetwork)}>Site</TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? order : 'asc'} onClick={createSortHandler('status')}>Status</TableSortLabel>
+              </TableCell>
               <TableCell align="right" />
             </TableRow>
           </TableHead>
@@ -141,7 +186,7 @@ export default function DeviceTable({ devices, onEdit, onSync }: DeviceTableProp
                 </TableCell>
               </TableRow>
             ) : (
-              devices.map((device) => {
+              sortedDevices.map((device) => {
                 const status = statusConfig[device.status] || statusConfig.OTHER;
                 const deviceType = typeConfig[device.type] || typeConfig.OTHER;
 

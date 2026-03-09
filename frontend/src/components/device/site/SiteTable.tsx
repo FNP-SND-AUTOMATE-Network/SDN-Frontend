@@ -17,6 +17,7 @@ import {
   ListItemText,
   Typography,
   Box,
+  TableSortLabel,
 } from "@mui/material";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -79,6 +80,33 @@ export default function SiteTable({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [menuSiteId, setMenuSiteId] = useState<string | null>(null);
 
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [orderBy, setOrderBy] = useState<keyof LocalSiteResponse>("site_name");
+
+  const handleSort = (property: keyof LocalSiteResponse) => {
+    const isAsc = orderBy === property && order === "asc";
+    setOrder(isAsc ? "desc" : "asc");
+    setOrderBy(property);
+  };
+
+  const createSortHandler = (property: keyof LocalSiteResponse) => () => {
+    handleSort(property);
+  };
+
+  const sortedSites = [...sites].sort((a, b) => {
+    let aVal: any = a[orderBy] || "";
+    let bVal: any = b[orderBy] || "";
+
+    if (orderBy === "site_name") {
+      aVal = a.site_name || a.site_code;
+      bVal = b.site_name || b.site_code;
+    }
+
+    if (aVal < bVal) return order === "asc" ? -1 : 1;
+    if (aVal > bVal) return order === "asc" ? 1 : -1;
+    return 0;
+  });
+
   const handleMenuClick = (e: React.MouseEvent<HTMLButtonElement>, siteId: string) => {
     e.stopPropagation();
     setAnchorEl(e.currentTarget);
@@ -114,12 +142,20 @@ export default function SiteTable({
         <Table sx={{ minWidth: 650 }} aria-label="local sites table">
           <TableHead sx={{ bgcolor: "grey.50" }}>
             <TableRow>
-              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Name</TableCell>
-              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Type</TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'site_name'} direction={orderBy === 'site_name' ? order : 'asc'} onClick={createSortHandler('site_name')}>Name</TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'site_type'} direction={orderBy === 'site_type' ? order : 'asc'} onClick={createSortHandler('site_type')}>Type</TableSortLabel>
+              </TableCell>
               <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Location</TableCell>
               <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Address</TableCell>
-              <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Devices</TableCell>
-              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Updated</TableCell>
+              <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'device_count'} direction={orderBy === 'device_count' ? order : 'asc'} onClick={createSortHandler('device_count')}>Devices</TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'updated_at'} direction={orderBy === 'updated_at' ? order : 'asc'} onClick={createSortHandler('updated_at')}>Updated</TableSortLabel>
+              </TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}></TableCell>
             </TableRow>
           </TableHead>
@@ -139,7 +175,7 @@ export default function SiteTable({
                 </TableCell>
               </TableRow>
             ) : (
-              sites.map((site) => {
+              sortedSites.map((site) => {
                 const typeBadge = getSiteTypeBadge(site.site_type);
                 return (
                   <TableRow

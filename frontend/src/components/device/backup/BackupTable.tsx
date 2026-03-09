@@ -13,6 +13,7 @@ import {
     Typography,
     IconButton,
     Chip,
+    TableSortLabel,
 } from "@mui/material";
 import {
     Router as RouterIcon,
@@ -60,6 +61,35 @@ export default function BackupTable({
     const isAllSelected = devices.length > 0 && selectedIds.length === devices.length;
     const isIndeterminate = selectedIds.length > 0 && selectedIds.length < devices.length;
 
+    const [order, setOrder] = React.useState<"asc" | "desc">("asc");
+    const [orderBy, setOrderBy] = React.useState<keyof DeviceNetwork>("device_name");
+
+    const handleSort = (property: keyof DeviceNetwork) => {
+        const isAsc = orderBy === property && order === "asc";
+        setOrder(isAsc ? "desc" : "asc");
+        setOrderBy(property);
+    };
+
+    const createSortHandler = (property: keyof DeviceNetwork) => () => {
+        handleSort(property);
+    };
+
+    const sortedDevices = React.useMemo(() => {
+        return [...devices].sort((a, b) => {
+            let aVal: any = a[orderBy] || "";
+            let bVal: any = b[orderBy] || "";
+
+            if (orderBy === "localSite" as keyof DeviceNetwork) {
+                aVal = a.localSite ? a.localSite.site_name || a.localSite.site_code : "";
+                bVal = b.localSite ? b.localSite.site_name || b.localSite.site_code : "";
+            }
+
+            if (aVal < bVal) return order === "asc" ? -1 : 1;
+            if (aVal > bVal) return order === "asc" ? 1 : -1;
+            return 0;
+        });
+    }, [devices, order, orderBy]);
+
     const router = useRouter();
 
     const handleOpenHistory = (device: DeviceNetwork) => {
@@ -80,12 +110,24 @@ export default function BackupTable({
                                 disabled={devices.length === 0}
                             />
                         </TableCell>
-                        <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Hostname</TableCell>
-                        <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>IP Address</TableCell>
-                        <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Type</TableCell>
-                        <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Vendor</TableCell>
-                        <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Site</TableCell>
-                        <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Status</TableCell>
+                        <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                            <TableSortLabel active={orderBy === 'device_name'} direction={orderBy === 'device_name' ? order : 'asc'} onClick={createSortHandler('device_name')}>Hostname</TableSortLabel>
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                            <TableSortLabel active={orderBy === 'ip_address'} direction={orderBy === 'ip_address' ? order : 'asc'} onClick={createSortHandler('ip_address')}>IP Address</TableSortLabel>
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                            <TableSortLabel active={orderBy === 'type'} direction={orderBy === 'type' ? order : 'asc'} onClick={createSortHandler('type')}>Type</TableSortLabel>
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                            <TableSortLabel active={orderBy === 'vendor'} direction={orderBy === 'vendor' ? order : 'asc'} onClick={createSortHandler('vendor')}>Vendor</TableSortLabel>
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                            <TableSortLabel active={orderBy === 'localSite' as unknown} direction={orderBy === 'localSite' as unknown ? order : 'asc'} onClick={createSortHandler('localSite' as unknown as keyof DeviceNetwork)}>Site</TableSortLabel>
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                            <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? order : 'asc'} onClick={createSortHandler('status')}>Status</TableSortLabel>
+                        </TableCell>
                         <TableCell align="right" />
                     </TableRow>
                 </TableHead>
@@ -98,7 +140,7 @@ export default function BackupTable({
                             </TableCell>
                         </TableRow>
                     ) : (
-                        devices.map((device) => {
+                        sortedDevices.map((device) => {
                             const status = statusConfig[device.status] || statusConfig.OTHER;
                             const deviceType = typeConfig[device.type] || typeConfig.OTHER;
                             const isSelected = selectedIds.includes(device.id);
@@ -125,14 +167,9 @@ export default function BackupTable({
                                         />
                                     </TableCell>
                                     <TableCell>
-                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                            <Box sx={{ color: deviceType.color, display: "flex", alignItems: "center" }}>
-                                                {deviceType.icon}
-                                            </Box>
-                                            <Typography variant="body2" fontWeight={500} sx={{ fontFamily: "SF Pro Text, -apple-system, BlinkMacSystemFont, system-ui, sans-serif", fontSize: 13 }}>
-                                                {device.device_name}
-                                            </Typography>
-                                        </Box>
+                                        <Typography variant="body2" fontWeight={500} sx={{ fontFamily: "SF Pro Text, -apple-system, BlinkMacSystemFont, system-ui, sans-serif", fontSize: 13 }}>
+                                            {device.device_name}
+                                        </Typography>
                                     </TableCell>
                                     <TableCell>
                                         <Typography variant="body2" sx={{ fontFamily: "SF Pro Text, -apple-system, BlinkMacSystemFont, system-ui, sans-serif", fontSize: 13 }}>
@@ -140,9 +177,14 @@ export default function BackupTable({
                                         </Typography>
                                     </TableCell>
                                     <TableCell>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {device.type.charAt(0) + device.type.slice(1).toLowerCase().replace("_", " ")}
-                                        </Typography>
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                            <Box sx={{ color: deviceType.color, display: "flex", alignItems: "center" }}>
+                                                {deviceType.icon}
+                                            </Box>
+                                            <Typography variant="body2" sx={{ color: deviceType.color, fontWeight: 500 }}>
+                                                {device.type.charAt(0) + device.type.slice(1).toUpperCase().replace("_", " ")}
+                                            </Typography>
+                                        </Box>
                                     </TableCell>
                                     <TableCell>
                                         <Typography variant="body2" color="text.secondary">

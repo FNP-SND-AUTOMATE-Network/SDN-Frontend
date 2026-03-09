@@ -22,6 +22,7 @@ import {
   Typography,
   Box,
   Badge,
+  TableSortLabel,
 } from "@mui/material";
 import { components } from "@/lib/apiv2/schema";
 
@@ -61,6 +62,27 @@ export default function TagTable({
   const [selectedTag, setSelectedTag] = useState<TagResponse | null>(null);
   const open = Boolean(anchorEl);
 
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [orderBy, setOrderBy] = useState<keyof TagResponse>("tag_name");
+
+  const handleSort = (property: keyof TagResponse) => {
+    const isAsc = orderBy === property && order === "asc";
+    setOrder(isAsc ? "desc" : "asc");
+    setOrderBy(property);
+  };
+
+  const createSortHandler = (property: keyof TagResponse) => () => {
+    handleSort(property);
+  };
+
+  const sortedTags = [...tags].sort((a, b) => {
+    const aVal: any = a[orderBy] || "";
+    const bVal: any = b[orderBy] || "";
+    if (aVal < bVal) return order === "asc" ? -1 : 1;
+    if (aVal > bVal) return order === "asc" ? 1 : -1;
+    return 0;
+  });
+
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, tag: TagResponse) => {
     setAnchorEl(event.currentTarget);
     setSelectedTag(tag);
@@ -90,13 +112,27 @@ export default function TagTable({
       <Table sx={{ minWidth: 650 }} aria-label="tag table">
         <TableHead sx={{ bgcolor: "grey.50" }}>
           <TableRow>
-            <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Tag</TableCell>
-            <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Type</TableCell>
-            <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Description</TableCell>
-            <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>OS</TableCell>
-            <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Devices</TableCell>
-            <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Templates</TableCell>
-            <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Updated</TableCell>
+            <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+              <TableSortLabel active={orderBy === 'tag_name'} direction={orderBy === 'tag_name' ? order : 'asc'} onClick={createSortHandler('tag_name')}>Tag</TableSortLabel>
+            </TableCell>
+            <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+              <TableSortLabel active={orderBy === 'type'} direction={orderBy === 'type' ? order : 'asc'} onClick={createSortHandler('type')}>Type</TableSortLabel>
+            </TableCell>
+            <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+              <TableSortLabel active={orderBy === 'description'} direction={orderBy === 'description' ? order : 'asc'} onClick={createSortHandler('description')}>Description</TableSortLabel>
+            </TableCell>
+            <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+              <TableSortLabel active={orderBy === 'os_count'} direction={orderBy === 'os_count' ? order : 'asc'} onClick={createSortHandler('os_count')}>OS</TableSortLabel>
+            </TableCell>
+            <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+              <TableSortLabel active={orderBy === 'device_count'} direction={orderBy === 'device_count' ? order : 'asc'} onClick={createSortHandler('device_count')}>Devices</TableSortLabel>
+            </TableCell>
+            <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+              <TableSortLabel active={orderBy === 'template_count'} direction={orderBy === 'template_count' ? order : 'asc'} onClick={createSortHandler('template_count')}>Templates</TableSortLabel>
+            </TableCell>
+            <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+              <TableSortLabel active={orderBy === 'updated_at'} direction={orderBy === 'updated_at' ? order : 'asc'} onClick={createSortHandler('updated_at')}>Updated</TableSortLabel>
+            </TableCell>
             <TableCell align="right"></TableCell>
           </TableRow>
         </TableHead>
@@ -114,7 +150,7 @@ export default function TagTable({
               </TableCell>
             </TableRow>
           ) : (
-            tags.map((tag) => {
+            sortedTags.map((tag) => {
               const typeProps = getTypeBadgeProps(tag.type);
               return (
                 <TableRow key={tag.tag_id} hover sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
@@ -180,7 +216,7 @@ export default function TagTable({
           )}
         </TableBody>
       </Table>
-      
+
       {/* Action Menu */}
       <Menu
         id="tag-menu"

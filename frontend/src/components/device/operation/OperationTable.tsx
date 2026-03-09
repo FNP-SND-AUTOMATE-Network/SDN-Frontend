@@ -18,6 +18,7 @@ import {
   Chip,
   Divider,
   Stack,
+  TableSortLabel,
 } from "@mui/material";
 import {
   MoreVert,
@@ -73,6 +74,27 @@ export default function OperationTable({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [menuOs, setMenuOs] = useState<OperatingSystem | null>(null);
 
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [orderBy, setOrderBy] = useState<keyof OperatingSystem>("os_type");
+
+  const handleSort = (property: keyof OperatingSystem) => {
+    const isAsc = orderBy === property && order === "asc";
+    setOrder(isAsc ? "desc" : "asc");
+    setOrderBy(property);
+  };
+
+  const createSortHandler = (property: keyof OperatingSystem) => () => {
+    handleSort(property);
+  };
+
+  const sortedOperatingSystems = [...operatingSystems].sort((a, b) => {
+    const aVal: any = a[orderBy] || "";
+    const bVal: any = b[orderBy] || "";
+    if (aVal < bVal) return order === "asc" ? -1 : 1;
+    if (aVal > bVal) return order === "asc" ? 1 : -1;
+    return 0;
+  });
+
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, os: OperatingSystem) => {
     setAnchorEl(event.currentTarget);
     setMenuOs(os);
@@ -104,12 +126,22 @@ export default function OperationTable({
         <Table sx={{ minWidth: 650 }} aria-label="device table">
           <TableHead sx={{ bgcolor: "grey.50" }}>
             <TableRow>
-              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Name</TableCell>
-              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Type</TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'os_type'} direction={orderBy === 'os_type' ? order : 'asc'} onClick={createSortHandler('os_type')}>Name</TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'os_type'} direction={orderBy === 'os_type' ? order : 'asc'} onClick={createSortHandler('os_type')}>Type</TableSortLabel>
+              </TableCell>
               <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Tags</TableCell>
-              <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Devices</TableCell>
-              <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Backups</TableCell>
-              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>Updated</TableCell>
+              <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'device_count'} direction={orderBy === 'device_count' ? order : 'asc'} onClick={createSortHandler('device_count')}>Devices</TableSortLabel>
+              </TableCell>
+              <TableCell align="center" sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'backup_count'} direction={orderBy === 'backup_count' ? order : 'asc'} onClick={createSortHandler('backup_count')}>Backups</TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <TableSortLabel active={orderBy === 'updated_at'} direction={orderBy === 'updated_at' ? order : 'asc'} onClick={createSortHandler('updated_at')}>Updated</TableSortLabel>
+              </TableCell>
               <TableCell align="right" sx={{ width: 48 }} />
             </TableRow>
           </TableHead>
@@ -127,7 +159,7 @@ export default function OperationTable({
                 </TableCell>
               </TableRow>
             ) : (
-              operatingSystems.map((os) => {
+              sortedOperatingSystems.map((os) => {
                 const chip = getOsTypeChip(os.os_type);
                 return (
                   <TableRow
