@@ -8,7 +8,7 @@ import { PolicyTable } from "@/components/policies/PolicyTable";
 import { $api, fetchClient } from "@/lib/apiv2/fetch";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
-import { Box, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Typography, CircularProgress } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, CircularProgress } from "@mui/material";
 import { CreatePolicyModal } from "@/components/policies/CreatePolicyModal";
 import { PolicyDetailsDrawer } from "@/components/policies/PolicyDetailsDrawer";
 import { SyncFlowsModal } from "@/components/policies/SyncFlowsModal";
