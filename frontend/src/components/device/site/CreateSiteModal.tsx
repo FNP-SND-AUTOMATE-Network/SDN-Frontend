@@ -176,7 +176,7 @@ export default function CreateSiteModal({
         <Dialog open={isOpen} onClose={!isLoading ? onClose : undefined} maxWidth="md" fullWidth>
             <DialogTitle sx={{ m: 0, p: 3, pb: 2, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-                    <Box sx={{ width: 44, height: 44, borderRadius: 2, bgcolor: "#007bff", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Box sx={{ width: 44, height: 44, borderRadius: 2, bgcolor: "primary.main", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <FontAwesomeIcon icon={faServer} style={{ fontSize: 20 }} />
                     </Box>
                     <Box>
@@ -205,7 +205,7 @@ export default function CreateSiteModal({
                         step={1}
                         title="Base Information"
                         description="Primary identifiers for this site"
-                        icon={faServer}
+                        icon={faServer }
                     />
                     <Grid container spacing={3} sx={{ mb: 2 }}>
                         <Grid size={{ xs: 12, md: 6 }}>
@@ -428,7 +428,7 @@ export default function CreateSiteModal({
                     form="create-site-form"
                     disabled={isLoading}
                     variant="contained"
-                    sx={{ boxShadow: "none", bgcolor: "#007bff" }}
+                    sx={{ boxShadow: "none" }}
                 >
                     {isLoading ? "Adding..." : "Add Site"}
                 </Button>
