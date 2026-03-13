@@ -1,20 +1,34 @@
 "use client";
 
-import { Section, Subnet } from "@/services/ipamService";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-    faFolder,
-    faFolderOpen,
-    faNetworkWired,
-    faChevronRight,
-    faChevronDown,
-} from "@fortawesome/free-solid-svg-icons";
-import Link from "next/link";
 import { useState } from "react";
+import Link from "next/link";
+import { components } from "@/lib/apiv2/schema";
+import {
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Collapse,
+    Typography,
+    Box,
+    Chip,
+    Paper,
+} from "@mui/material";
+import {
+    Folder as FolderIcon,
+    FolderOpen as FolderOpenIcon,
+    Lan as NetworkIcon,
+    ExpandMore,
+    ChevronRight,
+} from "@mui/icons-material";
+
+type SectionResponse = components["schemas"]["SectionResponse"];
+type SubnetResponse = components["schemas"]["SubnetResponse"];
 
 interface SectionTreeViewProps {
-    sections: Section[];
-    subnets: Subnet[];
+    sections: SectionResponse[];
+    subnets: SubnetResponse[];
     currentSectionId: string;
 }
 
@@ -23,7 +37,7 @@ type TreeNode = {
     type: "section" | "subnet";
     name: string;
     description?: string | null;
-    data: Section | Subnet;
+    data: SectionResponse | SubnetResponse;
     children: TreeNode[];
 };
 
@@ -75,7 +89,11 @@ export default function SectionTreeView({
         return tree;
     };
 
-    const toggleNode = (nodeId: string) => {
+    const toggleNode = (nodeId: string, e?: React.MouseEvent) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         const newExpanded = new Set(expandedNodes);
         if (newExpanded.has(nodeId)) {
             newExpanded.delete(nodeId);
@@ -88,96 +106,131 @@ export default function SectionTreeView({
     const renderNode = (node: TreeNode, level: number = 0) => {
         const isExpanded = expandedNodes.has(node.id);
         const hasChildren = node.children.length > 0;
-        const paddingLeft = level * 24;
+        const paddingLeft = level * 3 + 2; // MUI theme spacing
 
         if (node.type === "section") {
-            const section = node.data as Section;
+            const section = node.data as SectionResponse;
             return (
-                <div key={node.id}>
-                    <Link href={`/ipam/sections/${node.id}`}>
-                        <div
-                            className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer border-b border-gray-100"
-                            style={{ paddingLeft: `${paddingLeft + 12}px` }}
+                <Box key={node.id}>
+                    <ListItem disablePadding>
+                        <ListItemButton
+                            component={Link}
+                            href={`/ipam/sections/${node.id}`}
+                            sx={{ pl: paddingLeft, borderBottom: "1px solid", borderColor: "divider" }}
                         >
-                            {hasChildren && (
-                                <button
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        toggleNode(node.id);
-                                    }}
-                                    className="text-gray-400 hover:text-gray-600"
-                                >
-                                    <FontAwesomeIcon
-                                        icon={isExpanded ? faChevronDown : faChevronRight}
-                                        className="w-3 h-3"
-                                    />
-                                </button>
-                            )}
-                            <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <FontAwesomeIcon
-                                    icon={isExpanded ? faFolderOpen : faFolder}
-                                    className="w-5 h-5 text-primary-600"
-                                />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <h3 className="text-sm font-semibold text-gray-900 truncate">
-                                        {node.name}
-                                    </h3>
-                                    <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">
-                                        Section
-                                    </span>
-                                </div>
-                                {node.description && (
-                                    <p className="text-xs text-gray-600 truncate mt-0.5">
-                                        {node.description}
-                                    </p>
+                            <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
+                                {hasChildren && (
+                                    <Box
+                                        onClick={(e) => toggleNode(node.id, e)}
+                                        sx={{ 
+                                            display: "flex", 
+                                            alignItems: "center", 
+                                            justifyContent: "center",
+                                            mr: 1,
+                                            p: 0.5,
+                                            cursor: "pointer",
+                                            borderRadius: "50%",
+                                            "&:hover": { bgcolor: "action.hover" }
+                                        }}
+                                    >
+                                        {isExpanded ? <ExpandMore fontSize="small" /> : <ChevronRight fontSize="small" />}
+                                    </Box>
                                 )}
-                            </div>
-                        </div>
-                    </Link>
-                    {hasChildren && isExpanded && (
-                        <div>{node.children.map((child) => renderNode(child, level + 1))}</div>
+                                {!hasChildren && <Box sx={{ width: 28 }} />}
+                                <ListItemIcon sx={{ minWidth: 40 }}>
+                                    <Box
+                                        sx={{
+                                            width: 32,
+                                            height: 32,
+                                            borderRadius: 1,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            bgcolor: "primary.50",
+                                        }}
+                                    >
+                                        {isExpanded ? (
+                                            <FolderOpenIcon sx={{ fontSize: 20, color: "primary.main" }} />
+                                        ) : (
+                                            <FolderIcon sx={{ fontSize: 20, color: "primary.main" }} />
+                                        )}
+                                    </Box>
+                                </ListItemIcon>
+                                <ListItemText
+                                    primary={
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                            <Typography variant="body2" fontWeight="semibold" noWrap>
+                                                {node.name}
+                                            </Typography>
+                                            <Chip label="Section" size="small" color="info" variant="outlined" sx={{ height: 20, fontSize: "0.625rem" }} />
+                                        </Box>
+                                    }
+                                    secondary={node.description}
+                                    secondaryTypographyProps={{ variant: "caption", noWrap: true }}
+                                />
+                            </Box>
+                        </ListItemButton>
+                    </ListItem>
+                    {hasChildren && (
+                        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                            <List component="div" disablePadding>
+                                {node.children.map((child) => renderNode(child, level + 1))}
+                            </List>
+                        </Collapse>
                     )}
-                </div>
+                </Box>
             );
         } else {
             // Subnet node
-            const subnet = node.data as Subnet;
+            const subnet = node.data as SubnetResponse;
             return (
-                <Link key={node.id} href={`/ipam/subnets/${node.id}`}>
-                    <div
-                        className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer border-b border-gray-100"
-                        style={{ paddingLeft: `${paddingLeft + 12}px` }}
+                <ListItem key={node.id} disablePadding>
+                    <ListItemButton
+                        component={Link}
+                        href={`/ipam/subnets/${node.id}`}
+                        sx={{ pl: paddingLeft + 3.5, borderBottom: "1px solid", borderColor: "divider" }} // Align icon with section folders
                     >
-                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <FontAwesomeIcon
-                                icon={faNetworkWired}
-                                className="w-5 h-5 text-green-600"
-                            />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-sm font-semibold text-gray-900">
-                                    {node.name}
-                                </h3>
-                                <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded">
-                                    Subnet
-                                </span>
-                            </div>
-                            {node.description && (
-                                <p className="text-xs text-gray-600 truncate mt-0.5">
-                                    {node.description}
-                                </p>
-                            )}
-                            {subnet.vlan_id && (
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                    VLAN: {subnet.vlan_id}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                </Link>
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                            <Box
+                                sx={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 1,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    bgcolor: "success.50",
+                                }}
+                            >
+                                <NetworkIcon sx={{ fontSize: 20, color: "success.main" }} />
+                            </Box>
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                    <Typography variant="body2" fontWeight="semibold" noWrap>
+                                        {node.name}
+                                    </Typography>
+                                    <Chip label="Subnet" size="small" color="success" variant="outlined" sx={{ height: 20, fontSize: "0.625rem" }} />
+                                </Box>
+                            }
+                            secondary={
+                                <Box component="span" sx={{ display: "flex", flexDirection: "column", mt: 0.5 }}>
+                                    {node.description && (
+                                        <Typography variant="caption" color="text.secondary" noWrap>
+                                            {node.description}
+                                        </Typography>
+                                    )}
+                                    {subnet.vlan_id && (
+                                        <Typography variant="caption" color="text.disabled">
+                                            VLAN: {subnet.vlan_id}
+                                        </Typography>
+                                    )}
+                                </Box>
+                            }
+                        />
+                    </ListItemButton>
+                </ListItem>
             );
         }
     };
@@ -185,20 +238,19 @@ export default function SectionTreeView({
     const tree = buildTree();
 
     return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
             {tree.length === 0 ? (
-                <div className="p-12 text-center text-gray-500">
-                    <FontAwesomeIcon
-                        icon={faFolder}
-                        className="w-16 h-16 text-gray-300 mx-auto mb-4"
-                    />
-                    <p className="text-sm">No sub-sections or subnets found</p>
-                </div>
+                <Box sx={{ p: 6, textAlign: "center", color: "text.disabled" }}>
+                    <FolderIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
+                    <Typography variant="body2" color="text.secondary">
+                        No sub-sections or subnets found
+                    </Typography>
+                </Box>
             ) : (
-                <div className="divide-y divide-gray-100">
+                <List disablePadding>
                     {tree.map((node) => renderNode(node, 0))}
-                </div>
+                </List>
             )}
-        </div>
+        </Paper>
     );
 }

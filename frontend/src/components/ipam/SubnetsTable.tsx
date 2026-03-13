@@ -1,18 +1,36 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Subnet, ipamService } from "@/services/ipamService";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import React, { useState } from "react";
 import {
-    faNetworkWired,
-    faChevronDown,
-    faChevronRight,
-} from "@fortawesome/free-solid-svg-icons";
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Paper,
+    IconButton,
+    Collapse,
+    Typography,
+    Box,
+    CircularProgress,
+    Chip,
+    Button
+} from "@mui/material";
+import {
+    KeyboardArrowDown as KeyboardArrowDownIcon,
+    KeyboardArrowRight as KeyboardArrowRightIcon,
+    AccountTree as AccountTreeIcon
+} from "@mui/icons-material";
 import { useAuth } from "@/contexts/AuthContext";
+import { $api } from "@/lib/apiv2/fetch";
 import Link from "next/link";
+import { components } from "@/lib/apiv2/schema";
+
+type SubnetResponse = components["schemas"]["SubnetResponse"];
 
 interface SubnetsTableProps {
-    subnets: Subnet[];
+    subnets: SubnetResponse[];
     onRefresh: () => void;
 }
 
@@ -24,168 +42,130 @@ export default function SubnetsTable({
     const [expandedSubnets, setExpandedSubnets] = useState<Set<string>>(
         new Set()
     );
-    const [childSubnets, setChildSubnets] = useState<Record<string, Subnet[]>>(
-        {}
-    );
+    // Keep track of which subnets we are currently expanding to show loading state
     const [loadingChildren, setLoadingChildren] = useState<Set<string>>(
         new Set()
     );
 
-    const toggleExpand = async (subnetId: string) => {
+    const toggleExpand = (subnetId: string) => {
         const newExpanded = new Set(expandedSubnets);
-
         if (newExpanded.has(subnetId)) {
-            // Collapse
             newExpanded.delete(subnetId);
-            setExpandedSubnets(newExpanded);
         } else {
-            // Expand - fetch children if not already loaded
             newExpanded.add(subnetId);
-            setExpandedSubnets(newExpanded);
-
-            if (!childSubnets[subnetId] && token) {
-                // Fetch child subnets
-                setLoadingChildren(new Set(loadingChildren).add(subnetId));
-                try {
-                    const response = await ipamService.getSubnetChildren(token, subnetId);
-                    setChildSubnets({
-                        ...childSubnets,
-                        [subnetId]: response.subnets,
-                    });
-                } catch (error) {
-                    console.error("Error fetching child subnets:", error);
-                    setChildSubnets({
-                        ...childSubnets,
-                        [subnetId]: [],
-                    });
-                } finally {
-                    const newLoading = new Set(loadingChildren);
-                    newLoading.delete(subnetId);
-                    setLoadingChildren(newLoading);
-                }
-            }
         }
+        setExpandedSubnets(newExpanded);
     };
 
-    const renderSubnetRow = (subnet: Subnet, level: number = 0): React.ReactElement => {
+    const SubnetRow = ({ subnet, level = 0 }: { subnet: SubnetResponse, level?: number }) => {
         const isExpanded = expandedSubnets.has(subnet.id);
-        const children = childSubnets[subnet.id] || [];
-        const isLoading = loadingChildren.has(subnet.id);
-        const hasChildren = children.length > 0;
-        const hasBeenFetched = childSubnets.hasOwnProperty(subnet.id);
-        const paddingLeft = level * 24;
+        const paddingLeft = level * 24 + 16;
+        
+        // Fetch children if expanded
+        const { data: childrenData, isLoading } = $api.useQuery(
+            "get",
+            "/ipam/subnets/{subnet_id}/children",
+            {
+                params: { path: { subnet_id: subnet.id } }
+            },
+            {
+                enabled: isExpanded && !!token
+            }
+        );
+
+        const children = childrenData?.subnets || [];
+        // Determine dynamically if it has children from some property if available, otherwise assume it might until expanded.
+        const hasChildren = true; // In phpIPAM we don't always know without fetching, or we assume folder subnets have children. For now, show expand button always if possible or if it's a known folder.
 
         return (
-            <React.Fragment key={subnet.id}>
-                <tr key={subnet.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4" style={{ paddingLeft: `${paddingLeft + 24}px` }}>
-                        {isLoading || hasChildren || !hasBeenFetched ? (
-                            <button
-                                onClick={() => toggleExpand(subnet.id)}
-                                className="text-gray-400 hover:text-gray-600"
-                            >
-                                {isLoading ? (
-                                    <div className="w-4 h-4 border-2 border-gray-300 border-t-primary-600 rounded-full animate-spin"></div>
-                                ) : (
-                                    <FontAwesomeIcon
-                                        icon={isExpanded ? faChevronDown : faChevronRight}
-                                        className="w-4 h-4"
-                                    />
-                                )}
-                            </button>
-                        ) : (
-                            <div className="w-4 h-4"></div>
-                        )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                        <Link
-                            href={`/ipam/subnets/${subnet.id}`}
-                            className="text-sm font-medium text-primary-600 hover:text-primary-800"
+            <React.Fragment>
+                <TableRow sx={{ "&:hover": { bgcolor: "action.hover" } }}>
+                    <TableCell sx={{ pl: `${paddingLeft}px`, width: 48 }}>
+                        <IconButton
+                            size="small"
+                            onClick={() => toggleExpand(subnet.id)}
+                            sx={{ color: "text.secondary" }}
                         >
+                            {isLoading ? (
+                                <CircularProgress size={16} />
+                            ) : isExpanded ? (
+                                <KeyboardArrowDownIcon fontSize="small" />
+                            ) : (
+                                <KeyboardArrowRightIcon fontSize="small" />
+                            )}
+                        </IconButton>
+                    </TableCell>
+                    <TableCell>
+                        <Box component={Link} href={`/ipam/subnets/${subnet.id}`} sx={{ color: "primary.main", fontWeight: 500, textDecoration: "none", "&:hover": { color: "primary.dark" } }}>
                             {subnet.subnet}
-                        </Link>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-900">/{subnet.mask}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                        <div className="text-sm text-gray-700 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap">
+                        </Box>
+                    </TableCell>
+                    <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                            /{subnet.mask}
+                        </Typography>
+                    </TableCell>
+                    <TableCell>
+                        <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>
                             {subnet.description || "-"}
-                        </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                        </Typography>
+                    </TableCell>
+                    <TableCell>
                         {subnet.vlan_id ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                VLAN {subnet.vlan_id}
-                            </span>
+                            <Chip size="small" label={`VLAN ${subnet.vlan_id}`} color="info" variant="outlined" />
                         ) : (
-                            <span className="text-sm text-gray-400">-</span>
+                            <Typography variant="body2" color="text.disabled">-</Typography>
                         )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <Link
+                    </TableCell>
+                    <TableCell align="center">
+                        <Button
+                            component={Link}
                             href={`/ipam/subnets/${subnet.id}`}
-                            className="text-primary-600 hover:text-primary-900 text-sm font-medium"
+                            size="small"
+                            color="primary"
+                            sx={{ textTransform: "none", fontWeight: 500 }}
                         >
                             View Details
-                        </Link>
-                    </td>
-                </tr>
-                {/* Render child subnets */}
-                {isExpanded &&
-                    children.map((childSubnet) =>
-                        renderSubnetRow(childSubnet, level + 1)
-                    )}
+                        </Button>
+                    </TableCell>
+                </TableRow>
+                {isExpanded && children.map((childSubnet) => (
+                    <SubnetRow key={childSubnet.id} subnet={childSubnet as any} level={level + 1} />
+                ))}
             </React.Fragment>
         );
     };
 
     return (
-        <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
-                                {/* Expand icon */}
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Subnet
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Mask
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Description
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                VLAN
-                            </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {subnets.length === 0 ? (
-                            <tr>
-                                <td
-                                    colSpan={6}
-                                    className="px-6 py-8 text-center text-gray-500"
-                                >
-                                    <FontAwesomeIcon
-                                        icon={faNetworkWired}
-                                        className="w-12 h-12 mx-auto mb-3 text-gray-300"
-                                    />
-                                    <p>No subnets found</p>
-                                </td>
-                            </tr>
-                        ) : (
-                            subnets.map((subnet) => renderSubnetRow(subnet, 0))
-                        )}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+            <Table size="medium">
+                <TableHead sx={{ bgcolor: "background.default" }}>
+                    <TableRow>
+                        <TableCell sx={{ width: 48 }}></TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Subnet</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Mask</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>VLAN</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 600 }}>Actions</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {subnets.length === 0 ? (
+                        <TableRow>
+                            <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                                <AccountTreeIcon sx={{ fontSize: 48, color: "text.disabled", mb: 2 }} />
+                                <Typography variant="h6" color="text.secondary">
+                                    No subnets found
+                                </Typography>
+                            </TableCell>
+                        </TableRow>
+                    ) : (
+                        subnets.map((subnet) => (
+                            <SubnetRow key={subnet.id} subnet={subnet} level={0} />
+                        ))
+                    )}
+                </TableBody>
+            </Table>
+        </TableContainer>
     );
 }

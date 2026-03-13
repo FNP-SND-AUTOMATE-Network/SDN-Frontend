@@ -1,20 +1,32 @@
 "use client";
 
-import { Section } from "@/services/ipamService";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFolder, faEllipsisV, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
-import Link from "next/link";
 import { useState } from "react";
+import Link from "next/link";
+import { components } from "@/lib/apiv2/schema";
+import {
+    Card,
+    Typography,
+    IconButton,
+    Box,
+    Collapse,
+    Tooltip,
+} from "@mui/material";
+import {
+    Folder as FolderIcon,
+    FolderOpen as FolderOpenIcon,
+    MoreVert as MoreVertIcon,
+} from "@mui/icons-material";
+
+type SectionResponse = components["schemas"]["SectionResponse"];
 
 interface SectionsGridProps {
-    sections: Section[];
+    sections: SectionResponse[];
     onRefresh: () => void;
 }
 
-function SectionsGrid({ sections, onRefresh }: SectionsGridProps) {
+export default function SectionsGrid({ sections, onRefresh }: SectionsGridProps) {
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
-    // แยก sections เป็น root และ children
     const rootSections = sections.filter(s => !s.master_section);
     const getSectionChildren = (parentId: string) =>
         sections.filter(s => s.master_section === parentId);
@@ -29,103 +41,166 @@ function SectionsGrid({ sections, onRefresh }: SectionsGridProps) {
         setExpandedSections(newExpanded);
     };
 
-    const renderSection = (section: Section, level: number = 0) => {
+    const renderSection = (section: SectionResponse, level: number = 0) => {
         const children = getSectionChildren(section.id);
         const hasChildren = children.length > 0;
         const isExpanded = expandedSections.has(section.id);
-        const marginLeft = level * 20; // Indent for nested sections
+        const marginLeft = level * 3; // MUI spacing 3 = 24px
 
         return (
-            <div key={section.id} style={{ marginLeft: `${marginLeft}px` }}>
-                {/* Section Card */}
-                <div className="mb-4">
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-primary-300 transition-all duration-200 group">
-                        {/* Header */}
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3 flex-1">
-                                <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center group-hover:bg-primary-200 transition-colors">
-                                    <FontAwesomeIcon
-                                        icon={isExpanded ? faFolderOpen : faFolder}
-                                        className="w-6 h-6 text-primary-600"
-                                    />
-                                </div>
-                                <div className="flex-1">
-                                    <Link href={`/ipam/sections/${section.id}`}>
-                                        <h3 className="text-lg font-semibold text-gray-900 hover:text-primary-600 transition-colors overflow-hidden text-ellipsis whitespace-nowrap">
-                                            {section.name}
-                                        </h3>
-                                    </Link>
-                                    {section.description && (
-                                        <p className="text-sm text-gray-600 mt-1 overflow-hidden" style={{
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: 2,
-                                            WebkitBoxOrient: 'vertical',
-                                            lineHeight: '1.5rem',
-                                            maxHeight: '3rem'
-                                        }}>
-                                            {section.description}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {hasChildren && (
-                                    <button
-                                        onClick={() => toggleExpand(section.id)}
-                                        className="text-gray-400 hover:text-gray-600 p-2"
-                                    >
-                                        <span className="text-xs font-medium">
-                                            {isExpanded ? 'Collapse' : `${children.length} sub${children.length > 1 ? 's' : ''}`}
-                                        </span>
-                                    </button>
-                                )}
-                                <button
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        // TODO: Open section menu
-                                        console.log("Section menu:", section.id);
+            <Box key={section.id} sx={{ ml: marginLeft, mb: 2 }}>
+                <Card 
+                    elevation={0} 
+                    sx={{ 
+                        border: "1px solid", 
+                        borderColor: "divider",
+                        "&:hover": { borderColor: "primary.300", boxShadow: 1 },
+                        transition: "all 0.2s",
+                        "&:hover .folder-icon-bg": { bgcolor: "primary.200" }
+                    }}
+                >
+                    <Box sx={{ p: 3 }}>
+                        <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", mb: 2 }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1, minWidth: 0 }}>
+                                <Box 
+                                    className="folder-icon-bg"
+                                    sx={{ 
+                                        width: 48, 
+                                        height: 48, 
+                                        bgcolor: "primary.50", 
+                                        borderRadius: 2, 
+                                        display: "flex", 
+                                        alignItems: "center", 
+                                        justifyContent: "center",
+                                        transition: "background-color 0.2s",
+                                        flexShrink: 0
                                     }}
-                                    className="text-gray-400 hover:text-gray-600 p-1"
                                 >
-                                    <FontAwesomeIcon icon={faEllipsisV} />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="pt-4 border-t border-gray-100">
-                            <div className="flex items-center justify-between text-xs text-gray-500">
-                                <span>Section ID: {section.id}</span>
-                                {level > 0 && (
-                                    <span className="text-primary-600">Sub-section</span>
+                                    {isExpanded ? (
+                                        <FolderOpenIcon sx={{ fontSize: 24, color: "primary.main" }} />
+                                    ) : (
+                                        <FolderIcon sx={{ fontSize: 24, color: "primary.main" }} />
+                                    )}
+                                </Box>
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography 
+                                        component={Link} 
+                                        href={`/ipam/sections/${section.id}`}
+                                        variant="subtitle1" 
+                                        fontWeight="semibold"
+                                        color="text.primary"
+                                        sx={{ 
+                                            textDecoration: "none",
+                                            "&:hover": { color: "primary.main" },
+                                            display: "block",
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap"
+                                        }}
+                                    >
+                                        {section.name}
+                                    </Typography>
+                                    {section.description && (
+                                        <Typography 
+                                            variant="body2" 
+                                            color="text.secondary"
+                                            sx={{
+                                                mt: 0.5,
+                                                display: "-webkit-box",
+                                                WebkitLineClamp: 2,
+                                                WebkitBoxOrient: "vertical",
+                                                overflow: "hidden",
+                                                lineHeight: 1.5,
+                                                maxHeight: "3em"
+                                            }}
+                                        >
+                                            {section.description}
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </Box>
+                            
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: 2, flexShrink: 0 }}>
+                                {hasChildren && (
+                                    <Typography 
+                                        component="button"
+                                        onClick={() => toggleExpand(section.id)}
+                                        variant="caption"
+                                        fontWeight="medium"
+                                        color="text.secondary"
+                                        sx={{ 
+                                            bgcolor: "transparent", 
+                                            border: "none", 
+                                            cursor: "pointer",
+                                            "&:hover": { color: "text.primary" },
+                                            p: 1
+                                        }}
+                                    >
+                                        {isExpanded ? 'Collapse' : `${children.length} sub${children.length > 1 ? 's' : ''}`}
+                                    </Typography>
                                 )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                                <Tooltip title="Section actions">
+                                    <IconButton 
+                                        size="small" 
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            console.log("Section menu:", section.id);
+                                        }}
+                                        sx={{ color: "text.secondary" }}
+                                    >
+                                        <MoreVertIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            </Box>
+                        </Box>
 
-                {/* Render children if expanded */}
-                {hasChildren && isExpanded && (
-                    <div className="ml-4 border-l-2 border-gray-200 pl-4">
-                        {children.map(child => renderSection(child, level + 1))}
-                    </div>
+                        <Box sx={{ 
+                            pt: 2, 
+                            borderTop: "1px solid", 
+                            borderColor: "divider",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                        }}>
+                            <Typography variant="caption" color="text.secondary">
+                                Section ID: {section.id}
+                            </Typography>
+                            {level > 0 && (
+                                <Typography variant="caption" color="primary.main" fontWeight="medium">
+                                    Sub-section
+                                </Typography>
+                            )}
+                        </Box>
+                    </Box>
+                </Card>
+
+                {hasChildren && (
+                    <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                        <Box sx={{ 
+                            ml: 2.5, 
+                            mt: 2,
+                            pl: 2.5, 
+                            borderLeft: "2px solid", 
+                            borderColor: "divider" 
+                        }}>
+                            {children.map(child => renderSection(child, level + 1))}
+                        </Box>
+                    </Collapse>
                 )}
-            </div>
+            </Box>
         );
     };
 
     return (
-        <div>
+        <Box>
             {rootSections.length === 0 ? (
-                <div className="text-center text-gray-500 py-8">
-                    No root sections found
-                </div>
+                <Box sx={{ textAlign: "center", py: 8 }}>
+                    <Typography color="text.secondary">No root sections found</Typography>
+                </Box>
             ) : (
                 rootSections.map(section => renderSection(section, 0))
             )}
-        </div>
+        </Box>
     );
 }
-
-export default SectionsGrid;
 

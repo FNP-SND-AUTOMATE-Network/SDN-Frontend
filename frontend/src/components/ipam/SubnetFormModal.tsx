@@ -1,19 +1,36 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Subnet, SubnetCreateRequest, Section, ipamService } from "@/services/ipamService";
 import { useAuth } from "@/contexts/AuthContext";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimes, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { fetchClient } from "@/lib/apiv2/fetch";
+import { components } from "@/lib/apiv2/schema";
+import {
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Button,
+    TextField,
+    MenuItem,
+    Alert,
+    CircularProgress,
+    Box,
+    IconButton,
+    Typography
+} from "@mui/material";
+import { Close as CloseIcon } from "@mui/icons-material";
+
+type SubnetResponse = components["schemas"]["SubnetResponse"];
+type SectionResponse = components["schemas"]["SectionResponse"];
 
 interface SubnetFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    subnet?: Subnet | null; // For edit mode
-    sectionId: string; // Required section ID
-    parentSubnetId?: string | null; // For creating child subnet
-    allSections?: Section[]; // For section dropdown
+    subnet?: SubnetResponse | null;
+    sectionId: string;
+    parentSubnetId?: string | null;
+    allSections?: SectionResponse[];
 }
 
 export default function SubnetFormModal({
@@ -38,7 +55,6 @@ export default function SubnetFormModal({
 
     const isEditMode = !!subnet;
 
-    // Reset form when modal opens/closes or subnet changes
     useEffect(() => {
         if (isOpen) {
             if (subnet) {
@@ -66,14 +82,12 @@ export default function SubnetFormModal({
         setError(null);
 
         try {
-            // Build request with only non-null values
-            const subnetData: SubnetCreateRequest = {
+            const subnetData: any = {
                 subnet: subnetAddress.trim(),
                 mask: mask.trim(),
                 section_id: selectedSectionId,
             };
 
-            // Only add optional fields if they have values
             if (description.trim()) {
                 subnetData.description = description.trim();
             }
@@ -85,9 +99,16 @@ export default function SubnetFormModal({
             }
 
             if (isEditMode && subnet) {
-                await ipamService.updateSubnet(token, subnet.id, subnetData);
+                const res = await fetchClient.PATCH("/ipam/subnets/{subnet_id}", {
+                    params: { path: { subnet_id: subnet.id } },
+                    body: subnetData
+                });
+                if (res.error) throw res.error;
             } else {
-                await ipamService.createSubnet(token, subnetData);
+                const res = await fetchClient.POST("/ipam/subnets", {
+                    body: subnetData
+                });
+                if (res.error) throw res.error;
             }
 
             onSuccess();
@@ -99,148 +120,110 @@ export default function SubnetFormModal({
         }
     };
 
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                {/* Backdrop */}
-                <div
-                    className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+        <Dialog open={isOpen} onClose={!isLoading ? onClose : undefined} maxWidth="sm" fullWidth>
+            <DialogTitle sx={{ m: 0, p: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Typography variant="h6" component="div" fontWeight="semibold">
+                    {isEditMode ? "Edit Subnet" : parentSubnetId ? "Add Child Subnet" : "Add Subnet"}
+                </Typography>
+                <IconButton
+                    aria-label="close"
                     onClick={onClose}
-                />
+                    disabled={isLoading}
+                    sx={{ color: "text.secondary" }}
+                >
+                    <CloseIcon />
+                </IconButton>
+            </DialogTitle>
 
-                {/* Modal */}
-                <div className="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-lg">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                            {isEditMode ? "Edit Subnet" : parentSubnetId ? "Add Child Subnet" : "Add Subnet"}
-                        </h3>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                            <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    {/* Error */}
+            <form onSubmit={handleSubmit}>
+                <DialogContent dividers sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
                     {error && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                            {error}
-                        </div>
+                        <Alert severity="error">{error}</Alert>
                     )}
 
-                    {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Subnet <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={subnetAddress}
-                                    onChange={(e) => setSubnetAddress(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    placeholder="e.g. 10.0.0.0"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Mask <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={mask}
-                                    onChange={(e) => setMask(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    placeholder="e.g. 24"
-                                    required
-                                />
-                            </div>
-                        </div>
+                    <Box sx={{ display: "flex", gap: 2 }}>
+                        <TextField
+                            label="Subnet"
+                            value={subnetAddress}
+                            onChange={(e) => setSubnetAddress(e.target.value)}
+                            required
+                            fullWidth
+                            placeholder="e.g. 10.0.0.0"
+                            disabled={isLoading}
+                        />
+                        <TextField
+                            label="Mask"
+                            value={mask}
+                            onChange={(e) => setMask(e.target.value)}
+                            required
+                            fullWidth
+                            placeholder="e.g. 24"
+                            disabled={isLoading}
+                        />
+                    </Box>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Description
-                            </label>
-                            <textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                placeholder="Enter description (optional)"
-                                rows={2}
-                            />
-                        </div>
+                    <TextField
+                        label="Description"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        fullWidth
+                        multiline
+                        rows={2}
+                        placeholder="Enter description (optional)"
+                        disabled={isLoading}
+                    />
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Section <span className="text-red-500">*</span>
-                            </label>
-                            <select
-                                value={selectedSectionId}
-                                onChange={(e) => setSelectedSectionId(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                required
-                            >
-                                {allSections.length === 0 ? (
-                                    <option value={sectionId}>Current Section</option>
-                                ) : (
-                                    allSections.map((s) => (
-                                        <option key={s.id} value={s.id}>
-                                            {s.name}
-                                        </option>
-                                    ))
-                                )}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                VLAN ID
-                            </label>
-                            <input
-                                type="text"
-                                value={vlanId}
-                                onChange={(e) => setVlanId(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                placeholder="Enter VLAN ID (optional)"
-                            />
-                        </div>
-
-                        {parentSubnetId && (
-                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-                                This subnet will be created as a child of the parent subnet.
-                            </div>
+                    <TextField
+                        select
+                        label="Section"
+                        value={selectedSectionId}
+                        onChange={(e) => setSelectedSectionId(e.target.value)}
+                        required
+                        fullWidth
+                        disabled={isLoading}
+                    >
+                        {allSections.length === 0 ? (
+                            <MenuItem value={sectionId}>Current Section</MenuItem>
+                        ) : (
+                            allSections.map((s) => (
+                                <MenuItem key={s.id} value={s.id}>
+                                    {s.name}
+                                </MenuItem>
+                            ))
                         )}
+                    </TextField>
 
-                        {/* Actions */}
-                        <div className="flex gap-3 pt-4">
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                                disabled={isLoading}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                disabled={isLoading || !subnetAddress.trim() || !mask.trim()}
-                            >
-                                {isLoading && (
-                                    <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin" />
-                                )}
-                                {isEditMode ? "Save Changes" : "Add Subnet"}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+                    <TextField
+                        label="VLAN ID"
+                        value={vlanId}
+                        onChange={(e) => setVlanId(e.target.value)}
+                        fullWidth
+                        placeholder="Enter VLAN ID (optional)"
+                        disabled={isLoading}
+                    />
+
+                    {parentSubnetId && (
+                        <Alert severity="info">
+                            This subnet will be created as a child of the parent subnet.
+                        </Alert>
+                    )}
+                </DialogContent>
+
+                <DialogActions sx={{ p: 2.5 }}>
+                    <Button onClick={onClose} disabled={isLoading} color="inherit">
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        disabled={isLoading || !subnetAddress.trim() || !mask.trim()}
+                        startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
+                    >
+                        {isEditMode ? "Save Changes" : "Add Subnet"}
+                    </Button>
+                </DialogActions>
+            </form>
+        </Dialog>
     );
 }

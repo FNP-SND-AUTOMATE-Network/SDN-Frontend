@@ -1,20 +1,29 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Section, Subnet, ipamService } from "@/services/ipamService";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { fetchClient } from "@/lib/apiv2/fetch";
+import { components } from "@/lib/apiv2/schema";
 import {
-    faFolder,
-    faFolderOpen,
-    faNetworkWired,
-    faChevronRight,
-    faChevronDown,
-} from "@fortawesome/free-solid-svg-icons";
-import { useAuth } from "@/contexts/AuthContext";
+    Box,
+    Typography,
+    IconButton,
+    CircularProgress,
+    Divider
+} from "@mui/material";
+import {
+    Folder as FolderIcon,
+    FolderOpen as FolderOpenIcon,
+    AccountTree as AccountTreeIcon,
+    KeyboardArrowRight as KeyboardArrowRightIcon,
+    KeyboardArrowDown as KeyboardArrowDownIcon,
+} from "@mui/icons-material";
+
+type SectionResponse = components["schemas"]["SectionResponse"];
+type SubnetResponse = components["schemas"]["SubnetResponse"];
 
 interface IPAMTreeSidebarProps {
-    sections: Section[];
-    subnets: Subnet[];
+    sections: SectionResponse[];
+    subnets: SubnetResponse[];
     currentSectionId: string;
     selectedId: string;
     selectedType: "section" | "subnet";
@@ -27,7 +36,7 @@ type TreeNode = {
     type: "section" | "subnet";
     name: string;
     description?: string | null;
-    data: Section | Subnet;
+    data: SectionResponse | SubnetResponse;
     children: TreeNode[];
 };
 
@@ -40,9 +49,8 @@ export default function IPAMTreeSidebar({
     onSelectSection,
     onSelectSubnet,
 }: IPAMTreeSidebarProps) {
-    const { token } = useAuth();
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-    const [subnetChildren, setSubnetChildren] = useState<Record<string, Subnet[]>>({});
+    const [subnetChildren, setSubnetChildren] = useState<Record<string, SubnetResponse[]>>({});
     const [loadingSubnets, setLoadingSubnets] = useState<Set<string>>(new Set());
 
     // Find all ancestor section IDs for expanding path to current section
@@ -58,8 +66,10 @@ export default function IPAMTreeSidebar({
 
     // Auto-expand path to current section on mount
     useEffect(() => {
-        const pathToExpand = getAncestorPath(currentSectionId);
-        setExpandedNodes(new Set(pathToExpand));
+        if (currentSectionId && sections.length > 0) {
+            const pathToExpand = getAncestorPath(currentSectionId);
+            setExpandedNodes(new Set(pathToExpand));
+        }
     }, [currentSectionId, sections]);
 
     // Build full hierarchical tree from root
@@ -129,13 +139,17 @@ export default function IPAMTreeSidebar({
             setExpandedNodes(newExpanded);
 
             // If it's a subnet and we haven't fetched its children yet, fetch them
-            if (nodeType === "subnet" && !subnetChildren[nodeId] && token) {
+            if (nodeType === "subnet" && !subnetChildren[nodeId]) {
                 setLoadingSubnets(new Set(loadingSubnets).add(nodeId));
                 try {
-                    const response = await ipamService.getSubnetChildren(token, nodeId);
+                    const response = await fetchClient.GET("/ipam/subnets/{subnet_id}/children", {
+                        params: { path: { subnet_id: nodeId } }
+                    });
+                    if (response.error) throw response.error;
+                    
                     setSubnetChildren({
                         ...subnetChildren,
-                        [nodeId]: response.subnets,
+                        [nodeId]: response.data?.subnets || [],
                     });
                 } catch (error) {
                     console.error("Error fetching subnet children:", error);
@@ -168,110 +182,96 @@ export default function IPAMTreeSidebar({
         const paddingLeft = level * 16 + 12;
         const uniqueKey = `${node.type}-${node.id}`;
 
-        // For subnets, show arrow if has children or hasn't been fetched yet
         const hasBeenFetched = node.type === "subnet" ? subnetChildren.hasOwnProperty(node.id) : true;
         const showArrow = node.type === "section" ? hasChildren : (hasChildren || !hasBeenFetched);
 
-        if (node.type === "section") {
-            return (
-                <div key={uniqueKey}>
-                    <div
-                        onClick={() => handleSelect(node)}
-                        className={`flex items-center gap-2 py-2 px-3 cursor-pointer transition-colors ${isSelected
-                            ? "bg-primary-100 text-primary-700 border-r-2 border-primary-600"
-                            : "hover:bg-gray-100 text-gray-700"
-                            }`}
-                        style={{ paddingLeft: `${paddingLeft}px` }}
-                    >
-                        {showArrow ? (
-                            <button
-                                onClick={(e) => toggleNode(node.id, node.type, e)}
-                                className="flex-shrink-0"
-                            >
-                                <FontAwesomeIcon
-                                    icon={isExpanded ? faChevronDown : faChevronRight}
-                                    className="w-3 h-3"
-                                />
-                            </button>
-                        ) : (
-                            <div className="w-3" />
-                        )}
-                        <FontAwesomeIcon
-                            icon={isExpanded ? faFolderOpen : faFolder}
-                            className={`w-4 h-4 flex-shrink-0 ${isSelected ? "text-primary-600" : "text-blue-500"
-                                }`}
-                        />
-                        <span className="text-sm font-medium truncate">{node.name}</span>
-                    </div>
-                    {hasChildren && isExpanded && (
-                        <div>
-                            {node.children.map((child) => renderNode(child, level + 1))}
-                        </div>
+        return (
+            <Box key={uniqueKey}>
+                <Box
+                    onClick={() => handleSelect(node)}
+                    sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        py: 1,
+                        pr: 2,
+                        pl: `${paddingLeft}px`,
+                        cursor: "pointer",
+                        transition: "background-color 0.2s",
+                        ...(isSelected
+                            ? {
+                                  bgcolor: node.type === "section" ? "primary.lighter" : "success.lighter",
+                                  color: node.type === "section" ? "primary.dark" : "success.dark",
+                                  borderRight: "3px solid",
+                                  borderColor: node.type === "section" ? "primary.main" : "success.main",
+                              }
+                            : {
+                                  color: "text.primary",
+                                  "&:hover": {
+                                      bgcolor: "action.hover",
+                                  },
+                              }),
+                    }}
+                >
+                    {showArrow ? (
+                        <IconButton
+                            size="small"
+                            onClick={(e) => toggleNode(node.id, node.type, e)}
+                            sx={{ p: 0.5, color: "text.secondary" }}
+                        >
+                            {isLoading ? (
+                                <CircularProgress size={14} />
+                            ) : isExpanded ? (
+                                <KeyboardArrowDownIcon fontSize="small" />
+                            ) : (
+                                <KeyboardArrowRightIcon fontSize="small" />
+                            )}
+                        </IconButton>
+                    ) : (
+                        <Box sx={{ width: 24 }} />
                     )}
-                </div>
-            );
-        } else {
-            // Subnet node
-            return (
-                <div key={uniqueKey}>
-                    <div
-                        onClick={() => handleSelect(node)}
-                        className={`flex items-center gap-2 py-2 px-3 cursor-pointer transition-colors ${isSelected
-                            ? "bg-green-100 text-green-700 border-r-2 border-green-600"
-                            : "hover:bg-gray-100 text-gray-700"
-                            }`}
-                        style={{ paddingLeft: `${paddingLeft}px` }}
-                    >
-                        {showArrow ? (
-                            <button
-                                onClick={(e) => toggleNode(node.id, node.type, e)}
-                                className="flex-shrink-0"
-                            >
-                                {isLoading ? (
-                                    <div className="w-3 h-3 border-2 border-gray-300 border-t-primary-600 rounded-full animate-spin"></div>
-                                ) : (
-                                    <FontAwesomeIcon
-                                        icon={isExpanded ? faChevronDown : faChevronRight}
-                                        className="w-3 h-3"
-                                    />
-                                )}
-                            </button>
+                    
+                    {node.type === "section" ? (
+                        isExpanded ? (
+                            <FolderOpenIcon sx={{ fontSize: 18, color: isSelected ? "primary.main" : "primary.light" }} />
                         ) : (
-                            <div className="w-3" />
-                        )}
-                        <FontAwesomeIcon
-                            icon={faNetworkWired}
-                            className="w-4 h-4 flex-shrink-0 text-green-600"
-                        />
-                        <span className="text-sm truncate">{node.name}</span>
-                    </div>
-                    {hasChildren && isExpanded && (
-                        <div>
-                            {node.children.map((child) => renderNode(child, level + 1))}
-                        </div>
+                            <FolderIcon sx={{ fontSize: 18, color: isSelected ? "primary.main" : "primary.light" }} />
+                        )
+                    ) : (
+                        <AccountTreeIcon sx={{ fontSize: 18, color: isSelected ? "success.main" : "success.light" }} />
                     )}
-                </div>
-            );
-        }
+                    
+                    <Typography variant="body2" sx={{ fontWeight: isSelected ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {node.name}
+                    </Typography>
+                </Box>
+                {hasChildren && isExpanded && (
+                    <Box>
+                        {node.children.map((child) => renderNode(child, level + 1))}
+                    </Box>
+                )}
+            </Box>
+        );
     };
 
-    // Build tree from root (sections with no parent)
     const tree = buildTree(null);
 
     return (
-        <div className="h-full bg-white border-r border-gray-200 overflow-y-auto">
-            <div className="p-3 border-b border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-700">IPAM Tree</h3>
-            </div>
-            <div className="py-2">
+        <Box sx={{ height: "100%", bgcolor: "background.paper", borderRight: "1px solid", borderColor: "divider", overflowY: "auto" }}>
+            <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider" }}>
+                <Typography variant="subtitle2" fontWeight="semibold" color="text.secondary">
+                    IPAM Tree
+                </Typography>
+            </Box>
+            <Box sx={{ py: 1 }}>
                 {tree.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-gray-500">
+                    <Typography variant="body2" color="text.disabled" align="center" sx={{ p: 2 }}>
                         No sections found
-                    </div>
+                    </Typography>
                 ) : (
                     tree.map((node) => renderNode(node, 0))
                 )}
-            </div>
-        </div>
+            </Box>
+        </Box>
     );
 }

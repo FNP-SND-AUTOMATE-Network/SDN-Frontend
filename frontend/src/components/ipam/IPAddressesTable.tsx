@@ -1,19 +1,35 @@
 "use client";
 
-import { IPAddress } from "@/services/ipamService";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { components } from "@/lib/apiv2/schema";
 import {
-    faServer,
-    faCircle,
-    faEdit,
-    faTrash,
-} from "@fortawesome/free-solid-svg-icons";
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Paper,
+    Chip,
+    IconButton,
+    Typography,
+    Box,
+    Tooltip,
+} from "@mui/material";
+import {
+    Edit as EditIcon,
+    Delete as DeleteIcon,
+    Storage as ServerIcon,
+    Circle as CircleIcon,
+    Star as StarIcon,
+} from "@mui/icons-material";
+
+type IpAddressResponse = components["schemas"]["IpAddressResponse"];
 
 interface IPAddressesTableProps {
-    addresses: IPAddress[];
+    addresses: IpAddressResponse[];
     onRefresh: () => void;
-    onEdit?: (address: IPAddress) => void;
-    onDelete?: (address: IPAddress) => void;
+    onEdit?: (address: IpAddressResponse) => void;
+    onDelete?: (address: IpAddressResponse) => void;
 }
 
 export default function IPAddressesTable({
@@ -22,168 +38,168 @@ export default function IPAddressesTable({
     onEdit,
     onDelete,
 }: IPAddressesTableProps) {
-    // Helper function to get status badge
-    const getStatusBadge = (address: IPAddress) => {
+    const getStatusChip = (address: IpAddressResponse) => {
         // Check if is_gateway
         const isGateway = (address as any).is_gateway === "1" || (address as any).is_gateway === 1;
         if (isGateway) {
             return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                    <FontAwesomeIcon icon={faCircle} className="w-2 h-2" />
-                    Gateway
-                </span>
+                <Chip
+                    icon={<CircleIcon sx={{ fontSize: 10 }} />}
+                    label="Gateway"
+                    size="small"
+                    color="secondary"
+                    variant="outlined"
+                    sx={{ bgcolor: "secondary.50", fontWeight: "medium" }}
+                />
             );
         }
 
-        // Simple logic: if has hostname or description, it's "Used", otherwise "Free"
         const isUsed = address.hostname || address.description;
 
         if (isUsed) {
             return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                    <FontAwesomeIcon icon={faCircle} className="w-2 h-2" />
-                    Used
-                </span>
+                <Chip
+                    icon={<CircleIcon sx={{ fontSize: 10 }} />}
+                    label="Used"
+                    size="small"
+                    color="warning"
+                    variant="outlined"
+                    sx={{ bgcolor: "warning.50", fontWeight: "medium" }}
+                />
             );
         }
 
         return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                <FontAwesomeIcon icon={faCircle} className="w-2 h-2" />
-                Free
-            </span>
+            <Chip
+                icon={<CircleIcon sx={{ fontSize: 10 }} />}
+                label="Free"
+                size="small"
+                color="success"
+                variant="outlined"
+                sx={{ bgcolor: "success.50", fontWeight: "medium" }}
+            />
         );
     };
 
     return (
-        <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                IP Address
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Hostname
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Description
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                MAC Address
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
-                            </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+        <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider", overflow: "hidden", borderRadius: 2 }}>
+            <TableContainer>
+                <Table sx={{ minWidth: 650 }}>
+                    <TableHead sx={{ bgcolor: "grey.50" }}>
+                        <TableRow>
+                            <TableCell>IP Address</TableCell>
+                            <TableCell>Hostname</TableCell>
+                            <TableCell>Description</TableCell>
+                            <TableCell>MAC Address</TableCell>
+                            <TableCell>Status</TableCell>
+                            <TableCell align="center">Actions</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
                         {addresses.length === 0 ? (
-                            <tr>
-                                <td
-                                    colSpan={6}
-                                    className="px-6 py-8 text-center text-gray-500"
-                                >
-                                    <FontAwesomeIcon
-                                        icon={faServer}
-                                        className="w-12 h-12 text-gray-300 mx-auto mb-3"
-                                    />
-                                    <p className="text-sm">No IP addresses found</p>
-                                </td>
-                            </tr>
+                            <TableRow>
+                                <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                                    <ServerIcon sx={{ fontSize: 48, color: "text.disabled", mb: 2 }} />
+                                    <Typography color="text.secondary">No IP addresses found</Typography>
+                                </TableCell>
+                            </TableRow>
                         ) : (
                             addresses.map((address) => {
                                 const isGateway = (address as any).is_gateway === "1" || (address as any).is_gateway === 1;
                                 return (
-                                    <tr
+                                    <TableRow
                                         key={address.id}
-                                        className={`group ${isGateway ? 'bg-purple-50 hover:bg-purple-100' : 'hover:bg-gray-50'}`}
+                                        hover
+                                        sx={{
+                                            bgcolor: isGateway ? "secondary.50" : "inherit",
+                                            "&:hover": { bgcolor: isGateway ? "secondary.100" : "action.hover" },
+                                            "&:last-child td, &:last-child th": { border: 0 },
+                                        }}
                                     >
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center">
-                                                <div className={`w-8 h-8 rounded flex items-center justify-center mr-3 ${isGateway ? 'bg-purple-200' : 'bg-primary-100'}`}>
-                                                    <FontAwesomeIcon
-                                                        icon={faServer}
-                                                        className={`w-4 h-4 ${isGateway ? 'text-purple-700' : 'text-primary-600'}`}
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <span className={`text-sm font-medium ${isGateway ? 'text-purple-900' : 'text-gray-900'}`}>
+                                        <TableCell>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                                                <Box
+                                                    sx={{
+                                                        width: 32,
+                                                        height: 32,
+                                                        borderRadius: 1,
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center",
+                                                        bgcolor: isGateway ? "secondary.200" : "primary.50",
+                                                    }}
+                                                >
+                                                    <ServerIcon sx={{ fontSize: 16, color: isGateway ? "secondary.700" : "primary.main" }} />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="body2" fontWeight="medium" color={isGateway ? "secondary.900" : "text.primary"}>
                                                         {(address as any).ip}
-                                                    </span>
+                                                    </Typography>
                                                     {isGateway && (
-                                                        <span className="ml-2 text-xs text-purple-600 font-semibold">★ GATEWAY</span>
+                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
+                                                            <StarIcon sx={{ fontSize: 10, color: "secondary.main" }} />
+                                                            <Typography variant="caption" fontWeight="bold" color="secondary.main">
+                                                                GATEWAY
+                                                            </Typography>
+                                                        </Box>
                                                     )}
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900">
-                                                {address.hostname || "-"}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm text-gray-700 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap">
+                                                </Box>
+                                            </Box>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2">{address.hostname || "-"}</Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 200, WebkitLineClamp: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                                 {address.description || "-"}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-600 font-mono">
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" fontFamily="monospace" color="text.secondary">
                                                 {address.mac || "-"}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            {getStatusBadge(address)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            <div className="flex items-center justify-center gap-2">
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            {getStatusChip(address)}
+                                        </TableCell>
+                                        <TableCell align="center">
+                                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
                                                 {onEdit && (
-                                                    <button
-                                                        onClick={() => onEdit(address)}
-                                                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                                        title="Edit IP Address"
-                                                    >
-                                                        <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
-                                                    </button>
+                                                    <Tooltip title="Edit IP Address">
+                                                        <IconButton size="small" onClick={() => onEdit(address)} color="primary">
+                                                            <EditIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
                                                 )}
                                                 {onDelete && (
-                                                    <button
-                                                        onClick={() => onDelete(address)}
-                                                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                                        title="Delete IP Address"
-                                                    >
-                                                        <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
-                                                    </button>
+                                                    <Tooltip title="Delete IP Address">
+                                                        <IconButton size="small" onClick={() => onDelete(address)} color="error">
+                                                            <DeleteIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
                                                 )}
                                                 {!onEdit && !onDelete && (
-                                                    <span className="text-sm text-gray-400">-</span>
+                                                    <Typography variant="body2" color="text.disabled">-</Typography>
                                                 )}
-                                            </div>
-                                        </td>
-                                    </tr>
+                                            </Box>
+                                        </TableCell>
+                                    </TableRow>
                                 );
                             })
                         )}
-                    </tbody>
-                </table>
-            </div>
+                    </TableBody>
+                </Table>
+            </TableContainer>
 
-            {/* Pagination placeholder */}
             {addresses.length > 0 && (
-                <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-                    <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-700">
-                            Showing <span className="font-medium">{addresses.length}</span> IP
-                            address{addresses.length !== 1 ? "es" : ""}
-                        </div>
-                    </div>
-                </div>
+                <Box sx={{ bgcolor: "grey.50", px: 3, py: 1.5, borderTop: "1px solid", borderColor: "divider" }}>
+                    <Typography variant="body2" color="text.secondary">
+                        Showing <Box component="span" fontWeight="medium">{addresses.length}</Box> IP
+                        address{addresses.length !== 1 ? "es" : ""}
+                    </Typography>
+                </Box>
             )}
-        </div>
+        </Paper>
     );
 }
 

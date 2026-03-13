@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Box, Paper, Grid, Skeleton, Typography } from "@mui/material";
 
 interface IPAMSkeletonProps {
     showStats?: boolean;
@@ -9,15 +10,13 @@ interface IPAMSkeletonProps {
 
 function StatsCardSkeleton() {
     return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 animate-pulse">
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gray-200 rounded-lg" />
-                <div>
-                    <div className="h-3 bg-gray-200 rounded w-20 mb-2" />
-                    <div className="h-6 bg-gray-200 rounded w-12" />
-                </div>
-            </div>
-        </div>
+        <Paper elevation={0} sx={{ p: 2, display: "flex", alignItems: "center", gap: 2, border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+            <Skeleton variant="rounded" width={40} height={40} />
+            <Box>
+                <Skeleton variant="text" width={80} height={20} sx={{ mb: 0.5 }} />
+                <Skeleton variant="text" width={48} height={32} />
+            </Box>
+        </Paper>
     );
 }
 
@@ -25,64 +24,66 @@ function SectionRowSkeleton({ level = 0 }: { level?: number }) {
     const paddingLeft = level * 24 + 16;
 
     return (
-        <div
-            className="flex items-center gap-3 py-3 px-4 border-b border-gray-100 animate-pulse"
-            style={{ paddingLeft: `${paddingLeft}px` }}
+        <Box
+            sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                py: 1.5,
+                px: 2,
+                borderBottom: "1px solid",
+                borderColor: "divider",
+                pl: `${paddingLeft}px`,
+            }}
         >
-            {/* Chevron placeholder */}
-            <div className="w-4 h-4 bg-gray-200 rounded" />
-            {/* Folder icon placeholder */}
-            <div className="w-5 h-5 bg-gray-200 rounded" />
-            {/* Section name */}
-            <div className="flex-1">
-                <div className="h-4 bg-gray-200 rounded w-48" />
-            </div>
-            {/* Description */}
-            <div className="h-3 bg-gray-200 rounded w-32" />
-        </div>
+            <Skeleton variant="rounded" width={16} height={16} />
+            <Skeleton variant="rounded" width={20} height={20} />
+            <Box sx={{ flex: 1 }}>
+                <Skeleton variant="text" width={192} height={24} />
+            </Box>
+            <Skeleton variant="text" width={128} height={20} />
+        </Box>
     );
 }
 
 export default function IPAMSkeleton({ showStats = true, sectionCount = 6 }: IPAMSkeletonProps) {
     return (
-        <div className="p-6">
+        <Box sx={{ p: 3 }}>
             {/* Header Skeleton */}
-            <div className="flex items-center justify-between mb-6 animate-pulse">
-                <div>
-                    <div className="h-8 bg-gray-200 rounded w-64 mb-2" />
-                    <div className="h-4 bg-gray-200 rounded w-96" />
-                </div>
-                <div className="h-10 bg-gray-200 rounded w-32" />
-            </div>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
+                <Box>
+                    <Skeleton variant="text" width={256} height={40} sx={{ mb: 1 }} />
+                    <Skeleton variant="text" width={384} height={24} />
+                </Box>
+                <Skeleton variant="rounded" width={128} height={40} />
+            </Box>
 
             {/* Stats Cards Skeleton */}
             {showStats && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" }, gap: 2, mb: 3 }}>
                     <StatsCardSkeleton />
                     <StatsCardSkeleton />
                     <StatsCardSkeleton />
-                </div>
+                </Box>
             )}
 
             {/* Sections List Skeleton */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200 animate-pulse">
-                    <div className="h-5 bg-gray-200 rounded w-24" />
-                </div>
+            <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+                <Box sx={{ px: 3, py: 2, borderBottom: "1px solid", borderColor: "divider" }}>
+                    <Skeleton variant="text" width={96} height={28} />
+                </Box>
 
-                <div>
-                    {/* Mixed levels to simulate tree structure */}
+                <Box>
                     {Array.from({ length: sectionCount }).map((_, index) => {
-                        // Alternate levels to simulate tree
                         const level = index === 0 ? 0 :
                             index === 1 || index === 2 ? 1 :
                                 index === 3 ? 0 :
                                     index === 4 ? 1 : 0;
                         return <SectionRowSkeleton key={index} level={level} />;
                     })}
-                </div>
-            </div>
-        </div>
+                </Box>
+            </Paper>
+        </Box>
     );
 }
 

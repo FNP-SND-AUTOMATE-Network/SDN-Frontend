@@ -1,30 +1,49 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { ipamService, Subnet, Section, IPAddress } from "@/services/ipamService";
+import { fetchClient, $api } from "@/lib/apiv2/fetch";
+import { components } from "@/lib/apiv2/schema";
 import IPAMTreeSidebar from "@/components/ipam/IPAMTreeSidebar";
 import SubnetsTable from "@/components/ipam/SubnetsTable";
 import IPAddressesTable from "@/components/ipam/IPAddressesTable";
 import SectionFormModal from "@/components/ipam/SectionFormModal";
 import SubnetFormModal from "@/components/ipam/SubnetFormModal";
 import DeleteConfirmModal from "@/components/ipam/DeleteConfirmModal";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-    faFolder,
-    faArrowLeft,
-    faPlus,
-    faNetworkWired,
-    faEdit,
-    faTrash,
-} from "@fortawesome/free-solid-svg-icons";
-import { Button } from "@/components/ui/Button";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ProtectedRoute } from "@/components/auth/AuthGuard";
 import Link from "next/link";
+import {
+    Box,
+    Typography,
+    Paper,
+    Breadcrumbs,
+    Button,
+    IconButton,
+    CircularProgress,
+    Card,
+    CardContent,
+    Grid,
+    Alert,
+    Divider,
+    List,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+} from "@mui/material";
+import {
+    ArrowBack as ArrowBackIcon,
+    Add as AddIcon,
+    Edit as EditIcon,
+    Delete as DeleteIcon,
+    Folder as FolderIcon,
+    AccountTree as AccountTreeIcon,
+} from "@mui/icons-material";
 
 type ViewType = "section" | "subnet";
+type SectionResponse = components["schemas"]["SectionResponse"];
+type SubnetResponse = components["schemas"]["SubnetResponse"];
 
 export default function SectionDetailPage() {
     const params = useParams();
@@ -36,111 +55,90 @@ export default function SectionDetailPage() {
     const [viewType, setViewType] = useState<ViewType>("section");
     const [currentViewId, setCurrentViewId] = useState<string>(initialSectionId);
 
-    // Section data
-    const [subnets, setSubnets] = useState<Subnet[]>([]);
-    const [allSections, setAllSections] = useState<Section[]>([]);
-    const [subSections, setSubSections] = useState<Section[]>([]);
-    const [currentSection, setCurrentSection] = useState<Section | null>(null);
-
-    // Subnet data (for subnet view)
-    const [subnetDetail, setSubnetDetail] = useState<any>(null);
-    const [subnetAddresses, setSubnetAddresses] = useState<IPAddress[]>([]);
-    const [subnetUsage, setSubnetUsage] = useState<any>(null);
-    const [childSubnets, setChildSubnets] = useState<any[]>([]);
-
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
     // Modal states
     const [showSectionModal, setShowSectionModal] = useState(false);
-    const [editingSection, setEditingSection] = useState<Section | null>(null);
+    const [editingSection, setEditingSection] = useState<SectionResponse | null>(null);
     const [showSubnetModal, setShowSubnetModal] = useState(false);
-    const [editingSubnet, setEditingSubnet] = useState<Subnet | null>(null);
+    const [editingSubnet, setEditingSubnet] = useState<SubnetResponse | null>(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteType, setDeleteType] = useState<"section" | "subnet">("section");
-    const [deletingItem, setDeletingItem] = useState<Section | Subnet | null>(null);
+    const [deletingItem, setDeletingItem] = useState<SectionResponse | SubnetResponse | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // Fetch all sections once on mount
-    useEffect(() => {
-        fetchAllSections();
-    }, [token]);
+    // --- React Query Data Fetching ---
 
-    // Fetch data when view changes
-    useEffect(() => {
-        if (viewType === "section") {
-            fetchSectionData(currentViewId);
-        } else {
-            fetchSubnetData(currentViewId);
-        }
-    }, [currentViewId, viewType, token]);
+    // All sections for tree
+    const { data: sectionsData, refetch: refetchSections } = $api.useQuery(
+        "get",
+        "/ipam/sections",
+        {},
+        { enabled: !!token }
+    );
+    const allSections = sectionsData?.sections || [];
+    
+    // For section view
+    const { 
+        data: sectionSubnetsData, 
+        isLoading: isLoadingSection, 
+        error: sectionError,
+        refetch: refetchSectionSubnets
+    } = $api.useQuery(
+        "get",
+        "/ipam/sections/{section_id}/subnets",
+        { params: { path: { section_id: currentViewId } } },
+        { enabled: !!token && viewType === "section" }
+    );
+    const subnets = sectionSubnetsData?.subnets || [];
+    const currentSection = allSections.find((s) => s.id === currentViewId);
+    const subSections = allSections.filter((s) => s.master_section === currentViewId);
+    const parentSubnets = subnets.filter((s: any) => !s.master_subnet_id || s.master_subnet_id === "");
 
-    const fetchAllSections = async () => {
-        if (!token) return;
-        try {
-            const sectionsResponse = await ipamService.getSections(token);
-            setAllSections(sectionsResponse.sections);
-        } catch (err: any) {
-            console.error("Error fetching sections:", err);
-        }
-    };
+    // For subnet view
+    const {
+        data: subnetDetailData,
+        isLoading: isLoadingSubnetDetail,
+        error: subnetDetailError,
+        refetch: refetchSubnetDetail
+    } = $api.useQuery(
+        "get",
+        "/ipam/subnets/{subnet_id}",
+        { params: { path: { subnet_id: currentViewId } } },
+        { enabled: !!token && viewType === "subnet" }
+    );
+    
+    const { data: subnetAddressesData, refetch: refetchSubnetAddresses } = $api.useQuery(
+        "get",
+        "/ipam/subnets/{subnet_id}/addresses",
+        { params: { path: { subnet_id: currentViewId } } },
+        { enabled: !!token && viewType === "subnet" }
+    );
+    
+    const { data: subnetUsageData } = $api.useQuery(
+        "get",
+        "/ipam/subnets/{subnet_id}/usage",
+        { params: { path: { subnet_id: currentViewId } } },
+        { enabled: !!token && viewType === "subnet" }
+    );
+    
+    const { data: childSubnetsData } = $api.useQuery(
+        "get",
+        "/ipam/subnets/{subnet_id}/children",
+        { params: { path: { subnet_id: currentViewId } } },
+        { enabled: !!token && viewType === "subnet" }
+    );
 
-    const fetchSectionData = async (sectionId: string) => {
-        if (!token) return;
+    const subnetDetail = subnetDetailData as any;
+    const subnetAddresses = subnetAddressesData?.addresses || [];
+    const childSubnets = childSubnetsData?.subnets || [];
+    const subnetUsage = subnetUsageData as any;
+    
+    const usagePercent = subnetUsage?.Used_percent || 0;
+    const freePercent = subnetUsage?.freehosts_percent || 0;
 
-        setIsLoading(true);
-        setError(null);
+    const isLoading = viewType === "section" ? isLoadingSection : isLoadingSubnetDetail;
+    const error = viewType === "section" ? sectionError : subnetDetailError;
 
-        try {
-            const [subnetsResponse, sectionsResponse] = await Promise.all([
-                ipamService.getSectionSubnets(token, sectionId),
-                ipamService.getSections(token),
-            ]);
-
-            setSubnets(subnetsResponse.subnets);
-            setAllSections(sectionsResponse.sections);
-
-            const current = sectionsResponse.sections.find((s) => s.id === sectionId);
-            setCurrentSection(current || null);
-
-            const childSections = sectionsResponse.sections.filter(
-                (s) => s.master_section === sectionId
-            );
-            setSubSections(childSections);
-        } catch (err: any) {
-            console.error("Error fetching section data:", err);
-            setError(err.message || "Failed to load section data");
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const fetchSubnetData = async (subnetId: string) => {
-        if (!token) return;
-
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            const [detailResponse, addressesResponse, usageResponse, childrenResponse] =
-                await Promise.all([
-                    ipamService.getSubnetDetail(token, subnetId),
-                    ipamService.getSubnetAddresses(token, subnetId),
-                    ipamService.getSubnetUsage(token, subnetId),
-                    ipamService.getSubnetChildren(token, subnetId).catch(() => ({ subnets: [], total: 0 })),
-                ]);
-
-            setSubnetDetail(detailResponse);
-            setSubnetAddresses(addressesResponse.addresses);
-            setSubnetUsage(usageResponse);
-            setChildSubnets(childrenResponse.subnets);
-        } catch (err: any) {
-            console.error("Error fetching subnet data:", err);
-            setError(err.message || "Failed to load subnet data");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    // --- Handlers ---
 
     const handleSelectSection = (selectedSectionId: string) => {
         setViewType("section");
@@ -152,7 +150,6 @@ export default function SectionDetailPage() {
         setCurrentViewId(subnetId);
     };
 
-    // Section CRUD handlers
     const handleAddSection = () => {
         setEditingSection(null);
         setShowSectionModal(true);
@@ -160,7 +157,7 @@ export default function SectionDetailPage() {
 
     const handleEditSection = () => {
         if (currentSection) {
-            setEditingSection(currentSection);
+            setEditingSection(currentSection as SectionResponse);
             setShowSectionModal(true);
         }
     };
@@ -168,42 +165,49 @@ export default function SectionDetailPage() {
     const handleDeleteSectionClick = () => {
         if (currentSection) {
             setDeleteType("section");
-            setDeletingItem(currentSection);
+            setDeletingItem(currentSection as SectionResponse);
             setShowDeleteModal(true);
         }
     };
 
-    // Subnet CRUD handlers
     const handleAddSubnet = () => {
         setEditingSubnet(null);
         setShowSubnetModal(true);
     };
 
-    const handleEditSubnet = (subnet: Subnet) => {
+    const handleEditSubnet = (subnet: SubnetResponse) => {
         setEditingSubnet(subnet);
         setShowSubnetModal(true);
     };
 
-    const handleDeleteSubnetClick = (subnet: Subnet) => {
+    const handleDeleteSubnetClick = (subnet: SubnetResponse) => {
         setDeleteType("subnet");
         setDeletingItem(subnet);
         setShowDeleteModal(true);
     };
 
     const handleConfirmDelete = async () => {
-        if (!token || !deletingItem) return;
-
+        if (!deletingItem) return;
         setIsDeleting(true);
         try {
             if (deleteType === "section") {
-                await ipamService.deleteSection(token, deletingItem.id);
+                await fetchClient.DELETE("/ipam/sections/{section_id}", {
+                    params: { path: { section_id: deletingItem.id } }
+                });
                 router.push("/ipam");
             } else {
-                await ipamService.deleteSubnet(token, deletingItem.id);
-                fetchSectionData(currentViewId);
+                await fetchClient.DELETE("/ipam/subnets/{subnet_id}", {
+                    params: { path: { subnet_id: deletingItem.id } }
+                });
+                if (viewType === "section") {
+                    refetchSectionSubnets();
+                } else {
+                    refetchSubnetDetail();
+                }
             }
             setShowDeleteModal(false);
             setDeletingItem(null);
+            refetchSections();
         } catch (err: any) {
             console.error(`Error deleting ${deleteType}:`, err);
             alert(err.message || `Failed to delete ${deleteType}`);
@@ -212,350 +216,261 @@ export default function SectionDetailPage() {
         }
     };
 
-    const handleSectionSuccess = () => {
-        fetchAllSections();
-        fetchSectionData(currentViewId);
-    };
-
-    const handleSubnetSuccess = () => {
-        fetchSectionData(currentViewId);
-    };
-
-    const parentSubnets = subnets.filter((subnet) => {
-        const subnetDetail = subnet as any;
-        return !subnetDetail.master_subnet_id || subnetDetail.master_subnet_id === "";
-    });
-
     const totalItems = subSections.length + parentSubnets.length;
-    const usagePercent = subnetUsage?.Used_percent || 0;
-    const freePercent = subnetUsage?.freehosts_percent || 0;
 
     return (
         <ProtectedRoute>
             <PageLayout>
-                <div className="flex h-[calc(100vh-64px)]">
+                <Box sx={{ display: "flex", height: "calc(100vh - 64px)" }}>
                     {/* Left Sidebar - Tree Navigation */}
-                    <div className="w-80 flex-shrink-0">
+                    <Box sx={{ width: 320, flexShrink: 0 }}>
                         <IPAMTreeSidebar
                             sections={allSections}
-                            subnets={subnets}
+                            subnets={subnets as SubnetResponse[]}
                             currentSectionId={initialSectionId}
                             selectedId={currentViewId}
                             selectedType={viewType}
                             onSelectSection={handleSelectSection}
                             onSelectSubnet={handleSelectSubnet}
                         />
-                    </div>
+                    </Box>
 
                     {/* Right Content Area */}
-                    <div className="flex-1 overflow-y-auto">
-                        <div className="p-6">
-                            {/* Breadcrumb */}
-                            <nav className="mb-4">
-                                <ol className="flex items-center space-x-2 text-sm">
-                                    <li>
-                                        <Link
-                                            href="/ipam"
-                                            className="text-gray-500 hover:text-primary-600 transition-colors"
-                                        >
-                                            IPAM
-                                        </Link>
-                                    </li>
-                                    <li className="text-gray-400">/</li>
-                                    <li className="text-gray-900 font-medium">
-                                        {viewType === "section"
-                                            ? currentSection?.name || `Section ${currentViewId}`
-                                            : `${subnetDetail?.subnet}/${subnetDetail?.mask}` || "Subnet"}
-                                    </li>
-                                </ol>
-                            </nav>
+                    <Box sx={{ flex: 1, overflowY: "auto", bgcolor: "background.default", p: 3 }}>
+                        {/* Breadcrumbs */}
+                        <Breadcrumbs separator="/" sx={{ mb: 3 }}>
+                            <Link href="/ipam" style={{ textDecoration: "none" }}>
+                                <Typography color="text.secondary" sx={{ "&:hover": { color: "primary.main" } }}>IPAM</Typography>
+                            </Link>
+                            <Typography color="text.primary" fontWeight="medium">
+                                {viewType === "section"
+                                    ? currentSection?.name || `Section ${currentViewId}`
+                                    : `${subnetDetail?.subnet}/${subnetDetail?.mask}` || "Subnet"}
+                            </Typography>
+                        </Breadcrumbs>
 
-                            {/* Content based on view type */}
-                            {isLoading ? (
-                                <div className="flex items-center justify-center py-12">
-                                    <div className="text-center">
-                                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-                                        <p className="mt-4 text-gray-600">Loading...</p>
-                                    </div>
-                                </div>
-                            ) : error ? (
-                                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                                    <p className="text-red-800">{error}</p>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() =>
-                                            viewType === "section"
-                                                ? fetchSectionData(currentViewId)
-                                                : fetchSubnetData(currentViewId)
-                                        }
-                                        className="mt-3"
-                                    >
+                        {/* Content based on state */}
+                        {isLoading ? (
+                            <Box sx={{ display: "flex", height: 200, alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 2 }}>
+                                <CircularProgress />
+                                <Typography color="text.secondary">Loading details...</Typography>
+                            </Box>
+                        ) : error ? (
+                            <Alert 
+                                severity="error" 
+                                action={
+                                    <Button color="inherit" size="small" onClick={() => viewType === "section" ? refetchSectionSubnets() : refetchSubnetDetail()}>
                                         Retry
                                     </Button>
-                                </div>
-                            ) : viewType === "section" ? (
-                                // Section View
-                                <>
-                                    {/* Header */}
-                                    <div className="mb-6">
-                                        <div className="flex items-center gap-4 mb-4">
-                                            <button
-                                                onClick={() => router.push("/ipam")}
-                                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                            >
-                                                <FontAwesomeIcon
-                                                    icon={faArrowLeft}
-                                                    className="w-5 h-5 text-gray-600"
-                                                />
-                                            </button>
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                                                        <FontAwesomeIcon
-                                                            icon={faFolder}
-                                                            className="w-6 h-6 text-primary-600"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <h1 className="text-3xl font-bold text-gray-900">
-                                                            {currentSection?.name || "Section Details"}
-                                                        </h1>
-                                                        {currentSection?.description && (
-                                                            <p className="text-sm text-gray-600 mt-1">
-                                                                {currentSection.description}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <Button variant="outline" onClick={handleEditSection}>
-                                                    <FontAwesomeIcon icon={faEdit} className="mr-2" />
-                                                    Edit
-                                                </Button>
-                                                <Button variant="outline" onClick={handleDeleteSectionClick} className="text-red-600 hover:bg-red-50 border-red-200">
-                                                    <FontAwesomeIcon icon={faTrash} className="mr-2" />
-                                                    Delete
-                                                </Button>
-                                                <Button variant="outline" onClick={handleAddSection}>
-                                                    <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                                                    Add Section
-                                                </Button>
-                                                <Button variant="primary" onClick={handleAddSubnet}>
-                                                    <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                                                    Add Subnet
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Stats Cards */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                                            <div className="text-sm text-gray-600">Sub-sections</div>
-                                            <div className="text-2xl font-bold text-gray-900 mt-1">
-                                                {subSections.length}
-                                            </div>
-                                        </div>
-                                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                                            <div className="text-sm text-gray-600">Subnets</div>
-                                            <div className="text-2xl font-bold text-gray-900 mt-1">
-                                                {parentSubnets.length}
-                                            </div>
-                                        </div>
-                                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                                            <div className="text-sm text-gray-600">Total Items</div>
-                                            <div className="text-2xl font-bold text-gray-900 mt-1">
-                                                {totalItems}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Contents */}
-                                    <div>
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h2 className="text-xl font-semibold text-gray-900">Contents</h2>
-                                            <div className="text-sm text-gray-600">
-                                                {totalItems} item{totalItems !== 1 ? "s" : ""}
-                                            </div>
-                                        </div>
-
-                                        {totalItems === 0 ? (
-                                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                                                <FontAwesomeIcon
-                                                    icon={faFolder}
-                                                    className="w-16 h-16 text-gray-300 mx-auto mb-4"
-                                                />
-                                                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                                    No items found
-                                                </h3>
-                                                <p className="text-gray-600 mb-4">
-                                                    Get started by adding sections or subnets
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <SubnetsTable
-                                                subnets={parentSubnets}
-                                                onRefresh={() => fetchSectionData(currentViewId)}
-                                            />
-                                        )}
-                                    </div>
-                                </>
-                            ) : (
-                                // Subnet View
-                                <div className="space-y-6">
-                                    {/* Top Row: Subnet Details + Usage Graph */}
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                        {/* Left Sidebar - Subnet Details */}
-                                        <div className="lg:col-span-1">
-                                            <div className="bg-gray-800 text-white space-y-4 rounded-lg shadow-sm border border-gray-200 p-7 h-full">
-                                                <div>
-                                                    <div className="text-sm text-gray-400 mb-1">Subnet details</div>
-                                                    <div className="text-lg font-semibold">
-                                                        {subnetDetail?.subnet}/{subnetDetail?.mask}
-                                                    </div>
-                                                </div>
-
-                                                <div>
-                                                    <div className="text-sm text-gray-400 mb-1">Subnet description</div>
-                                                    <div className="text-sm">{subnetDetail?.description || "-"}</div>
-                                                </div>
-
-                                                <div>
-                                                    <div className="text-sm text-gray-400 mb-1">Subnet Usage</div>
-                                                    <div className="text-sm">
-                                                        Used: {subnetUsage?.used || 0} | Free: {subnetUsage?.freehosts || 0} (
-                                                        {freePercent.toFixed(1)}%) | Total: {subnetUsage?.maxhosts || 0}
-                                                    </div>
-                                                </div>
-
-                                                {/* Gateway - only show if found in IP addresses */}
-                                                {(() => {
-                                                    const gatewayAddress = subnetAddresses.find(
-                                                        (addr: any) => addr.is_gateway === "1" || addr.is_gateway === 1
-                                                    );
-                                                    return gatewayAddress ? (
-                                                        <div>
-                                                            <div className="text-sm text-gray-400 mb-1">Gateway</div>
-                                                            <div className="text-sm">{(gatewayAddress as any).ip}</div>
-                                                        </div>
-                                                    ) : null;
-                                                })()}
-
-                                                {subnetDetail?.vlan_id && (
-                                                    <div>
-                                                        <div className="text-sm text-gray-400 mb-1">VLAN</div>
-                                                        <div className="text-sm">{subnetDetail.vlan_id}</div>
-                                                    </div>
+                                }
+                            >
+                                {(error as any)?.message || "Failed to load data"}
+                            </Alert>
+                        ) : viewType === "section" ? (
+                            // Section View
+                            <Box>
+                                {/* Header */}
+                                <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", mb: 4 }}>
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                                        <IconButton onClick={() => router.push("/ipam")} sx={{ bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}>
+                                            <ArrowBackIcon />
+                                        </IconButton>
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                                            <Box sx={{ width: 48, height: 48, bgcolor: "primary.lighter", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                <FolderIcon sx={{ color: "primary.main", fontSize: 28 }} />
+                                            </Box>
+                                            <Box>
+                                                <Typography variant="h4" fontWeight="bold" color="text.primary">
+                                                    {currentSection?.name || "Section Details"}
+                                                </Typography>
+                                                {currentSection?.description && (
+                                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                                        {currentSection.description}
+                                                    </Typography>
                                                 )}
-                                            </div>
-                                        </div>
+                                            </Box>
+                                        </Box>
+                                    </Box>
+                                    <Box sx={{ display: "flex", gap: 1 }}>
+                                        <Button variant="outlined" startIcon={<EditIcon />} onClick={handleEditSection}>
+                                            Edit
+                                        </Button>
+                                        <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDeleteSectionClick}>
+                                            Delete
+                                        </Button>
+                                        <Button variant="outlined" startIcon={<AddIcon />} onClick={handleAddSection}>
+                                            Add Section
+                                        </Button>
+                                        <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddSubnet}>
+                                            Add Subnet
+                                        </Button>
+                                    </Box>
+                                </Box>
 
-                                        {/* Right Content Area - Usage Graph */}
-                                        <div className="lg:col-span-2">
-                                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-7 h-full">
-                                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Usage graph</h3>
-                                                <div className="flex items-center justify-center h-64">
-                                                    <div className="relative w-64 h-64">
-                                                        <svg viewBox="0 0 100 100" className="transform -rotate-90">
-                                                            <circle
-                                                                cx="50"
-                                                                cy="50"
-                                                                r="40"
-                                                                fill="none"
-                                                                stroke="#e5e7eb"
-                                                                strokeWidth="20"
-                                                            />
-                                                            <circle
-                                                                cx="50"
-                                                                cy="50"
-                                                                r="40"
-                                                                fill="none"
-                                                                stroke="#10b981"
-                                                                strokeWidth="20"
-                                                                strokeDasharray={`${usagePercent * 2.51} 251`}
-                                                                className="transition-all duration-500"
-                                                            />
-                                                        </svg>
-                                                        <div className="absolute inset-0 flex items-center justify-center">
-                                                            <div className="text-center">
-                                                                <div className="text-3xl font-bold text-gray-900">
-                                                                    {usagePercent.toFixed(1)}%
-                                                                </div>
-                                                                <div className="text-sm text-gray-600">Used</div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                {/* Stats Cards */}
+                                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" }, gap: 3, mb: 4 }}>
+                                    <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
+                                        <CardContent>
+                                            <Typography color="text.secondary" variant="body2" gutterBottom>Sub-sections</Typography>
+                                            <Typography variant="h4" fontWeight="bold">{subSections.length}</Typography>
+                                        </CardContent>
+                                    </Card>
+                                    <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
+                                        <CardContent>
+                                            <Typography color="text.secondary" variant="body2" gutterBottom>Subnets</Typography>
+                                            <Typography variant="h4" fontWeight="bold">{parentSubnets.length}</Typography>
+                                        </CardContent>
+                                    </Card>
+                                    <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
+                                        <CardContent>
+                                            <Typography color="text.secondary" variant="body2" gutterBottom>Total Items</Typography>
+                                            <Typography variant="h4" fontWeight="bold">{totalItems}</Typography>
+                                        </CardContent>
+                                    </Card>
+                                </Box>
 
-                                    {/* Child Subnets - Full Width */}
-                                    {childSubnets.length > 0 && (
-                                        <div>
-                                            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                                                Child Subnets
-                                            </h2>
-                                            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                                                <div className="divide-y divide-gray-100">
-                                                    {childSubnets.map((childSubnet) => (
-                                                        <div
-                                                            key={childSubnet.id}
-                                                            onClick={() => handleSelectSubnet(childSubnet.id)}
-                                                            className="flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                                                        >
-                                                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                                <FontAwesomeIcon
-                                                                    icon={faNetworkWired}
-                                                                    className="w-5 h-5 text-green-600"
-                                                                />
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <h3 className="text-sm font-semibold text-gray-900">
-                                                                    {childSubnet.subnet}/{childSubnet.mask}
-                                                                </h3>
-                                                                {childSubnet.description && (
-                                                                    <p className="text-xs text-gray-600 truncate mt-0.5">
-                                                                        {childSubnet.description}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
+                                {/* Contents */}
+                                <Box>
+                                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                                        <Typography variant="h6" fontWeight="semibold">Contents</Typography>
+                                        <Typography variant="body2" color="text.secondary">{totalItems} item{totalItems !== 1 ? "s" : ""}</Typography>
+                                    </Box>
+
+                                    {totalItems === 0 ? (
+                                        <Paper elevation={0} sx={{ p: 6, textAlign: "center", border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                                            <FolderIcon sx={{ fontSize: 64, color: "text.disabled", mb: 2 }} />
+                                            <Typography variant="h6" color="text.primary" gutterBottom>No items found</Typography>
+                                            <Typography color="text.secondary">Get started by adding sections or subnets</Typography>
+                                        </Paper>
+                                    ) : (
+                                        <SubnetsTable
+                                            subnets={parentSubnets}
+                                            onRefresh={refetchSectionSubnets}
+                                        />
                                     )}
+                                </Box>
+                            </Box>
+                        ) : (
+                            // Subnet View
+                            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1fr 2fr" }, gap: 3 }}>
+                                    {/* Left Sidebar - Subnet Details */}
+                                    <Card sx={{ bgcolor: "grey.900", color: "common.white", p: 3, height: "100%", borderRadius: 2 }}>
+                                        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                                            <Box>
+                                                <Typography variant="body2" color="grey.500" gutterBottom>Subnet details</Typography>
+                                                <Typography variant="h6" fontWeight="semibold">
+                                                    {subnetDetail?.subnet}/{subnetDetail?.mask}
+                                                </Typography>
+                                            </Box>
+                                            <Box>
+                                                <Typography variant="body2" color="grey.500" gutterBottom>Description</Typography>
+                                                <Typography variant="body2">{subnetDetail?.description || "-"}</Typography>
+                                            </Box>
+                                            <Box>
+                                                <Typography variant="body2" color="grey.500" gutterBottom>Usage</Typography>
+                                                <Typography variant="body2">
+                                                    Used: {subnetUsage?.used || 0} | Free: {subnetUsage?.freehosts || 0} ({freePercent.toFixed(1)}%) | Total: {subnetUsage?.maxhosts || 0}
+                                                </Typography>
+                                            </Box>
+                                            {(() => {
+                                                const gatewayAddress = subnetAddresses.find(
+                                                    (addr: any) => addr.is_gateway === "1" || addr.is_gateway === 1
+                                                );
+                                                return gatewayAddress ? (
+                                                    <Box>
+                                                        <Typography variant="body2" color="grey.500" gutterBottom>Gateway</Typography>
+                                                        <Typography variant="body2">{(gatewayAddress as any).ip}</Typography>
+                                                    </Box>
+                                                ) : null;
+                                            })()}
+                                            {subnetDetail?.vlan_id && (
+                                                <Box>
+                                                    <Typography variant="body2" color="grey.500" gutterBottom>VLAN</Typography>
+                                                    <Typography variant="body2">{subnetDetail.vlan_id}</Typography>
+                                                </Box>
+                                            )}
+                                        </Box>
+                                    </Card>
 
-                                    {/* IP Addresses - Full Width */}
-                                    <div>
-                                        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                                            IP Addresses
-                                        </h2>
-                                        {subnetAddresses.length === 0 ? (
-                                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                                                <FontAwesomeIcon
-                                                    icon={faNetworkWired}
-                                                    className="w-16 h-16 text-gray-300 mx-auto mb-4"
-                                                />
-                                                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                                    No IP addresses found
-                                                </h3>
-                                            </div>
-                                        ) : (
-                                            <IPAddressesTable
-                                                addresses={subnetAddresses}
-                                                onRefresh={() => fetchSubnetData(currentViewId)}
-                                            />
-                                        )}
-                                    </div>
-                                </div>
-                            )}
+                                    {/* Right Content Area - Usage Graph */}
+                                    <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider", p: 3, height: "100%", borderRadius: 2 }}>
+                                        <Typography variant="h6" fontWeight="semibold" gutterBottom>Usage graph</Typography>
+                                        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: 250 }}>
+                                            <Box sx={{ position: "relative", width: 200, height: 200 }}>
+                                                <svg viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)", width: "100%", height: "100%" }}>
+                                                    <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="20" />
+                                                    <circle
+                                                        cx="50"
+                                                        cy="50"
+                                                        r="40"
+                                                        fill="none"
+                                                        stroke="#10b981"
+                                                        strokeWidth="20"
+                                                        strokeDasharray={`${usagePercent * 2.51} 251`}
+                                                        style={{ transition: "stroke-dasharray 0.5s ease" }}
+                                                    />
+                                                </svg>
+                                                <Box sx={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                                                    <Typography variant="h4" fontWeight="bold">{usagePercent.toFixed(1)}%</Typography>
+                                                    <Typography variant="body2" color="text.secondary">Used</Typography>
+                                                </Box>
+                                            </Box>
+                                        </Box>
+                                    </Card>
+                                </Box>
 
-                        </div>
-                    </div>
-                </div>
+                                {/* Child Subnets */}
+                                {childSubnets.length > 0 && (
+                                    <Box>
+                                        <Typography variant="h6" fontWeight="semibold" gutterBottom>Child Subnets</Typography>
+                                        <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                                            <List disablePadding>
+                                                {childSubnets.map((childSubnet: any, index: number) => (
+                                                    <div key={childSubnet.id}>
+                                                        {index > 0 && <Divider />}
+                                                        <ListItemButton
+                                                            onClick={() => handleSelectSubnet(childSubnet.id)}
+                                                            sx={{ py: 2, "&:hover": { bgcolor: "action.hover" } }}
+                                                        >
+                                                            <ListItemIcon>
+                                                                <Box sx={{ width: 40, height: 40, bgcolor: "success.lighter", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                                    <AccountTreeIcon sx={{ color: "success.main" }} />
+                                                                </Box>
+                                                            </ListItemIcon>
+                                                            <ListItemText 
+                                                                primary={`${childSubnet.subnet}/${childSubnet.mask}`}
+                                                                secondary={childSubnet.description}
+                                                                primaryTypographyProps={{ fontWeight: "semibold" }}
+                                                                secondaryTypographyProps={{ noWrap: true }}
+                                                            />
+                                                        </ListItemButton>
+                                                    </div>
+                                                ))}
+                                            </List>
+                                        </Paper>
+                                    </Box>
+                                )}
+
+                                {/* IP Addresses */}
+                                <Box>
+                                    <Typography variant="h6" fontWeight="semibold" gutterBottom>IP Addresses</Typography>
+                                    {subnetAddresses.length === 0 ? (
+                                        <Paper elevation={0} sx={{ p: 6, textAlign: "center", border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                                            <AccountTreeIcon sx={{ fontSize: 48, color: "text.disabled", mb: 2 }} />
+                                            <Typography variant="h6" color="text.primary" gutterBottom>No IP addresses found</Typography>
+                                        </Paper>
+                                    ) : (
+                                        <IPAddressesTable
+                                            addresses={subnetAddresses}
+                                            onRefresh={refetchSubnetAddresses}
+                                        />
+                                    )}
+                                </Box>
+                            </Box>
+                        )}
+                    </Box>
+                </Box>
 
                 {/* Section Form Modal */}
                 <SectionFormModal
@@ -564,10 +479,10 @@ export default function SectionDetailPage() {
                         setShowSectionModal(false);
                         setEditingSection(null);
                     }}
-                    onSuccess={handleSectionSuccess}
-                    section={editingSection}
+                    onSuccess={() => { refetchSections(); refetchSectionSubnets(); }}
+                    section={editingSection as any}
                     parentSectionId={currentViewId}
-                    allSections={allSections}
+                    allSections={allSections as any}
                 />
 
                 {/* Subnet Form Modal */}
@@ -577,10 +492,10 @@ export default function SectionDetailPage() {
                         setShowSubnetModal(false);
                         setEditingSubnet(null);
                     }}
-                    onSuccess={handleSubnetSuccess}
-                    subnet={editingSubnet}
+                    onSuccess={() => { refetchSectionSubnets(); refetchSubnetDetail(); }}
+                    subnet={editingSubnet as any}
                     sectionId={viewType === "section" ? currentViewId : (subnetDetail?.section_id || currentViewId)}
-                    allSections={allSections}
+                    allSections={allSections as any}
                 />
 
                 {/* Delete Confirmation Modal */}
@@ -593,7 +508,7 @@ export default function SectionDetailPage() {
                     onConfirm={handleConfirmDelete}
                     title={deleteType === "section" ? "Delete Section" : "Delete Subnet"}
                     message={`Are you sure you want to delete this ${deleteType}? This action cannot be undone.`}
-                    itemName={deletingItem ? (deleteType === "section" ? (deletingItem as Section).name : `${(deletingItem as Subnet).subnet}/${(deletingItem as Subnet).mask}`) : ""}
+                    itemName={deletingItem ? (deleteType === "section" ? (deletingItem as SectionResponse).name : `${(deletingItem as SubnetResponse).subnet}/${(deletingItem as SubnetResponse).mask}`) : ""}
                     isLoading={isDeleting}
                 />
             </PageLayout>
