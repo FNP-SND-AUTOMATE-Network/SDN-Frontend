@@ -168,7 +168,7 @@ export default function ConfigPreviewModal({
                             flex: 1,
                             p: 2,
                             overflowY: "auto",
-                            fontFamily: 'SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace',
+                            fontFamily: 'SFMono-Regular',
                             fontSize: "0.875rem",
                             color: "#E4E4E7",
                             whiteSpace: "pre-wrap",

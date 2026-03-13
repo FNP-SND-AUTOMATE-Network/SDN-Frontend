@@ -6,8 +6,7 @@ import {
     faChevronRight,
     faChevronDown,
     faFolder,
-    faFolderOpen,
-    faSpinner,
+    faFolderOpen
 } from "@fortawesome/free-solid-svg-icons";
 import { Server, Router as RouterIcon, Shield, Wifi, Box as BoxIcon } from "lucide-react";
 import {
@@ -18,8 +17,7 @@ import {
     Collapse,
     CircularProgress,
     Box,
-    Typography,
-    Divider,
+    Typography
 } from "@mui/material";
 import { $api } from "@/lib/apiv2/fetch";
 import { components } from "@/lib/apiv2/schema";

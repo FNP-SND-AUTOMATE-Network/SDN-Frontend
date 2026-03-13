@@ -190,23 +190,13 @@ export default function TopologyDeviceTable({
         }
     };
 
-    if (devices.length === 0) {
-        return (
-            <Paper elevation={0} sx={{ p: 4, textAlign: "center", border: 1, borderColor: "divider", borderRadius: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                    No devices to display
-                </Typography>
-            </Paper>
-        );
-    }
-
     const currentDevice = devices.find(d => d.id === menuDeviceId);
 
     return (
-        <Box>
-            <TableContainer component={Paper} elevation={0} sx={{ border: 1, borderColor: "divider", borderRadius: 2, overflowX: "auto" }}>
+        <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+            <TableContainer sx={{ overflowX: "auto", flexGrow: 1 }}>
                 <Table sx={{ minWidth: 650 }} aria-label="topology devices table">
-                    <TableHead sx={{ bgcolor: "grey.50" }}>
+                    <TableHead sx={{ bgcolor: "grey.50", position: 'sticky', top: 0, zIndex: 1 }}>
                         <TableRow>
                             <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>Name</TableCell>
                             <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>Type</TableCell>
@@ -216,7 +206,16 @@ export default function TopologyDeviceTable({
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {devices.map((device) => {
+                        {devices.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={5} sx={{ py: 10, borderBottom: 0, textAlign: "center" }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        No devices to display
+                                    </Typography>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                        devices.map((device) => {
                             const isSelected = selectedDeviceId === device.id;
                             const deviceType = (device.type as string) || "OTHER";
                             const typeProps = typeConfig[deviceType] || typeConfig.OTHER;
@@ -263,7 +262,6 @@ export default function TopologyDeviceTable({
                                     </TableCell>
                                     <TableCell>
                                         <Chip
-                                            icon={<FontAwesomeIcon icon={faCircle} className="w-2 h-2 ml-1.5" />}
                                             label={statusProps.label}
                                             size="small"
                                             sx={{
@@ -285,7 +283,7 @@ export default function TopologyDeviceTable({
                                     </TableCell>
                                 </TableRow>
                             );
-                        })}
+                        }))}
                     </TableBody>
                 </Table>
             </TableContainer>
