@@ -189,7 +189,7 @@ export default function TemplateDetailModal({
                 <Paper
                     variant="outlined"
                     sx={{
-                        bgcolor: "#1e293b", // slate-800 or near black
+                        bgcolor: "#1E1E1E", // slate-800 or near black
                         p: 2,
                         borderRadius: 2,
                         overflowX: "auto",
