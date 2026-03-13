@@ -59,7 +59,7 @@ function StatusCard({
     return (
         <Paper variant="outlined" sx={{ flex: 1, minWidth: 140, p: 2, borderRadius: 2 }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                <Box sx={{ color, display: "flex", alignItems: "center"}}>
+                <Box sx={{ color, display: "flex", alignItems: "center" }}>
                     {icon}
                 </Box>
                 <Typography
@@ -120,15 +120,6 @@ export default function BackupHeader({
             </Box>
 
             {/* Status Cards */}
-            {statusCounts && (
-                <Stack direction="row" spacing={2} sx={{ overflowX: "auto", mb: 3 }}>
-                    <StatusCard label="Total Devices" count={statusCounts.total} color="#3B82F6" icon={<Monitor />} />
-                    <StatusCard label="Online" count={statusCounts.online} color="#22C55E" icon={<TaskAlt />} />
-                    <StatusCard label="Last Success" count={statusCounts.lastSuccess} color="#22C55E" icon={<AccessTime />} />
-                    <StatusCard label="Last Failed" count={statusCounts.lastFailed} color="#EF4444" icon={<HighlightOff />} />
-                </Stack>
-            )}
-
             {/* Search + Filters + Action */}
             <Stack direction={{ xs: "column", sm: "row" }}
                 spacing={2}
@@ -213,6 +204,15 @@ export default function BackupHeader({
                     </Button>
                 </Box>
             </Stack>
+            {statusCounts && (
+                <Stack direction="row" spacing={2} sx={{ overflowX: "auto", mb: 3 }}>
+                    <StatusCard label="Total Devices" count={statusCounts.total} color="#3B82F6" icon={<Monitor />} />
+                    <StatusCard label="Online" count={statusCounts.online} color="#22C55E" icon={<TaskAlt />} />
+                    <StatusCard label="Last Success" count={statusCounts.lastSuccess} color="#22C55E" icon={<AccessTime />} />
+                    <StatusCard label="Last Failed" count={statusCounts.lastFailed} color="#EF4444" icon={<HighlightOff />} />
+                </Stack>
+            )}
+
         </Box>
     );
 }
