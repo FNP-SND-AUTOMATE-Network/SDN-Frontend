@@ -1,8 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronUp, faChevronDown, faTable } from "@fortawesome/free-solid-svg-icons";
+import {
+    Box,
+    Typography,
+    Grid,
+    Paper,
+    Button,
+    Divider
+} from "@mui/material";
+import {
+    KeyboardArrowUp as KeyboardArrowUpIcon,
+    KeyboardArrowDown as KeyboardArrowDownIcon,
+    TableChart as TableChartIcon,
+} from "@mui/icons-material";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ProtectedRoute } from "@/components/auth/AuthGuard";
 import TopologySiteTree from "@/components/topology/TopologySiteTree";
@@ -10,7 +21,7 @@ import TopologyCanvas from "@/components/topology/TopologyCanvas";
 import TopologyDeviceTable from "@/components/topology/TopologyDeviceTable";
 import { useAuth } from "@/contexts/AuthContext";
 import { $api } from "@/lib/apiv2/fetch";
-import { paths, components } from "@/lib/apiv2/schema";
+import { components } from "@/lib/apiv2/schema";
 
 export type TopologyDeviceItem = components["schemas"]["DeviceNetworkResponse"];
 
@@ -53,73 +64,101 @@ export default function TopologyPage() {
         <ProtectedRoute>
             <PageLayout>
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-3xl font-bold text-gray-900 font-sf-pro-display">
-                        Topology
-                    </h1>
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
+                    <Box>
+                        <Typography variant="h5" fontWeight={700}>
+                            Topology
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Topology canvas and device table
+                        </Typography>
+                    </Box>
                     {selectedSiteId && (
-                        <div className="text-sm text-gray-500">
+                        <Typography variant="body2" color="text.secondary">
                             {devices.length} device{devices.length !== 1 ? "s" : ""} found
-                        </div>
+                        </Typography>
                     )}
-                </div>
+                </Box>
 
                 {/* Main Grid Layout */}
-                <div className="grid grid-cols-12 gap-6" style={{ height: "calc(100vh - 240px)" }}>
+                <Grid container spacing={3} sx={{ height: "calc(100vh - 160px)" }}>
                     {/* Left Sidebar - Sites Tree */}
-                    <div className="col-span-2 h-full rounded-lg shadow-sm overflow-hidden">
-                        <TopologySiteTree
-                            onSiteSelect={handleSiteSelect}
-                            onDeviceSelect={handleDeviceSelect}
-                            selectedSiteId={selectedSiteId}
-                            selectedDeviceId={selectedDeviceId}
-                        />
-                    </div>
+                    <Grid size={{ xs: 2 }} sx={{ height: "100%" }}>
+                        <Paper elevation={0} sx={{ height: "100%", borderRadius: 2, overflow: "hidden", border: "1px solid", borderColor: "divider" }}>
+                            <TopologySiteTree
+                                onSiteSelect={handleSiteSelect}
+                                onDeviceSelect={handleDeviceSelect}
+                                selectedSiteId={selectedSiteId}
+                                selectedDeviceId={selectedDeviceId}
+                            />
+                        </Paper>
+                    </Grid>
 
                     {/* Right Side - Canvas + Table */}
-                    <div className="col-span-10 flex flex-col h-full">
+                    <Grid size={{ xs: 10 }} sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
                         {/* Topology Canvas - Expands when table is collapsed */}
-                        <div
-                            className="rounded-lg shadow-sm overflow-hidden transition-all duration-300"
-                            style={{ flex: isTableCollapsed ? 1 : 3 }}
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                flex: isTableCollapsed ? 1 : 3,
+                                transition: "all 0.3s ease-in-out",
+                                borderRadius: 2,
+                                overflow: "hidden",
+                                display: "flex",
+                                flexDirection: "column",
+                                border: "1px solid",
+                                borderColor: "divider",
+                            }}
                         >
                             <TopologyCanvas selectedSiteId={selectedSiteId} />
-                        </div>
+                        </Paper>
 
                         {/* Toggle Button */}
-                        <div className="flex items-center py-1">
-                            <button
+                        <Box sx={{ display: "flex", alignItems: "center", py: 1 }}>
+                            <Button
+                                variant="text"
+                                color="inherit"
+                                size="small"
                                 onClick={() => setIsTableCollapsed(!isTableCollapsed)}
-                                className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                startIcon={<TableChartIcon fontSize="small" />}
+                                endIcon={isTableCollapsed ? <KeyboardArrowDownIcon fontSize="small" /> : <KeyboardArrowUpIcon fontSize="small" />}
+                                sx={{
+                                    textTransform: "none",
+                                    color: "text.secondary",
+                                    fontSize: "0.75rem",
+                                    "&:hover": { color: "text.primary", bgcolor: "action.hover" },
+                                }}
                             >
-                                <FontAwesomeIcon
-                                    icon={faTable}
-                                    className="w-3 h-3"
-                                />
                                 Devices
-                                <FontAwesomeIcon
-                                    icon={isTableCollapsed ? faChevronDown : faChevronUp}
-                                    className="w-3 h-3"
-                                />
-                            </button>
-                            <div className="flex-1 h-px bg-gray-200 ml-2" />
-                        </div>
+                            </Button>
+                            <Divider sx={{ flexGrow: 1, ml: 2 }} />
+                        </Box>
 
                         {/* Device Table - Collapsible */}
-                        <div
-                            className={`overflow-hidden transition-all duration-300 ${isTableCollapsed ? "flex-none h-0" : "flex-[2]"
-                                }`}
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                flex: isTableCollapsed ? "none" : 2,
+                                height: isTableCollapsed ? 0 : "auto",
+                                transition: "all 0.3s ease-in-out",
+                                overflow: "hidden",
+                                display: "flex",
+                                flexDirection: "column",
+                                minHeight: 0,
+                                borderRadius: 2,
+                                border: isTableCollapsed ? "none" : 1,
+                                borderColor: "divider",
+                                bgcolor: "background.paper",
+                            }}
                         >
-                            <div className="h-full overflow-auto">
-                                <TopologyDeviceTable
-                                    devices={devices as any}
-                                    selectedDeviceId={selectedDeviceId}
-                                    onDeviceSelect={handleDeviceSelect}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                            <TopologyDeviceTable
+                                devices={devices as any}
+                                selectedDeviceId={selectedDeviceId}
+                                onDeviceSelect={handleDeviceSelect}
+                            />
+                        </Paper>
+                    </Grid>
+                </Grid>
             </PageLayout>
         </ProtectedRoute>
     );
