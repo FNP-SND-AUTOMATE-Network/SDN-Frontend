@@ -6,8 +6,7 @@ import {
     faCog,
     faDatabase,
     faFile,
-    faEllipsisVertical,
-    faCircle,
+    faEllipsisVertical
 } from "@fortawesome/free-solid-svg-icons";
 import {
     Router as RouterIcon,
@@ -31,11 +30,7 @@ import {
     MenuItem,
     ListItemIcon,
     ListItemText,
-    Chip,
-    Snackbar,
-    Alert,
-    Stack,
-    CircularProgress,
+    Chip
 } from "@mui/material";
 
 import { fetchClient } from "@/lib/apiv2/fetch";

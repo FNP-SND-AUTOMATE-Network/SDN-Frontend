@@ -4,12 +4,9 @@ import {
   faNetworkWired,
   faShieldAlt,
   faChartLine,
-  faArrowRight,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Navbar } from "@/components/ui/Navbar";
-import { Button } from "@/components/ui/Button";
-import Link from "next/link";
 import { PublicRoute } from "@/components/auth/AuthGuard";
 
 export default function HomePage() {

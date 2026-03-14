@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes, faEye, faEyeSlash, faChevronUp, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { Alert } from "@/components/ui/Alert";
+import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 import { Tag } from "@/services/tagService";
 import { LocalSite } from "@/services/siteService";
 import { OperatingSystem } from "@/services/operatingSystemService";
@@ -267,14 +267,6 @@ export default function DeviceModal({
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", overflow: "hidden", flex: 1 }}>
         <DialogContent dividers sx={{ p: 3, bgcolor: "grey.50", overflowY: "auto" }}>
-          {formError && (
-            <Box sx={{ mb: 3 }}>
-              <Alert variant="error" closable onClose={() => setFormError(null)}>
-                {formError}
-              </Alert>
-            </Box>
-          )}
-
           <Stack spacing={3}>
             {/* Basic Information Card */}
             <Box sx={{ bgcolor: "background.paper", p: 3, borderRadius: 2, border: 1, borderColor: "grey.200", boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)" }}>
@@ -660,6 +652,13 @@ export default function DeviceModal({
           </Button>
         </DialogActions>
       </form>
+
+      <MuiSnackbar
+        open={!!formError}
+        message={formError || ""}
+        severity="error"
+        onClose={() => setFormError(null)}
+      />
     </Dialog>
   );
 }
