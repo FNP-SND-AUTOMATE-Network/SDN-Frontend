@@ -19,11 +19,7 @@ export function SettingPanel({ device, nodeId, onStageIntent }: ConfigPanelProps
     const [dnsDomain, setDnsDomain] = useState("");
     const [ntpServer, setNtpServer] = useState("");
 
-    useEffect(() => {
-        if (device) {
-            setHostname(device.device_name || "");
-        }
-    }, [device]);
+    useEffect(() => { }, [device]);
 
     const handleStage = (intent: string, params: Record<string, any>, label: string) => {
         if (onStageIntent) {
