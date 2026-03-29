@@ -160,7 +160,12 @@ export const NotificationBell: React.FC = () => {
                         </Typography>
                         <Typography variant="caption" component="div" color="text.disabled" sx={{ mt: 0.5 }}>
                           {(() => {
-                            const d = new Date(alert.received_at);
+                            let dateStr = alert.received_at || "";
+                            // If timestamp is missing timezone indicator, append "Z" for UTC
+                            if (dateStr && !dateStr.endsWith("Z") && !dateStr.includes("+") && !dateStr.includes("-", 10)) {
+                              dateStr += "Z";
+                            }
+                            const d = new Date(dateStr);
                             return !isNaN(d.getTime()) 
                               ? formatDistanceToNow(d, { addSuffix: true }) 
                               : "Just now";
