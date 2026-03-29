@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -131,6 +132,8 @@ export const Navbar: React.FC<NavbarProps> = ({ className = "" }) => {
           </div>
 
           <div className="flex items-center space-x-4 ml-auto">
+            <NotificationBell />
+            
             {/* User Avatar and Name */}
             <div className="relative" ref={dropdownRef}>
               <button

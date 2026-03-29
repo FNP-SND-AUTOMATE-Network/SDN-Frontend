@@ -4,6 +4,7 @@ import "./globals.css";
 import MuiProvider from "@/components/providers/MuiProvider";
 import QueryProvider from "@/components/providers/QueryProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AlertProvider } from "@/contexts/AlertContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,7 +38,9 @@ export default function RootLayout({
         <AuthProvider>
           <QueryProvider>
             <MuiProvider>
-              {children}
+              <AlertProvider>
+                {children}
+              </AlertProvider>
             </MuiProvider>
           </QueryProvider>
         </AuthProvider>
