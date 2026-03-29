@@ -45,6 +45,9 @@ import { DeviceInterfaceForm, InterfaceDraft } from "../device/device-detail/Dev
 import { StagedIntent } from "./config-panels/types";
 import { TopologyConfigSidebar, SUB_ITEMS } from "./TopologyConfigSidebar";
 import { TopologyConfigConfirmModal } from "./TopologyConfigConfirmModal";
+import { components } from "@/lib/apiv2/schema";
+
+type BulkIntentItemResult = components["schemas"]["BulkIntentItemResult"];
 
 // DeviceNetwork type derived from schema paths
 type DeviceNetwork =
@@ -111,8 +114,11 @@ export default function TopologyConfigModal({
 
     // ==================== Staged Intents (Bulk Queue) ====================
     const [stagedIntents, setStagedIntents] = useState<StagedIntent[]>([]);
-    const [isBulkPushing, setIsBulkPushing] = useState(false);
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+    
+    // Bulk execution states
+    const [isBulkPushing, setIsBulkPushing] = useState(false);
+    const [bulkResults, setBulkResults] = useState<BulkIntentItemResult[] | null>(null);
 
     /** Accept a single intent OR an array of intents (from DeviceInterfaceForm) */
     const handleStageIntent = useCallback((staged: StagedIntent | StagedIntent[]) => {
@@ -284,10 +290,10 @@ export default function TopologyConfigModal({
 
         // ===== BULK PUSH: Send all stagedIntents via /intents/bulk =====
         if (stagedIntents.length === 0) {
-            showWarning("No configuration changes staged for this device.");
+            showWarning("No pending intent");
             return;
         }
-
+        setBulkResults(null);
         setConfirmDialogOpen(true);
     };
 
@@ -316,16 +322,37 @@ export default function TopologyConfigModal({
 
             const bulkRes = data as any;
             if (response?.status === 200 || bulkRes?.success) {
-                showSuccess(`✅ ส่ง Config ทั้งหมด ${bulkRes.total_executed} รายการสำเร็จ`);
-                setStagedIntents([]);
+                showSuccess(`Config Push ${bulkRes.total_executed} success`);
+                if (bulkRes.results) setBulkResults(bulkRes.results);
             } else if (response?.status === 207) {
                 showWarning(
-                    `⚠️ สำเร็จ ${bulkRes.total_executed - bulkRes.total_failed} / ${bulkRes.total_executed} รายการ (${bulkRes.total_failed} ล้มเหลว)`
+                    `Config Push ${bulkRes.total_executed - bulkRes.total_failed} / ${bulkRes.total_executed} success (${bulkRes.total_failed} failed)`
                 );
-                setStagedIntents([]);
+                if (bulkRes.results) setBulkResults(bulkRes.results);
             } else {
                 showError("Unexpected response from bulk endpoint");
+                if (bulkRes?.results) setBulkResults(bulkRes.results);
             }
+
+            // Trigger sync and reload interface list if there were successful items (since interfaces might be updated)
+            if (bulkRes?.success || (bulkRes?.succeeded && bulkRes.succeeded > 0) || response?.status === 200 || response?.status === 207) {
+                try {
+                    fetchClient.GET("/interfaces/odl/{node_id}/sync", {
+                        params: { path: { node_id: nodeId } }
+                    }).then(() => {
+                        // Reload if user is currently looking at interface tab or list is expanded
+                        if (activeSection.startsWith("interface") || expandedSections.has("interface")) {
+                            loadSectionData("interface");
+                            if (activeSection.startsWith("interface-")) {
+                                loadSectionData(activeSection);
+                            }
+                        }
+                    }).catch(e => console.error("Auto-sync failed", e));
+                } catch (syncErr) {
+                    console.error("Auto-sync failed directly", syncErr);
+                }
+            }
+
         } catch (error: any) {
             console.error("❌ Bulk Push ERROR:", error);
             showError(`Failed to push bulk config: ${error?.message || "Unknown error"}`);
@@ -553,10 +580,24 @@ export default function TopologyConfigModal({
 
             <TopologyConfigConfirmModal
                 open={confirmDialogOpen}
-                onClose={() => setConfirmDialogOpen(false)}
+                onClose={() => {
+                    setConfirmDialogOpen(false);
+                    // only clear if done
+                    if (bulkResults !== null) {
+                        setStagedIntents([]);
+                        setBulkResults(null);
+                    }
+                }}
+                onReset={() => {
+                    setConfirmDialogOpen(false);
+                    setStagedIntents([]);
+                    setBulkResults(null);
+                }}
                 deviceName={device.device_name || ""}
                 nodeId={nodeId}
                 stagedIntents={stagedIntents}
+                isPushing={isBulkPushing}
+                results={bulkResults}
                 onConfirm={executeBulkPush}
             />
 
