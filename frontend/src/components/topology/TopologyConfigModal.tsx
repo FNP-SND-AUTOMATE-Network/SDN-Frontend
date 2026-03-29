@@ -313,7 +313,7 @@ export default function TopologyConfigModal({
 
             const bulkRes = data as any;
             if (response?.status === 200 || bulkRes?.success) {
-                showSuccess(`Config Push ${bulkRes.total_executed} success`);
+                showSuccess(`Config Push success`);
                 
                 // Show the success results on the modal temporarily
                 if (bulkRes.results) {
@@ -327,6 +327,7 @@ export default function TopologyConfigModal({
                     setBulkResults(null);
                     setStagedIntents([]);
                     setConfirmDialogOpen(false);
+                    hideSnackbar();
                     onClose();
                 }, 1500);
             } else if (response?.status === 207) {
@@ -458,7 +459,10 @@ export default function TopologyConfigModal({
         <>
             <Dialog
                 open={isOpen}
-                onClose={onClose}
+                onClose={() => {
+                    hideSnackbar();
+                    onClose();
+                }}
                 maxWidth="md"
                 fullWidth
                 PaperProps={{ sx: { maxHeight: "85vh", borderRadius: 3 } }}
@@ -474,7 +478,7 @@ export default function TopologyConfigModal({
                             <Chip label={nodeId} size="small" variant="outlined" sx={{ fontFamily: "monospace", fontSize: "0.7rem" }} />
                         )}
                     </Stack>
-                    <IconButton onClick={onClose} size="small">
+                    <IconButton onClick={() => { hideSnackbar(); onClose(); }} size="small">
                         <Close />
                     </IconButton>
                 </DialogTitle>
