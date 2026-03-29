@@ -10,23 +10,16 @@ import {
     IconButton,
     Tabs,
     Tab,
-    List,
-    ListItemButton,
-    ListItemText,
-    Collapse,
     CircularProgress,
     Button,
     Chip,
     Stack,
     Divider,
     Badge,
-    Alert,
     LinearProgress,
 } from "@mui/material";
 import {
     Close,
-    ExpandMore,
-    ChevronRight,
     Save,
     LanOutlined,
     DeleteSweep,
@@ -298,7 +291,6 @@ export default function TopologyConfigModal({
 
     const executeBulkPush = async () => {
         setIsBulkPushing(true);
-        setConfirmDialogOpen(false);
         try {
             const payload = {
                 intents: stagedIntents.map(({ intent, node_id, params }) => ({
@@ -323,11 +315,20 @@ export default function TopologyConfigModal({
             if (response?.status === 200 || bulkRes?.success) {
                 showSuccess(`Config Push ${bulkRes.total_executed} success`);
                 
-                // Clear state and close the modal completely on full success
-                setBulkResults(null);
-                setStagedIntents([]);
-                setConfirmDialogOpen(false);
-                onClose();
+                // Show the success results on the modal temporarily
+                if (bulkRes.results) {
+                    setBulkResults(bulkRes.results);
+                } else {
+                    setBulkResults(stagedIntents.map((_, i) => ({ index: i, status: "SUCCESS", message: "Success" } as any)));
+                }
+
+                // Wait 1.5 seconds for user to see the success state, then close the modal completely
+                setTimeout(() => {
+                    setBulkResults(null);
+                    setStagedIntents([]);
+                    setConfirmDialogOpen(false);
+                    onClose();
+                }, 1500);
             } else if (response?.status === 207) {
                 showWarning(
                     `Config Push ${bulkRes.total_executed - bulkRes.total_failed} / ${bulkRes.total_executed} success (${bulkRes.total_failed} failed)`
