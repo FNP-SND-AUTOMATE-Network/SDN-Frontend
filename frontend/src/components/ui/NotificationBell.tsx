@@ -136,8 +136,9 @@ export const NotificationBell: React.FC = () => {
                     {getIconForSeverity(alert.severity)}
                   </ListItemIcon>
                   <ListItemText
+                    disableTypography
                     primary={
-                      <Typography variant="body2" fontWeight={!alert.isRead ? 600 : 500} noWrap>
+                      <Typography variant="body2" component="div" fontWeight={!alert.isRead ? 600 : 500} noWrap>
                         {alert.host_name} - {alert.severity_label}
                       </Typography>
                     }
@@ -145,6 +146,7 @@ export const NotificationBell: React.FC = () => {
                       <Box sx={{ mt: 0.5 }}>
                         <Typography
                           variant="caption"
+                          component="div"
                           color="text.secondary"
                           sx={{
                             display: "-webkit-box",
@@ -156,7 +158,7 @@ export const NotificationBell: React.FC = () => {
                         >
                           {alert.trigger_name}
                         </Typography>
-                        <Typography variant="caption" color="text.disabled" sx={{ display: "block", mt: 0.5 }}>
+                        <Typography variant="caption" component="div" color="text.disabled" sx={{ mt: 0.5 }}>
                           {formatDistanceToNow(new Date(alert.received_at), { addSuffix: true })}
                         </Typography>
                       </Box>
