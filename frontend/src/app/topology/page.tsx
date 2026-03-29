@@ -28,7 +28,7 @@ export type TopologyDeviceItem = components["schemas"]["DeviceNetworkResponse"];
 export default function TopologyPage() {
     const { token } = useAuth();
     const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
-    const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+    const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
     const [isTableCollapsed, setIsTableCollapsed] = useState(false);
 
     // Fetch devices when site is selected using React Query
@@ -53,11 +53,11 @@ export default function TopologyPage() {
 
     const handleSiteSelect = (siteId: string) => {
         setSelectedSiteId(siteId);
-        setSelectedDeviceId(null); // Reset device selection
+        setSelectedDeviceIds([]); // Reset device selection
     };
 
     const handleDeviceSelect = (deviceId: string) => {
-        setSelectedDeviceId(deviceId);
+        setSelectedDeviceIds([deviceId]);
     };
 
     return (
@@ -89,7 +89,7 @@ export default function TopologyPage() {
                                 onSiteSelect={handleSiteSelect}
                                 onDeviceSelect={handleDeviceSelect}
                                 selectedSiteId={selectedSiteId}
-                                selectedDeviceId={selectedDeviceId}
+                                selectedDeviceId={selectedDeviceIds.length === 1 ? selectedDeviceIds[0] : null}
                             />
                         </Paper>
                     </Grid>
@@ -153,7 +153,8 @@ export default function TopologyPage() {
                         >
                             <TopologyDeviceTable
                                 devices={devices as any}
-                                selectedDeviceId={selectedDeviceId}
+                                selectedDeviceIds={selectedDeviceIds}
+                                onSelectionChange={setSelectedDeviceIds}
                                 onDeviceSelect={handleDeviceSelect}
                             />
                         </Paper>
