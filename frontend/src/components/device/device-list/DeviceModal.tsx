@@ -12,6 +12,7 @@ import { LocalSite } from "@/services/siteService";
 import { OperatingSystem } from "@/services/operatingSystemService";
 import { paths } from "@/lib/apiv2/schema";
 import { fetchClient } from "@/lib/apiv2/fetch";
+import IPPicker from "./IPPicker";
 import {
   Dialog,
   DialogTitle,
@@ -208,27 +209,61 @@ export default function DeviceModal({
 
     setIsLoading(true);
     try {
+      
+      const payload = Object.fromEntries(
+        Object.entries(data).map(([key, value]) => [key, value === "" ? null : value])
+      );
 
       if (mode === "add") {
         const { error } = await fetchClient.POST("/device-networks/", {
-          body: data,
+          body: payload as any,
         });
         if (error) throw error;
       } else if (mode === "edit" && device) {
         const { error } = await fetchClient.PUT("/device-networks/{device_id}", {
           params: { path: { device_id: device.id } },
-          body: data,
+          body: payload as any,
         });
         if (error) throw error;
       }
 
       // Invalidate device list cache so table auto-refreshes
       queryClient.invalidateQueries({ queryKey: ["get", "/device-networks/"] });
+      
+      // Invalidate IPAM related caches so IPAM page updates
+      queryClient.invalidateQueries({ queryKey: ["get", "/ipam/addresses"] });
+      queryClient.invalidateQueries({ queryKey: ["get", "/ipam/subnets"] });
+
       onSuccess();
       onClose();
     } catch (error: any) {
       console.error(`Error ${mode === "add" ? "creating" : "updating"} device:`, error);
-      setFormError(error?.detail || error?.message || `Failed to ${mode === "add" ? "create" : "update"} device. Please try again.`);
+      
+      let errorMessage = `Failed to ${mode === "add" ? "create" : "update"} device. Please try again.`;
+      if (error && typeof error === 'object') {
+        if (error.detail) {
+          if (Array.isArray(error.detail)) {
+            // Pydantic validation error array
+            errorMessage = error.detail.map((err: any) => `${err.loc?.join('->') || 'Field'}: ${err.msg}`).join(', ');
+          } else if (typeof error.detail === 'string') {
+            errorMessage = error.detail;
+          } else {
+            errorMessage = JSON.stringify(error.detail);
+          }
+        } else if (error.message) {
+          errorMessage = error.message;
+        } else {
+           // Fallback for empty looking objects
+           try {
+             const str = JSON.stringify(error);
+             if (str !== "{}") errorMessage = str;
+           } catch (e) {}
+        }
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+
+      setFormError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -454,16 +489,27 @@ export default function DeviceModal({
                       </Box>
                     </Stack>
                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                      <Box sx={{ flex: 1 }}>
-                        <Input
-                          label="IP Address (Management)"
-                          name="ip_address"
-                          value={data.ip_address || ""}
-                          onChange={handleChange}
-                          error={errors.ip_address || ""}
-                          disabled={isLoading}
-                          placeholder="e.g. 10.0.0.1"
-                        />
+                      <Box sx={{ flex: 1, display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                        <Box sx={{ flex: 1 }}>
+                          <Input
+                            label="IP Address (Management)"
+                            name="ip_address"
+                            value={data.ip_address || ""}
+                            onChange={handleChange}
+                            error={errors.ip_address || ""}
+                            disabled={isLoading}
+                            placeholder="e.g. 10.0.0.1"
+                          />
+                        </Box>
+                        <Box sx={{ pt: 3.5 }}>
+                          <IPPicker 
+                              onIpSelect={(ip) => {
+                                  setData(prev => ({ ...prev, ip_address: ip }));
+                                  if (errors.ip_address) setErrors(prev => ({ ...prev, ip_address: "" }));
+                              }}
+                              disabled={isLoading} 
+                          />
+                        </Box>
                       </Box>
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="body2" fontWeight={500} color="text.primary" mb={0.5}>

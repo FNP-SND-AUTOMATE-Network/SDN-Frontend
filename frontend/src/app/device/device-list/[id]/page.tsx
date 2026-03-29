@@ -40,8 +40,7 @@ export default function DeviceDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { token } = useAuth();
-  const { snackbar, hideSnackbar, showError, showSuccess } = useSnackbar();
-
+  const { snackbar, hideSnackbar, showError, showSuccess, showInfo } = useSnackbar();
   // --- Tab State ---
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
 
@@ -108,12 +107,39 @@ export default function DeviceDetailPage() {
     try {
       setIsMounting(true);
       const { fetchClient } = await import("@/lib/apiv2/fetch");
-      const { data: res, error } = await fetchClient.POST(
+      const { data: res, error, response } = await fetchClient.POST(
         "/api/v1/nbi/devices/{node_id}/mount",
         { params: { path: { node_id: device.node_id } } }
       );
-      if (error) throw error;
-      showSuccess(res?.message || "Device mounted successfully");
+      
+      const status = response?.status;
+      if (status === 200) {
+        if ((res as any)?.code === "DEVICE_ALREADY_MOUNTED") {
+            showSuccess(`Device ${device.node_id} is already connected`);
+        } else {
+            showSuccess(res?.message || `Device ${device.node_id} is connected successfully`);
+        }
+        // Trigger auto-sync for interfaces
+        fetchClient.GET("/interfaces/odl/{node_id}/sync", {
+          params: { path: { node_id: device.node_id } }
+        }).catch(console.error);
+      } else if (status === 400) {
+        const detail = (error as any)?.detail || "";
+        showError(typeof detail === "string" ? detail : JSON.stringify(detail));
+      } else if (status === 404) {
+        showError("Device not found");
+      } else if (status === 502) {
+        const detail = (error as any)?.detail || {};
+        showError(detail.message || "Mount successful but cannot connect to device");
+        if (detail.suggestion) {
+          showInfo(detail.suggestion);
+        }
+      } else if (status === 504) {
+        showError("Connection timeout (120s)");
+      } else if (error) {
+        throw error;
+      }
+
       queryClient.invalidateQueries({
         queryKey: ["get", "/device-networks/{device_id}"],
       });
