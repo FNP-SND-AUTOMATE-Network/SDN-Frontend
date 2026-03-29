@@ -1613,36 +1613,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List Supported Intents
-         * @description Get all supported intents grouped by OS
-         *
-         *     **Always returns 200**
-         */
+        /** List Supported Intents */
         get: operations["list_supported_intents_api_v1_nbi_intents_get"];
         put?: never;
-        /**
-         * Handle Intent
-         * @description Execute an Intent-based network operation
-         *
-         *     **Error Codes:**
-         *     - `INTENT_NOT_FOUND`: Intent ไม่มีในระบบ
-         *     - `DEVICE_NOT_FOUND`: ไม่พบ device
-         *     - `DEVICE_NOT_CONNECTED`: Device ยังไม่ connected
-         *     - `INVALID_PARAMS`: Parameters ไม่ถูกต้อง
-         *     - `ODL_REQUEST_FAILED`: ODL request failed
-         *
-         *     **Example Request:**
-         *     ```json
-         *     {
-         *         "intent": "show.interface",
-         *         "node_id": "CSR1000vT",
-         *         "params": {
-         *             "interface": "GigabitEthernet1"
-         *         }
-         *     }
-         *     ```
-         */
+        /** Handle Intent */
         post: operations["handle_intent_api_v1_nbi_intents_post"];
         delete?: never;
         options?: never;
@@ -1657,13 +1631,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get Intent Info
-         * @description Get detailed information about a specific intent
-         *
-         *     **Error Codes:**
-         *     - `INTENT_NOT_FOUND`: Intent ไม่มีในระบบ
-         */
+        /** Get Intent Info */
         get: operations["get_intent_info_api_v1_nbi_intents__intent_name__get"];
         put?: never;
         post?: never;
