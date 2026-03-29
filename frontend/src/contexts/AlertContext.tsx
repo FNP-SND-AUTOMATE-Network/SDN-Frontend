@@ -111,8 +111,8 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }, 5000);
     };
 
-    wsRef.current.onerror = (err) => {
-      console.error("[AlertContext] WebSocket Error:", err);
+    wsRef.current.onerror = () => {
+      console.warn("[AlertContext] WebSocket connection issue. Retrying...");
       // Let onClose handle reconnects
     };
   }, [popAlert]);
