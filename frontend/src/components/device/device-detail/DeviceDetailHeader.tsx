@@ -29,6 +29,7 @@ import {
   Inventory2,
 } from "@mui/icons-material";
 import { paths } from "@/lib/apiv2/schema";
+import { ExportConfigModal } from "./ExportConfigModal";
 
 type DeviceNetwork =
   paths["/device-networks/{device_id}"]["get"]["responses"]["200"]["content"]["application/json"];
@@ -68,6 +69,7 @@ export default function DeviceDetailHeader({
   isUnmounting = false,
 }: DeviceDetailHeaderProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const tags = device.tags || [];
   const status = statusConfig[device.status] || statusConfig.OTHER;
   const typeIcon = typeIconMap[device.type] || typeIconMap.OTHER;
@@ -177,7 +179,7 @@ export default function DeviceDetailHeader({
               <ListItemIcon><Edit fontSize="small" color="primary" /></ListItemIcon>
               <ListItemText>Edit Device</ListItemText>
             </MenuItem>
-            <MenuItem onClick={() => { console.log("Export config"); setAnchorEl(null); }}>
+            <MenuItem onClick={() => { setExportModalOpen(true); setAnchorEl(null); }}>
               <ListItemIcon><Download fontSize="small" /></ListItemIcon>
               <ListItemText>Export Config</ListItemText>
             </MenuItem>
@@ -189,6 +191,14 @@ export default function DeviceDetailHeader({
           </Menu>
         </Stack>
       </Stack>
+
+      {/* Modals outside the layout flow */}
+      <ExportConfigModal
+        open={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        deviceId={device.id}
+        deviceName={device.device_name}
+      />
     </Box>
   );
 }

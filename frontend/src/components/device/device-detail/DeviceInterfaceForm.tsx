@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Box,
     Typography,
@@ -17,12 +17,28 @@ import {
     Language,
     AltRoute,
     AccessTime,
+    Add as AddIcon,
 } from "@mui/icons-material";
 import { InterfaceDiscoveryResponse } from "@/services/deviceNetworkService";
 import { fetchClient } from "@/lib/apiv2/fetch";
 import { useSnackbar } from "@/hooks/useSnackbar";
+import { StagedIntent } from "@/components/topology/config-panels/types";
 
 type NetworkInterface = InterfaceDiscoveryResponse["interfaces"][0];
+
+/** Draft state that can be persisted across interface switches */
+export interface InterfaceDraft {
+    adminStatus: boolean;
+    description: string;
+    duplex: string;
+    autoNegotiate: boolean;
+    ipv4Address: string;
+    subnetMask: string;
+    ipv6Address: string;
+    mtu: string | number;
+    ospfProcessId: string;
+    ospfArea: string;
+}
 
 interface DeviceInterfaceFormProps {
     interfaceData: NetworkInterface;
@@ -32,21 +48,32 @@ interface DeviceInterfaceFormProps {
     onCancel: () => void;
     hideFooter?: boolean;
     onSaveRef?: React.MutableRefObject<(() => Promise<void>) | null>;
+    /** When true, the form will not fire API calls. Instead it stages intents via onStageIntent. */
+    stagingMode?: boolean;
+    /** Callback to queue intents for bulk push (only used when stagingMode=true) */
+    onStageIntent?: (intents: StagedIntent[]) => void;
+    /** External draft state for preserving form values across interface switches */
+    draft?: InterfaceDraft;
+    /** Callback when draft changes so parent can persist it */
+    onDraftChange?: (draft: InterfaceDraft) => void;
 }
 
 // --- Helper: Section Header ---
-function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
+function SectionHeader({ icon, title, action }: { icon: React.ReactNode; title: string; action?: React.ReactNode }) {
     return (
         <Stack
             direction="row"
             alignItems="center"
-            spacing={1}
+            justifyContent="space-between"
             sx={{ pb: 1, mb: 2, borderBottom: 1, borderColor: "divider" }}
         >
-            {icon}
-            <Typography variant="subtitle2" fontWeight={600}>
-                {title}
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={1}>
+                {icon}
+                <Typography variant="subtitle2" fontWeight={600}>
+                    {title}
+                </Typography>
+            </Stack>
+            {action && <Box>{action}</Box>}
         </Stack>
     );
 }
@@ -59,6 +86,10 @@ export function DeviceInterfaceForm({
     onCancel,
     hideFooter,
     onSaveRef,
+    stagingMode = false,
+    onStageIntent,
+    draft,
+    onDraftChange,
 }: DeviceInterfaceFormProps) {
     const { showSuccess, showError } = useSnackbar();
 
@@ -76,8 +107,26 @@ export function DeviceInterfaceForm({
 
     const [isSaving, setIsSaving] = useState(false);
 
+    // Guard to prevent onDraftChange from firing during init
+    const isInitializingRef = React.useRef(false);
+
+    // Initialize from draft (if provided) or from interfaceData
+    // Only depends on interfaceData.name — when user switches interface, we re-init
     useEffect(() => {
-        if (interfaceData) {
+        isInitializingRef.current = true;
+        if (draft) {
+            // Restore from persisted draft
+            setAdminStatus(draft.adminStatus);
+            setDescription(draft.description);
+            setDuplex(draft.duplex);
+            setAutoNegotiate(draft.autoNegotiate);
+            setIpv4Address(draft.ipv4Address);
+            setSubnetMask(draft.subnetMask);
+            setIpv6Address(draft.ipv6Address);
+            setMtu(draft.mtu);
+            setOspfProcessId(draft.ospfProcessId);
+            setOspfArea(draft.ospfArea);
+        } else if (interfaceData) {
             setAdminStatus(interfaceData.admin_status?.toLowerCase() === "up");
             setDescription(interfaceData.description || "");
             setDuplex(interfaceData.duplex || "Auto");
@@ -95,11 +144,109 @@ export function DeviceInterfaceForm({
                 setOspfArea("");
             }
         }
-    }, [interfaceData]);
+        // Allow onDraftChange after a tick (after React batches the setState calls)
+        requestAnimationFrame(() => { isInitializingRef.current = false; });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [interfaceData.name]);
 
-    // Helper to execute an intent via fetchClient
+    // Notify parent of draft changes (for persistence across interface switches)
+    useEffect(() => {
+        // Skip during initialization to avoid infinite loop
+        if (isInitializingRef.current) return;
+        if (onDraftChange && stagingMode) {
+            onDraftChange({
+                adminStatus,
+                description,
+                duplex,
+                autoNegotiate,
+                ipv4Address,
+                subnetMask,
+                ipv6Address,
+                mtu,
+                ospfProcessId,
+                ospfArea,
+            });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [adminStatus, description, duplex, autoNegotiate, ipv4Address, subnetMask, ipv6Address, mtu, ospfProcessId, ospfArea]);
+
+    // ==================== Build Intent List (shared between staging & direct modes) ====================
+    const buildIntents = (): StagedIntent[] => {
+        const intents: StagedIntent[] = [];
+        const ifName = interfaceData.name;
+
+        // 1. Admin Status
+        const currentAdminUp = interfaceData.admin_status?.toLowerCase() === "up";
+        if (adminStatus && !currentAdminUp) {
+            intents.push({ intent: "interface.enable", node_id: deviceId, params: { interface: ifName }, label: `${ifName}: Enable` });
+        } else if (!adminStatus && currentAdminUp) {
+            intents.push({ intent: "interface.disable", node_id: deviceId, params: { interface: ifName }, label: `${ifName}: Disable` });
+        }
+
+        // 2. IPv4
+        const ipChanged = ipv4Address !== (interfaceData.ipv4_address || "") || subnetMask !== (interfaceData.subnet_mask || "");
+        if (ipChanged && ipv4Address && subnetMask) {
+            intents.push({ intent: "interface.set_ipv4", node_id: deviceId, params: { interface: ifName, ip: ipv4Address, mask: subnetMask }, label: `${ifName}: Set IPv4 → ${ipv4Address}` });
+        }
+
+        // 3. Description
+        const descChanged = description !== (interfaceData.description || "");
+        if (descChanged) {
+            intents.push({ intent: "interface.set_description", node_id: deviceId, params: { interface: ifName, description }, label: `${ifName}: Set description` });
+        }
+
+        // 4. MTU
+        const mtuChanged = mtu !== (interfaceData.mtu || "");
+        if (mtuChanged && mtu) {
+            intents.push({ intent: "interface.set_mtu", node_id: deviceId, params: { interface: ifName, mtu: parseInt(mtu.toString(), 10) }, label: `${ifName}: Set MTU → ${mtu}` });
+        }
+
+        // 5. IPv6
+        const ipv6Changed = ipv6Address !== (interfaceData.ipv6 || "");
+        if (ipv6Changed && ipv6Address) {
+            let ip = ipv6Address;
+            let prefix = "64";
+            if (ipv6Address.includes("/")) {
+                const parts = ipv6Address.split("/");
+                ip = parts[0];
+                prefix = parts[1];
+            }
+            intents.push({ intent: "interface.set_ipv6", node_id: deviceId, params: { interface: ifName, ip, prefix }, label: `${ifName}: Set IPv6 → ${ip}` });
+        }
+
+        // 6. OSPF
+        const oldProcessId = interfaceData.ospf?.process_id?.toString() || "";
+        const oldArea = interfaceData.ospf?.area?.toString() || "";
+        const newProcessId = ospfProcessId.trim();
+        const newArea = ospfArea.trim();
+
+        if (newProcessId !== oldProcessId || newArea !== oldArea) {
+            if (newProcessId && newArea) {
+                intents.push({ intent: "routing.ospf.add_network_interface", node_id: deviceId, params: { process_id: parseInt(newProcessId, 10), interface: ifName, area: parseInt(newArea, 10) }, label: `${ifName}: OSPF area ${newArea}` });
+            } else if (!newProcessId && !newArea && oldProcessId && oldArea) {
+                intents.push({ intent: "routing.ospf.remove_network_interface", node_id: deviceId, params: { process_id: parseInt(oldProcessId, 10), interface: ifName, area: parseInt(oldArea, 10) }, label: `${ifName}: Remove OSPF` });
+            }
+        }
+
+        return intents;
+    };
+
+    // ==================== Staging Mode: Queue intents ====================
+    const handleStageIntents = () => {
+        const intents = buildIntents();
+        if (intents.length === 0) {
+            showError("ไม่มีการเปลี่ยนแปลง — ไม่มี Intent ที่ต้อง Queue");
+            return;
+        }
+        if (onStageIntent) {
+            onStageIntent(intents);
+            showSuccess(`เพิ่ม ${intents.length} รายการของ ${interfaceData.name} เข้าคิว`);
+        }
+    };
+
+    // ==================== Direct Mode: Execute intents immediately ====================
     const executeIntent = async (intent: string, params: Record<string, any>) => {
-        const { error } = await fetchClient.POST("/api/v1/nbi/intents", {
+        const { data, error } = await fetchClient.POST("/api/v1/nbi/intents", {
             body: {
                 intent,
                 node_id: deviceId,
@@ -107,88 +254,59 @@ export function DeviceInterfaceForm({
             },
         });
         if (error) {
-            throw new Error((error as any)?.message || `Failed to execute intent: ${intent}`);
+            let errorMsg = `Failed to execute intent: ${intent}`;
+            if (error && typeof error === 'object') {
+                if ((error as any).detail) {
+                    if (Array.isArray((error as any).detail)) {
+                        errorMsg = (error as any).detail.map((e: any) => `${e.loc?.join('->') || 'Field'}: ${e.msg}`).join(', ');
+                    } else if (typeof (error as any).detail === 'string') {
+                        errorMsg = (error as any).detail;
+                    } else {
+                        errorMsg = JSON.stringify((error as any).detail);
+                    }
+                } else if ((error as any).message) {
+                    errorMsg = (error as any).message;
+                } else {
+                    try {
+                        const str = JSON.stringify(error);
+                        if (str !== "{}") errorMsg = str;
+                    } catch (e) {}
+                }
+            } else if (typeof error === 'string') {
+                errorMsg = error;
+            }
+            throw new Error(errorMsg);
+        }
+        
+        if (data && !(data as any).success) {
+            const backendError = (data as any).error;
+            const errMsg = typeof backendError === 'string' ? backendError : JSON.stringify(backendError);
+            throw new Error(errMsg || `Intent ${intent} returned success=false`);
         }
     };
 
     const handleSave = async () => {
+        // In staging mode, delegate to handleStageIntents
+        if (stagingMode) {
+            handleStageIntents();
+            return;
+        }
+
+        // Direct mode: execute intents immediately
         setIsSaving(true);
         try {
-            // 1. Handle Admin Status (Enable / Disable)
-            const currentAdminUp = interfaceData.admin_status?.toLowerCase() === "up";
-
-            if (adminStatus && !currentAdminUp) {
-                await executeIntent("interface.enable", { interface: interfaceData.name });
-            } else if (!adminStatus && currentAdminUp) {
-                await executeIntent("interface.disable", { interface: interfaceData.name });
+            const intents = buildIntents();
+            for (const staged of intents) {
+                await executeIntent(staged.intent, staged.params);
             }
 
-            // 2. Handle IP (interface.set_ipv4)
-            const ipChanged = ipv4Address !== (interfaceData.ipv4_address || "") || subnetMask !== (interfaceData.subnet_mask || "");
-            if (ipChanged && ipv4Address && subnetMask) {
-                await executeIntent("interface.set_ipv4", {
-                    interface: interfaceData.name,
-                    ip: ipv4Address,
-                    mask: subnetMask,
-                });
-            }
-
-            // 3. Handle Description (interface.set_description)
-            const descChanged = description !== (interfaceData.description || "");
-            if (descChanged) {
-                await executeIntent("interface.set_description", {
-                    interface: interfaceData.name,
-                    description,
-                });
-            }
-
-            // 4. Handle MTU (interface.set_mtu)
-            const mtuChanged = mtu !== (interfaceData.mtu || "");
-            if (mtuChanged && mtu) {
-                await executeIntent("interface.set_mtu", {
-                    interface: interfaceData.name,
-                    mtu: parseInt(mtu.toString(), 10),
-                });
-            }
-
-            // 5. Handle IPv6 (interface.set_ipv6)
-            const ipv6Changed = ipv6Address !== (interfaceData.ipv6 || "");
-            if (ipv6Changed && ipv6Address) {
-                let ip = ipv6Address;
-                let prefix = "64";
-                if (ipv6Address.includes("/")) {
-                    const parts = ipv6Address.split("/");
-                    ip = parts[0];
-                    prefix = parts[1];
-                }
-
-                await executeIntent("interface.set_ipv6", {
-                    interface: interfaceData.name,
-                    ip,
-                    prefix,
-                });
-            }
-
-            // 6. Handle OSPF Routing
-            const oldProcessId = interfaceData.ospf?.process_id?.toString() || "";
-            const oldArea = interfaceData.ospf?.area?.toString() || "";
-            const newProcessId = ospfProcessId.trim();
-            const newArea = ospfArea.trim();
-
-            if (newProcessId !== oldProcessId || newArea !== oldArea) {
-                if (newProcessId && newArea) {
-                    await executeIntent("routing.ospf.add_network_interface", {
-                        process_id: parseInt(newProcessId, 10),
-                        interface: interfaceData.name,
-                        area: parseInt(newArea, 10),
-                    });
-                } else if (!newProcessId && !newArea && oldProcessId && oldArea) {
-                    await executeIntent("routing.ospf.remove_network_interface", {
-                        process_id: parseInt(oldProcessId, 10),
-                        interface: interfaceData.name,
-                        area: parseInt(oldArea, 10),
-                    });
-                }
+            // Auto-sync interfaces after config push
+            try {
+                fetchClient.GET("/interfaces/odl/{node_id}/sync", {
+                    params: { path: { node_id: deviceId } }
+                }).catch(e => console.error("Auto-sync failed", e));
+            } catch (syncErr) {
+                console.error("Failed to run sync:", syncErr);
             }
 
             showSuccess(`Interface ${interfaceData.name} updated successfully`);
@@ -201,7 +319,6 @@ export function DeviceInterfaceForm({
         }
     };
 
-    const isUp = interfaceData.oper_status?.toLowerCase() === "up";
     const isEdit = mode === "edit";
 
     // Expose handleSave to parent
@@ -218,6 +335,20 @@ export function DeviceInterfaceForm({
                         <SectionHeader
                             icon={<Memory fontSize="small" color="action" />}
                             title="Hardware & Status"
+                            action={
+                                stagingMode && isEdit ? (
+                                    <Button
+                                        variant="outlined"
+                                        color="warning"
+                                        size="small"
+                                        onClick={handleStageIntents}
+                                        startIcon={<AddIcon />}
+                                        sx={{ textTransform: "none", py: 0.25 }}
+                                    >
+                                        Queue {interfaceData.name}
+                                    </Button>
+                                ) : undefined
+                            }
                         />
                         <Box
                             sx={{
@@ -226,30 +357,6 @@ export function DeviceInterfaceForm({
                                 gap: 2.5,
                             }}
                         >
-                            {/* Operational Status */}
-                            <Box>
-                                <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
-                                    Operational Status
-                                </Typography>
-                                <Stack direction="row" alignItems="center" spacing={1}>
-                                    <Box
-                                        sx={{
-                                            width: 10,
-                                            height: 10,
-                                            borderRadius: "50%",
-                                            bgcolor: isUp ? "success.main" : "error.main",
-                                        }}
-                                    />
-                                    <Typography
-                                        variant="body2"
-                                        fontWeight={500}
-                                        color={isUp ? "success.dark" : "error.dark"}
-                                    >
-                                        {interfaceData.oper_status?.toUpperCase() || "UNKNOWN"}
-                                    </Typography>
-                                </Stack>
-                            </Box>
-
                             {/* Admin Status */}
                             <Box>
                                 <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
@@ -493,7 +600,7 @@ export function DeviceInterfaceForm({
                 </Stack>
             </Box>
 
-            {/* Footer */}
+            {/* Footer (only in non-staging, non-hidden mode) */}
             {!hideFooter && (
                 <>
                     <Divider />

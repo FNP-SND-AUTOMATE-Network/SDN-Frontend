@@ -25,11 +25,14 @@ import {
     Visibility,
     Edit,
     FiberManualRecord,
+    Sync as SyncIcon,
 } from "@mui/icons-material";
-import { $api } from "@/lib/apiv2/fetch";
+import { $api, fetchClient } from "@/lib/apiv2/fetch";
 import { paths } from "@/lib/apiv2/schema";
 import { InterfaceDiscoveryResponse } from "@/services/deviceNetworkService";
 import { DeviceInterfaceModal } from "./DeviceInterfaceModal";
+import { useSnackbar } from "@/hooks/useSnackbar";
+import { LinearProgress, Button } from "@mui/material";
 
 type DeviceNetwork =
     paths["/device-networks/{device_id}"]["get"]["responses"]["200"]["content"]["application/json"];
@@ -50,6 +53,10 @@ export function DeviceInterfacesTab({ device }: DeviceInterfacesTabProps) {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [menuIface, setMenuIface] = useState<NetworkInterface | null>(null);
 
+    // Sync state
+    const [isSyncing, setIsSyncing] = useState(false);
+    const { showSuccess, showError } = useSnackbar();
+
     const nodeId = device.node_id;
 
     // --- Fetch interfaces via React Query ---
@@ -60,7 +67,7 @@ export function DeviceInterfacesTab({ device }: DeviceInterfacesTabProps) {
         refetch,
     } = $api.useQuery(
         "get",
-        "/api/v1/nbi/devices/{node_id}/interfaces/discover",
+        "/interfaces/odl/{node_id}",
         {
             params: {
                 path: { node_id: nodeId! },
@@ -102,8 +109,26 @@ export function DeviceInterfacesTab({ device }: DeviceInterfacesTabProps) {
         handleMenuClose();
     };
 
+    // --- Sync Handler ---
+    const handleSync = async () => {
+        if (!nodeId) return;
+        setIsSyncing(true);
+        try {
+            const { data, error } = await fetchClient.GET("/interfaces/odl/{node_id}/sync", {
+                params: { path: { node_id: nodeId } }
+            });
+            if (error) throw error;
+            showSuccess("Sync สำเร็จ");
+            refetch();
+        } catch (err: any) {
+            showError(err?.message || "DB sync failed");
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     // --- Loading ---
-    if (isLoading) {
+    if (isLoading && !isSyncing) {
         return (
             <Box py={4}>
                 <Stack spacing={1}>
@@ -137,20 +162,48 @@ export function DeviceInterfacesTab({ device }: DeviceInterfacesTabProps) {
         );
     }
 
+    // --- Syncing State (Full override if data is empty, else overlay on table) ---
+    if (isSyncing && interfaces.length === 0) {
+        return (
+            <Box py={6} textAlign="center">
+                <Typography color="text.secondary" sx={{ mb: 2 }}>
+                    Syncing from device...
+                </Typography>
+                <Box sx={{ width: '50%', mx: 'auto' }}>
+                    <LinearProgress />
+                </Box>
+            </Box>
+        );
+    }
+
     // --- Empty ---
     if (interfaces.length === 0) {
         return (
             <Box py={6} textAlign="center">
-                <Typography color="text.secondary">
-                    No interfaces found on this device.
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    Press the Sync button to pull from the device
                 </Typography>
+                <Button variant="contained" startIcon={<SyncIcon />} onClick={handleSync}>
+                    Sync Now
+                </Button>
             </Box>
         );
     }
 
     return (
-        <>
-            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 0.5 }}>
+        <Stack spacing={2}>
+            <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                <Button 
+                    variant="outlined" 
+                    startIcon={<SyncIcon />} 
+                    onClick={handleSync}
+                    disabled={isSyncing}
+                >
+                    {isSyncing ? "Syncing..." : "Sync Interfaces"}
+                </Button>
+            </Box>
+            {isSyncing && interfaces.length > 0 && <LinearProgress />}
+            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 0.5, opacity: isSyncing ? 0.6 : 1 }}>
                 <Table size="small">
                     <TableHead>
                         <TableRow sx={{ bgcolor: "grey.50" }}>
@@ -173,7 +226,7 @@ export function DeviceInterfacesTab({ device }: DeviceInterfacesTabProps) {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {interfaces.map((iface, index) => {
+                        {[...interfaces].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })).map((iface, index) => {
                             const isUp = iface.oper_status?.toLowerCase() === "up";
                             return (
                                 <TableRow
@@ -243,7 +296,6 @@ export function DeviceInterfacesTab({ device }: DeviceInterfacesTabProps) {
                 </MenuItem>
             </Menu>
 
-            {/* Interface Modal */}
             <DeviceInterfaceModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
@@ -252,6 +304,6 @@ export function DeviceInterfacesTab({ device }: DeviceInterfacesTabProps) {
                 deviceId={device.node_id || ""}
                 onSuccess={() => refetch()}
             />
-        </>
+        </Stack>
     );
 }
