@@ -19,6 +19,9 @@ import {
     Chip,
     Stack,
     Divider,
+    Badge,
+    Alert,
+    LinearProgress,
 } from "@mui/material";
 import {
     Close,
@@ -26,6 +29,7 @@ import {
     ChevronRight,
     Save,
     LanOutlined,
+    DeleteSweep,
 } from "@mui/icons-material";
 import { paths } from "@/lib/apiv2/schema";
 import { fetchClient } from "@/lib/apiv2/fetch";
@@ -34,11 +38,13 @@ import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 import { SettingPanel } from "./config-panels/SettingPanel";
 import { StaticRoutePanel } from "./config-panels/StaticRoutePanel";
 import { OspfPanel } from "./config-panels/OspfPanel";
-import { DefaultRoutePanel } from "./config-panels/DefaultRoutePanel";
 import { VlanPanel } from "./config-panels/VlanPanel";
 import { DhcpPanel } from "./config-panels/DhcpPanel";
 import { ConfigurationTemplatePanel } from "./config-panels/ConfigurationTemplatePanel";
-import { DeviceInterfaceForm } from "../device/device-detail/DeviceInterfaceForm";
+import { DeviceInterfaceForm, InterfaceDraft } from "../device/device-detail/DeviceInterfaceForm";
+import { StagedIntent } from "./config-panels/types";
+import { TopologyConfigSidebar, SUB_ITEMS } from "./TopologyConfigSidebar";
+import { TopologyConfigConfirmModal } from "./TopologyConfigConfirmModal";
 
 // DeviceNetwork type derived from schema paths
 type DeviceNetwork =
@@ -76,36 +82,6 @@ interface TopologyConfigModalProps {
 
 type MainTab = "config" | "template";
 
-// Sidebar menu items — filtered per device type
-type SidebarItem = { key: string; label: string; expandable: boolean };
-
-const ALL_SIDEBAR_ITEMS: SidebarItem[] = [
-    { key: "setting", label: "SETTING", expandable: false },
-    { key: "routing", label: "ROUTING", expandable: true },
-    { key: "interface", label: "INTERFACE", expandable: true },
-    { key: "vlan", label: "VLAN", expandable: false },
-    { key: "dhcp", label: "DHCP", expandable: false },
-];
-
-function getSidebarItems(deviceType?: string): SidebarItem[] {
-    switch (deviceType) {
-        case "ROUTER":
-            return ALL_SIDEBAR_ITEMS.filter((i) => i.key !== "vlan");
-        case "SWITCH":
-            return ALL_SIDEBAR_ITEMS.filter((i) => i.key !== "routing" && i.key !== "dhcp");
-        default:
-            return ALL_SIDEBAR_ITEMS;
-    }
-}
-
-const SUB_ITEMS: Record<string, { key: string; label: string }[]> = {
-    routing: [
-        { key: "routing-static", label: "Static Route" },
-        { key: "routing-ospf", label: "OSPF" },
-        { key: "routing-default", label: "Default Route" },
-    ],
-};
-
 // ==================== Main Component ====================
 export default function TopologyConfigModal({
     isOpen,
@@ -113,7 +89,7 @@ export default function TopologyConfigModal({
     device,
     onDeviceUpdated,
 }: TopologyConfigModalProps) {
-    const { snackbar, showSuccess, showError, hideSnackbar } = useSnackbar();
+    const { snackbar, showSuccess, showError, showWarning, hideSnackbar } = useSnackbar();
     const [mainTab, setMainTab] = useState<MainTab>("config");
     const [activeSection, setActiveSection] = useState<string>("setting");
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -123,8 +99,8 @@ export default function TopologyConfigModal({
     const [isLoading, setIsLoading] = useState(false);
     const [discoveredInterfaces, setDiscoveredInterfaces] = useState<NetworkInterface[]>([]);
 
-    const interfaceSaveRef = React.useRef<(() => Promise<void>) | null>(null);
-    const [isInterfaceSaving, setIsInterfaceSaving] = useState(false);
+    // Interface drafts: persist form state per interface name across sidebar switches
+    const [interfaceDrafts, setInterfaceDrafts] = useState<Record<string, InterfaceDraft>>({});
 
     const nodeId = device?.node_id || "";
 
@@ -132,6 +108,24 @@ export default function TopologyConfigModal({
     const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(device?.configuration_template?.id || null);
     const [editedConfigContent, setEditedConfigContent] = useState<string>("");
     const [isDeploying, setIsDeploying] = useState(false);
+
+    // ==================== Staged Intents (Bulk Queue) ====================
+    const [stagedIntents, setStagedIntents] = useState<StagedIntent[]>([]);
+    const [isBulkPushing, setIsBulkPushing] = useState(false);
+    const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+
+    /** Accept a single intent OR an array of intents (from DeviceInterfaceForm) */
+    const handleStageIntent = useCallback((staged: StagedIntent | StagedIntent[]) => {
+        setStagedIntents((prev) => [...prev, ...(Array.isArray(staged) ? staged : [staged])]);
+    }, []);
+
+    const handleClearStaged = () => {
+        setStagedIntents([]);
+    };
+
+    const handleRemoveStaged = (index: number) => {
+        setStagedIntents((prev) => prev.filter((_, i) => i !== index));
+    };
 
     // Initialize when device changes
     useEffect(() => {
@@ -142,6 +136,8 @@ export default function TopologyConfigModal({
             setMainTab("config");
             setSelectedTemplateId(device.configuration_template?.id || null);
             setEditedConfigContent("");
+            setStagedIntents([]);
+            setInterfaceDrafts({});
         }
     }, [device]);
 
@@ -160,7 +156,7 @@ export default function TopologyConfigModal({
                         break;
                     case "interface": {
                         const { data: discoverData } = await fetchClient.GET(
-                            "/api/v1/nbi/devices/{node_id}/interfaces/discover",
+                            "/interfaces/odl/{node_id}",
                             { params: { path: { node_id: nodeId } } }
                         );
                         if (discoverData) {
@@ -193,12 +189,10 @@ export default function TopologyConfigModal({
                     if (error) {
                         const errDetail = (error as any)?.detail || (error as any)?.message || JSON.stringify(error);
                         console.warn(`[loadSectionData] Intent "${intentName}" error:`, errDetail);
-                        // Still try to show partial data if available
                     } else if (data) {
                         if (data.success) {
                             setShowData(data.result ?? null);
                         } else {
-                            // Intent returned success=false — show the error as data
                             console.warn(`[loadSectionData] Intent "${intentName}" returned success=false:`, data.error);
                             setShowData(data.result ?? data.error ?? null);
                         }
@@ -256,8 +250,9 @@ export default function TopologyConfigModal({
         return "Settings";
     };
 
-    // ==================== Push Handlers ====================
+    // ==================== Bulk Push Handler ====================
     const handleGlobalPush = async () => {
+        // Template deploy (unchanged)
         if (mainTab === "template") {
             if (!selectedTemplateId) {
                 showError("Please select a template to deploy.");
@@ -265,14 +260,13 @@ export default function TopologyConfigModal({
             }
             setIsDeploying(true);
             try {
-                // Deploy Template via POST /deployments/ (correct path per schema)
                 const { error, response } = await fetchClient.POST("/deployments/", {
                     body: {
                         template_id: selectedTemplateId,
                         device_ids: [device.id],
                         variables: {},
                         config_content: editedConfigContent || undefined,
-                    } as any // Using 'as any' since config_content isn't explicitly defined in DeploymentRequest schema
+                    } as any
                 });
 
                 if (error) {
@@ -288,34 +282,61 @@ export default function TopologyConfigModal({
             return;
         }
 
-        if (activeSection.startsWith("interface-") && interfaceSaveRef.current) {
-            setIsInterfaceSaving(true);
-            try {
-                await interfaceSaveRef.current();
-            } finally {
-                setIsInterfaceSaving(false);
+        // ===== BULK PUSH: Send all stagedIntents via /intents/bulk =====
+        if (stagedIntents.length === 0) {
+            showWarning("No configuration changes staged for this device.");
+            return;
+        }
+
+        setConfirmDialogOpen(true);
+    };
+
+    const executeBulkPush = async () => {
+        setIsBulkPushing(true);
+        setConfirmDialogOpen(false);
+        try {
+            const payload = {
+                intents: stagedIntents.map(({ intent, node_id, params }) => ({
+                    intent,
+                    node_id,
+                    params,
+                })),
+            };
+
+            const { data, error, response } = await fetchClient.POST(
+                "/api/v1/nbi/intents/bulk",
+                { body: payload }
+            );
+
+            if (error) {
+                const detail = (error as any)?.detail;
+                showError(typeof detail === "string" ? detail : JSON.stringify(detail) || "Bulk push failed");
+                return;
             }
-        } else {
-            try {
-                const { data, error } = await fetchClient.POST("/api/v1/nbi/intents", {
-                    body: { intent: "system.save_config", node_id: nodeId, params: {} },
-                });
-                if (error) {
-                    showError("Failed to save config");
-                } else if (data?.success) {
-                    showSuccess("Configuration saved successfully");
-                } else {
-                    showError(data?.error ? JSON.stringify(data.error) : "Save config failed");
-                }
-            } catch (err: any) {
-                showError(err.message || "Failed to save config");
+
+            const bulkRes = data as any;
+            if (response?.status === 200 || bulkRes?.success) {
+                showSuccess(`✅ ส่ง Config ทั้งหมด ${bulkRes.total_executed} รายการสำเร็จ`);
+                setStagedIntents([]);
+            } else if (response?.status === 207) {
+                showWarning(
+                    `⚠️ สำเร็จ ${bulkRes.total_executed - bulkRes.total_failed} / ${bulkRes.total_executed} รายการ (${bulkRes.total_failed} ล้มเหลว)`
+                );
+                setStagedIntents([]);
+            } else {
+                showError("Unexpected response from bulk endpoint");
             }
+        } catch (error: any) {
+            console.error("❌ Bulk Push ERROR:", error);
+            showError(`Failed to push bulk config: ${error?.message || "Unknown error"}`);
+        } finally {
+            setIsBulkPushing(false);
         }
     };
 
     // ==================== Section Renderers ====================
     const renderContent = () => {
-        const commonProps = { device, nodeId, showData };
+        const commonProps = { device, nodeId, showData, onStageIntent: handleStageIntent };
 
         if (activeSection.startsWith("interface-")) {
             const ifaceName = activeSection.replace("interface-", "");
@@ -330,7 +351,10 @@ export default function TopologyConfigModal({
                             onSuccess={() => loadSectionData("interface")}
                             onCancel={() => { }}
                             hideFooter={true}
-                            onSaveRef={interfaceSaveRef}
+                            stagingMode={true}
+                            onStageIntent={(intents) => handleStageIntent(intents)}
+                            draft={interfaceDrafts[ifaceName]}
+                            onDraftChange={(d) => setInterfaceDrafts((prev) => ({ ...prev, [ifaceName]: d }))}
                         />
                     </Box>
                 );
@@ -341,7 +365,6 @@ export default function TopologyConfigModal({
             case "setting": return <SettingPanel {...commonProps} />;
             case "routing-static": return <StaticRoutePanel {...commonProps} />;
             case "routing-ospf": return <OspfPanel {...commonProps} />;
-            case "routing-default": return <DefaultRoutePanel {...commonProps} />;
             case "routing": return <StaticRoutePanel {...commonProps} />;
             case "interface":
                 return (
@@ -387,6 +410,16 @@ export default function TopologyConfigModal({
         }
     };
 
+    const isGlobalPushDisabled = mainTab === "config"
+        ? (isBulkPushing || stagedIntents.length === 0)
+        : isDeploying;
+
+    const getGlobalPushLabel = () => {
+        if (mainTab === "template") return "Deploy Template";
+        return stagedIntents.length > 0
+            ? `Push Config (${stagedIntents.length})`
+            : "Save Config";
+    };
 
     // ==================== Render ====================
     return (
@@ -426,27 +459,44 @@ export default function TopologyConfigModal({
                         <Tab label="Config" value="config" />
                         <Tab label="Template" value="template" />
                     </Tabs>
-                    <Button
-                        variant="contained"
-                        size="small"
-                        onClick={handleGlobalPush}
-                        disabled={mainTab === "config" ? isInterfaceSaving : isDeploying}
-                        startIcon={
-                            (mainTab === "config" && isInterfaceSaving) || (mainTab === "template" && isDeploying)
-                                ? <CircularProgress size={16} color="inherit" />
-                                : <Save />
-                        }
-                        color="primary"
-                        sx={{ textTransform: "none"}}
-                    >
-                        {mainTab === "template"
-                            ? "Deploy Template"
-                            : activeSection.startsWith("interface-")
-                                ? "Save Interface"
-                                : "Save Config"
-                        }
-                    </Button>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        {mainTab === "config" && stagedIntents.length > 0 && (
+                            <Button
+                                variant="text"
+                                size="small"
+                                color="error"
+                                onClick={handleClearStaged}
+                                startIcon={<DeleteSweep />}
+                                sx={{ textTransform: "none" }}
+                            >
+                                Clear
+                            </Button>
+                        )}
+                        <Badge
+                            badgeContent={mainTab === "config" ? stagedIntents.length : 0}
+                            color="warning"
+                            max={99}
+                        >
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={handleGlobalPush}
+                                disabled={isGlobalPushDisabled}
+                                startIcon={
+                                    isBulkPushing || isDeploying
+                                        ? <CircularProgress size={16} color="inherit" />
+                                        : <Save />
+                                }
+                                color="primary"
+                                sx={{ textTransform: "none" }}
+                            >
+                                {getGlobalPushLabel()}
+                            </Button>
+                        </Badge>
+                    </Stack>
                 </Box>
+
+                {isBulkPushing && <LinearProgress />}
 
                 <Divider />
 
@@ -454,77 +504,16 @@ export default function TopologyConfigModal({
                 <DialogContent sx={{ p: 0, display: "flex", minHeight: 480 }}>
                     {mainTab === "config" ? (
                         <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
-                            {/* Sidebar */}
-                            <Box
-                                sx={{
-                                    width: 200,
-                                    borderRight: 1,
-                                    borderColor: "divider",
-                                    bgcolor: "grey.50",
-                                    overflowY: "auto",
-                                    flexShrink: 0,
-                                }}
-                            >
-                                <List disablePadding dense>
-                                    {getSidebarItems(device.type).map((item) => {
-                                        const isActive = activeSection === item.key ||
-                                            (item.key === "routing" && activeSection.startsWith("routing-")) ||
-                                            (item.key === "interface" && activeSection.startsWith("interface-"));
-                                        const isExpanded = expandedSections.has(item.key);
-
-                                        let subItems = SUB_ITEMS[item.key];
-                                        if (item.key === "interface") {
-                                            subItems = discoveredInterfaces.map(iface => ({
-                                                key: `interface-${iface.name}`,
-                                                label: iface.name,
-                                            }));
-                                        }
-
-                                        return (
-                                            <React.Fragment key={item.key}>
-                                                <ListItemButton
-                                                    onClick={() => handleSidebarClick(item.key, item.expandable)}
-                                                    selected={isActive}
-                                                    sx={{
-                                                        borderLeft: 3,
-                                                        borderColor: isActive ? "primary.main" : "transparent",
-                                                        py: 1,
-                                                    }}
-                                                >
-                                                    <ListItemText
-                                                        primary={item.label}
-                                                        primaryTypographyProps={{
-                                                            variant: "caption",
-                                                            fontWeight: 700,
-                                                            letterSpacing: "0.05em",
-                                                        }}
-                                                    />
-                                                    {item.expandable && (isExpanded ? <ExpandMore fontSize="small" /> : <ChevronRight fontSize="small" />)}
-                                                </ListItemButton>
-                                                {item.expandable && subItems && (
-                                                    <Collapse in={isExpanded}>
-                                                        <List disablePadding dense>
-                                                            {subItems.map((sub) => (
-                                                                <ListItemButton
-                                                                    key={sub.key}
-                                                                    onClick={() => setActiveSection(sub.key)}
-                                                                    selected={activeSection === sub.key}
-                                                                    sx={{ pl: 4, py: 0.75 }}
-                                                                >
-                                                                    <ListItemText
-                                                                        primary={sub.label}
-                                                                        primaryTypographyProps={{ variant: "body2", fontSize: "0.75rem" }}
-                                                                    />
-                                                                </ListItemButton>
-                                                            ))}
-                                                        </List>
-                                                    </Collapse>
-                                                )}
-                                            </React.Fragment>
-                                        );
-                                    })}
-                                </List>
-                            </Box>
+                            <TopologyConfigSidebar
+                                deviceType={device.type}
+                                activeSection={activeSection}
+                                setActiveSection={setActiveSection}
+                                expandedSections={expandedSections}
+                                toggleSection={toggleSection}
+                                discoveredInterfaces={discoveredInterfaces}
+                                stagedIntents={stagedIntents}
+                                handleRemoveStaged={handleRemoveStaged}
+                            />
 
                             {/* Content */}
                             <Box sx={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
@@ -561,6 +550,15 @@ export default function TopologyConfigModal({
                     )}
                 </DialogContent>
             </Dialog>
+
+            <TopologyConfigConfirmModal
+                open={confirmDialogOpen}
+                onClose={() => setConfirmDialogOpen(false)}
+                deviceName={device.device_name || ""}
+                nodeId={nodeId}
+                stagedIntents={stagedIntents}
+                onConfirm={executeBulkPush}
+            />
 
             <MuiSnackbar
                 open={snackbar.open}

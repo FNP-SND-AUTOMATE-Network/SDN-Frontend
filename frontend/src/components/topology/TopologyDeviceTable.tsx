@@ -30,7 +30,9 @@ import {
     MenuItem,
     ListItemIcon,
     ListItemText,
-    Chip
+    Chip,
+    Checkbox,
+    Button
 } from "@mui/material";
 
 import { fetchClient } from "@/lib/apiv2/fetch";
@@ -38,6 +40,7 @@ import { Inventory2, DnsRounded } from "@mui/icons-material";
 import ConfigPreviewModal from "./ConfigPreviewModal";
 import TopologyConfigModal from "./TopologyConfigModal";
 import BackupStatusOverlay, { BackupJobResult } from "../device/backup/BackupStatusOverlay";
+import DeployTemplateModal from "./DeployTemplateModal";
 import { components } from "@/lib/apiv2/schema";
 
 type DeviceNetwork = components["schemas"]["DeviceNetworkResponse"];
@@ -45,7 +48,8 @@ type StatusDevice = components["schemas"]["StatusDevice"];
 
 interface TopologyDeviceTableProps {
     devices: DeviceNetwork[];
-    selectedDeviceId?: string | null;
+    selectedDeviceIds?: string[];
+    onSelectionChange?: (deviceIds: string[]) => void;
     onDeviceSelect?: (deviceId: string) => void;
 }
 
@@ -87,13 +91,15 @@ const getStatusChipProps = (status: StatusDevice) => {
 
 export default function TopologyDeviceTable({
     devices,
-    selectedDeviceId,
+    selectedDeviceIds,
+    onSelectionChange,
     onDeviceSelect,
 }: TopologyDeviceTableProps) {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [menuDeviceId, setMenuDeviceId] = useState<string | null>(null);
     const [configModalDevice, setConfigModalDevice] = useState<any | null>(null);
     const [configEditorDevice, setConfigEditorDevice] = useState<any | null>(null);
+    const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
 
     // Backup Task tracking
     const [backupJobs, setBackupJobs] = useState<BackupJobResult[]>([]);
@@ -110,61 +116,63 @@ export default function TopologyDeviceTable({
         setMenuDeviceId(null);
     };
 
-    const handleBackupDevice = async (device: DeviceNetwork) => {
-        const localTaskId = `backup-${Date.now()}-${device.id}`;
+    const handleBackupDevices = async (devicesToBackup: DeviceNetwork[]) => {
+        if (!devicesToBackup.length) return;
 
         setShowBackupOverlay(true);
-        // Optimistically add the pending task
-        setBackupJobs(prev => [...prev, {
-            id: localTaskId,
+
+        const localTasks = devicesToBackup.map(device => ({
+            id: `backup-${Date.now()}-${device.id}`,
             name: device.device_name,
-            status: 'IN_PROGRESS'
-        }]);
+            status: 'IN_PROGRESS' as const,
+        }));
+
+        setBackupJobs(prev => [...prev, ...localTasks]);
 
         try {
             const result = await fetchClient.POST("/api/v1/devices/backups", {
                 body: {
-                    device_ids: [device.id],
+                    device_ids: devicesToBackup.map(d => d.id),
                     config_type: "RUNNING"
                 }
             });
 
             if (result.error) throw result.error;
 
-            // Extract the generated record ID
             const records = result.data?.job_info?.record_ids;
-            const recordId = Array.isArray(records) && records.length > 0 ? (records[0] as string) : null;
 
-            if (!recordId) {
-                // Fallback: If no record ID returned, just mark success as we did before
+            if (!Array.isArray(records) || records.length === 0) {
                 setBackupJobs(prev => prev.map(t =>
-                    t.id === localTaskId ? { ...t, status: 'SUCCESS' } : t
+                    localTasks.some(lt => lt.id === t.id) ? { ...t, status: 'SUCCESS' } : t
                 ));
                 return;
             }
 
-            // Update local job with the real recordId
-            setBackupJobs(prev => prev.map(t =>
-                t.id === localTaskId ? { ...t, id: recordId, status: 'IN_PROGRESS' } : t
-            ));
+            const tasksToUpdate = [...localTasks];
+            setBackupJobs(prev => prev.map(t => {
+                const matchedTaskIndex = tasksToUpdate.findIndex(lt => lt.id === t.id);
+                if (matchedTaskIndex !== -1 && records[matchedTaskIndex]) {
+                    return { ...t, id: records[matchedTaskIndex] as string };
+                }
+                return t;
+            }));
 
-            // Polling function for this specific backup
-            const pollStatus = async (idToPoll: string) => {
+            const pollStatus = async (idToPoll: string, retryCount = 0) => {
                 setTimeout(async () => {
                     try {
                         const res = await fetchClient.GET("/api/v1/devices/backups/{record_id}", {
                             params: { path: { record_id: idToPoll } }
                         });
                         if (res.data) {
-                            // @ts-ignore - bypassing specific prisma property indexing
+                            // @ts-ignore
                             const currentStatus = res.data.status || "IN_PROGRESS";
 
                             setBackupJobs(prev => prev.map(job =>
                                 job.id === idToPoll ? { ...job, status: currentStatus as any } : job
                             ));
 
-                            if (currentStatus === "IN_PROGRESS") {
-                                pollStatus(idToPoll);
+                            if (currentStatus === "IN_PROGRESS" && retryCount < 60) {
+                                pollStatus(idToPoll, retryCount + 1);
                             }
                         }
                     } catch (e) {
@@ -173,14 +181,12 @@ export default function TopologyDeviceTable({
                 }, 3000);
             };
 
-            // Kick off polling
-            pollStatus(recordId);
+            records.forEach(id => pollStatus(id as string));
 
         } catch (error) {
-            console.error("Backup failed for device", device.device_name, error);
-            // Mark as error
+            console.error("Backup failed for devices", error);
             setBackupJobs(prev => prev.map(t =>
-                t.id === localTaskId ? { ...t, status: 'FAILED' } : t
+                localTasks.some(lt => lt.id === t.id) ? { ...t, status: 'FAILED' } : t
             ));
         }
     };
@@ -189,10 +195,51 @@ export default function TopologyDeviceTable({
 
     return (
         <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+            {selectedDeviceIds && selectedDeviceIds.length > 0 && (
+                <Box sx={{ px: 2, py: 1.5, display: "flex", alignItems: "center", justifyContent: "space-between", bgcolor: "primary.50", borderBottom: 1, borderColor: "divider" }}>
+                    <Typography color="primary" variant="subtitle1" fontWeight={600}>
+                        {selectedDeviceIds.length} device{selectedDeviceIds.length > 1 ? "s" : ""} selected
+                    </Typography>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                        <Button 
+                            variant="contained" 
+                            color="primary" 
+                            size="small" 
+                            startIcon={<FontAwesomeIcon icon={faCog} />}
+                            onClick={() => setIsDeployModalOpen(true)}
+                        >
+                            Template Config
+                        </Button>
+                        <Button 
+                            variant="outlined" 
+                            color="primary" 
+                            size="small"
+                            startIcon={<FontAwesomeIcon icon={faDatabase} />}
+                            onClick={() => handleBackupDevices(devices.filter(d => selectedDeviceIds.includes(d.id)))}
+                        >
+                            Backup Devices
+                        </Button>
+                    </Box>
+                </Box>
+            )}
             <TableContainer sx={{ overflowX: "auto", flexGrow: 1 }}>
                 <Table sx={{ minWidth: 650 }} aria-label="topology devices table">
                     <TableHead sx={{ bgcolor: "grey.50", position: 'sticky', top: 0, zIndex: 1 }}>
                         <TableRow>
+                            <TableCell padding="checkbox">
+                                <Checkbox
+                                    color="primary"
+                                    indeterminate={selectedDeviceIds && selectedDeviceIds.length > 0 && selectedDeviceIds.length < devices.length}
+                                    checked={devices.length > 0 && selectedDeviceIds?.length === devices.length}
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            onSelectionChange?.(devices.map(d => d.id));
+                                        } else {
+                                            onSelectionChange?.([]);
+                                        }
+                                    }}
+                                />
+                            </TableCell>
                             <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>Name</TableCell>
                             <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>Type</TableCell>
                             <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>IP Management</TableCell>
@@ -211,7 +258,7 @@ export default function TopologyDeviceTable({
                             </TableRow>
                         ) : (
                         devices.map((device) => {
-                            const isSelected = selectedDeviceId === device.id;
+                            const isSelected = selectedDeviceIds?.includes(device.id) || false;
                             const deviceType = (device.type as string) || "OTHER";
                             const typeProps = typeConfig[deviceType] || typeConfig.OTHER;
                             const statusProps = getStatusChipProps(device.status as StatusDevice);
@@ -227,6 +274,22 @@ export default function TopologyDeviceTable({
                                         "&.Mui-selected": { bgcolor: "primary.50", "&:hover": { bgcolor: "primary.100" } },
                                     }}
                                 >
+                                    <TableCell padding="checkbox">
+                                        <Checkbox
+                                            color="primary"
+                                            checked={isSelected}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                            }}
+                                            onChange={(e) => {
+                                                const checked = e.target.checked;
+                                                const newSelected = checked 
+                                                    ? [...(selectedDeviceIds || []), device.id]
+                                                    : (selectedDeviceIds || []).filter(id => id !== device.id);
+                                                onSelectionChange?.(newSelected);
+                                            }}
+                                        />
+                                    </TableCell>
                                     <TableCell>
                                         <Typography variant="body2" fontWeight={500} color="text.primary">
                                             {device.device_name}
@@ -316,7 +379,7 @@ export default function TopologyDeviceTable({
                     e.stopPropagation();
                     handleMenuClose();
                     if (currentDevice) {
-                        handleBackupDevice(currentDevice);
+                        handleBackupDevices([currentDevice]);
                     }
                 }}>
                     <ListItemIcon>
@@ -338,6 +401,17 @@ export default function TopologyDeviceTable({
                 isOpen={!!configEditorDevice}
                 onClose={() => setConfigEditorDevice(null)}
                 device={configEditorDevice}
+            />
+
+            {/* Deploy Template Modal */}
+            <DeployTemplateModal
+                isOpen={isDeployModalOpen}
+                onClose={() => setIsDeployModalOpen(false)}
+                selectedDevices={devices.filter(d => selectedDeviceIds?.includes(d.id))}
+                onSuccess={() => {
+                    setIsDeployModalOpen(false);
+                    onSelectionChange?.([]);
+                }}
             />
 
             {/* Bottom-right Backup Tasks Widget */}
