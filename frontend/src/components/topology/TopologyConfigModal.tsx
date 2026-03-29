@@ -120,9 +120,46 @@ export default function TopologyConfigModal({
     const [isBulkPushing, setIsBulkPushing] = useState(false);
     const [bulkResults, setBulkResults] = useState<BulkIntentItemResult[] | null>(null);
 
-    /** Accept a single intent OR an array of intents (from DeviceInterfaceForm) */
+    /** Accept a single intent OR an array of intents (from DeviceInterfaceForm) and prevent duplicates */
     const handleStageIntent = useCallback((staged: StagedIntent | StagedIntent[]) => {
-        setStagedIntents((prev) => [...prev, ...(Array.isArray(staged) ? staged : [staged])]);
+        const incomingIntents = Array.isArray(staged) ? staged : [staged];
+        
+        setStagedIntents((prev) => {
+            const next = [...prev];
+            
+            incomingIntents.forEach(incoming => {
+                // Determine a unique identifier for this intent type to prevent functional duplicates
+                const getIdentity = (intent: StagedIntent) => {
+                    const params = intent.params || {};
+                    // Interfaces are uniquely identified by their interface name and intent type
+                    if (intent.intent.startsWith('interface.')) {
+                        return `${intent.intent}-${params.interface || ''}`;
+                    }
+                    // Static routes are uniquely identified by their destination network
+                    if (intent.intent === 'routing.set_static_route') {
+                        return `${intent.intent}-${params.dest || ''}-${params.dest_mask || ''}`;
+                    }
+                    if (intent.intent === 'routing.set_ospf') {
+                        return `${intent.intent}-${params.process_id || ''}`;
+                    }
+                    // System-wide singletons (hostname, ntp, dns) are unique by intent name alone
+                    return intent.intent;
+                };
+
+                const incomingIdentity = getIdentity(incoming);
+                const existingIndex = next.findIndex(existing => getIdentity(existing) === incomingIdentity);
+
+                if (existingIndex !== -1) {
+                    // Replace the existing intent if it targets the same configuration scope
+                    next[existingIndex] = incoming;
+                } else {
+                    // Append new intent
+                    next.push(incoming);
+                }
+            });
+            
+            return next;
+        });
     }, []);
 
     const handleClearStaged = () => {
@@ -154,54 +191,16 @@ export default function TopologyConfigModal({
             setIsLoading(true);
             setShowData(null);
             try {
-                let intentName: string | null = null;
-
-                switch (section) {
-                    case "setting":
-                        intentName = "show.running_config";
-                        break;
-                    case "interface": {
-                        const { data: discoverData } = await fetchClient.GET(
-                            "/interfaces/odl/{node_id}",
-                            { params: { path: { node_id: nodeId } } }
-                        );
-                        if (discoverData) {
-                            const payload = discoverData as { interfaces?: NetworkInterface[] };
-                            setDiscoveredInterfaces(payload.interfaces || []);
-                        }
-                        setIsLoading(false);
-                        return;
-                    }
-                    case "routing-static":
-                    case "routing-ospf":
-                    case "routing-default":
-                        intentName = "show.ip_route";
-                        break;
-                    case "vlan":
-                        intentName = "show.vlans";
-                        break;
-                    case "dhcp":
-                        intentName = "show.dhcp_pools";
-                        break;
-                    default:
-                        setIsLoading(false);
-                        return;
-                }
-
-                if (intentName) {
-                    const { data, error } = await fetchClient.POST("/api/v1/nbi/intents", {
-                        body: { intent: intentName, node_id: nodeId, params: {} },
-                    });
-                    if (error) {
-                        const errDetail = (error as any)?.detail || (error as any)?.message || JSON.stringify(error);
-                        console.warn(`[loadSectionData] Intent "${intentName}" error:`, errDetail);
-                    } else if (data) {
-                        if (data.success) {
-                            setShowData(data.result ?? null);
-                        } else {
-                            console.warn(`[loadSectionData] Intent "${intentName}" returned success=false:`, data.error);
-                            setShowData(data.result ?? data.error ?? null);
-                        }
+                // We only fetch interface list from the DB (fast). 
+                // We no longer fetch show commands via /api/v1/nbi/intents here to prevent slow loading and 502 Bad Gateway errors.
+                if (section === "interface" || section.startsWith("interface-")) {
+                    const { data: discoverData } = await fetchClient.GET(
+                        "/interfaces/odl/{node_id}",
+                        { params: { path: { node_id: nodeId } } }
+                    );
+                    if (discoverData) {
+                        const payload = discoverData as { interfaces?: NetworkInterface[] };
+                        setDiscoveredInterfaces(payload.interfaces || []);
                     }
                 }
             } catch (err: any) {
