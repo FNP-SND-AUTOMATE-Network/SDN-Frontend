@@ -362,7 +362,31 @@ export const deviceNetworkService = {
     token: string,
     nodeId: string,
   ): Promise<InterfaceDiscoveryResponse> {
-    const url = `${API_BASE_URL}/api/v1/nbi/devices/${nodeId}/interfaces/discover`;
+    const url = `${API_BASE_URL}/interfaces/odl/${nodeId}`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: createHeaders(token),
+    });
+    return handleResponse(response);
+  },
+
+  async syncInterfaces(
+    token: string,
+    nodeId: string,
+  ): Promise<InterfaceDiscoveryResponse> {
+    const url = `${API_BASE_URL}/interfaces/odl/${nodeId}/sync`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: createHeaders(token),
+    });
+    return handleResponse(response);
+  },
+
+  async getInterfaceNames(
+    token: string,
+    nodeId: string,
+  ): Promise<{ success: boolean; names: string[] }> {
+    const url = `${API_BASE_URL}/interfaces/odl/${nodeId}/names`;
     const response = await fetch(url, {
       method: "GET",
       headers: createHeaders(token),
