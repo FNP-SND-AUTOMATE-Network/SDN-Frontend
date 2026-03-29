@@ -819,8 +819,7 @@ export interface paths {
         /** Get Interfaces */
         get: operations["get_interfaces_interfaces__get"];
         put?: never;
-        /** Create Interface */
-        post: operations["create_interface_interfaces__post"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -853,11 +852,70 @@ export interface paths {
         };
         /** Get Interface */
         get: operations["get_interface_interfaces__interface_id__get"];
-        /** Update Interface */
-        put: operations["update_interface_interfaces__interface_id__put"];
+        put?: never;
         post?: never;
         /** Delete Interface */
         delete: operations["delete_interface_interfaces__interface_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/interfaces/odl/{node_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get interfaces from DB by node_id
+         * @description ดึง interface list จาก Database โดยตรง ไม่ยิง ODL เลย (~5ms). ใช้เป็น default สำหรับแสดงหน้า interface list. ข้อมูลจะเป็นปัจจุบันเท่ากับครั้งล่าสุดที่เรียก /interfaces/odl/{node_id}/sync
+         */
+        get: operations["get_interfaces_from_db_interfaces_odl__node_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/interfaces/odl/{node_id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sync interfaces from device (synchronous)
+         * @description ไปดึง interface list จาก ODL จริง → sync ลง DB → อ่านกลับจาก DB แล้ว return. Response เป็น DB state เสมอ (source='database') จึงรับประกันว่า ข้อมูลที่ frontend เห็นตรงกับ DB 100%.
+         */
+        get: operations["sync_interfaces_interfaces_odl__node_id__sync_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/interfaces/odl/{node_id}/names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get interface name list
+         * @description ดึงเฉพาะชื่อ interface สำหรับ dropdown
+         */
+        get: operations["get_interface_names_interfaces_odl__node_id__names_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -896,6 +954,26 @@ export interface paths {
          * @description ดึงรายการ IP addresses ใน subnet
          */
         get: operations["get_subnet_addresses_ipam_subnets__subnet_id__addresses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ipam/subnets/{subnet_id}/first_free": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get First Free Ip
+         * @description ดึง IP แรกที่ว่างอยู่ใน subnet นี้ เพื่อนำไป auto-suggest ใน UI
+         */
+        get: operations["get_first_free_ip_ipam_subnets__subnet_id__first_free_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1140,7 +1218,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/nbi/intents": {
+    "/api/v1/nbi/health": {
         parameters: {
             query?: never;
             header?: never;
@@ -1148,57 +1226,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Supported Intents
-         * @description Get all supported intents grouped by OS
+         * Nbi Health Check
+         * @description NBI Health Check - ตรวจสอบการเชื่อมต่อ ODL และ Database
          *
-         *     **Always returns 200**
+         *     **Returns:**
+         *     - `odl_status`: ODL connection status
+         *     - `db_status`: Database connection status
          */
-        get: operations["list_supported_intents_api_v1_nbi_intents_get"];
-        put?: never;
-        /**
-         * Handle Intent
-         * @description Execute an Intent-based network operation
-         *
-         *     **Error Codes:**
-         *     - `INTENT_NOT_FOUND`: Intent ไม่มีในระบบ
-         *     - `DEVICE_NOT_FOUND`: ไม่พบ device
-         *     - `DEVICE_NOT_CONNECTED`: Device ยังไม่ connected
-         *     - `INVALID_PARAMS`: Parameters ไม่ถูกต้อง
-         *     - `ODL_REQUEST_FAILED`: ODL request failed
-         *
-         *     **Example Request:**
-         *     ```json
-         *     {
-         *         "intent": "show.interface",
-         *         "node_id": "CSR1000vT",
-         *         "params": {
-         *             "interface": "GigabitEthernet1"
-         *         }
-         *     }
-         *     ```
-         */
-        post: operations["handle_intent_api_v1_nbi_intents_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/nbi/intents/{intent_name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Intent Info
-         * @description Get detailed information about a specific intent
-         *
-         *     **Error Codes:**
-         *     - `INTENT_NOT_FOUND`: Intent ไม่มีในระบบ
-         */
-        get: operations["get_intent_info_api_v1_nbi_intents__intent_name__get"];
+        get: operations["nbi_health_check_api_v1_nbi_health_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1284,6 +1319,159 @@ export interface paths {
         get: operations["get_device_capabilities_api_v1_nbi_devices__device_id__capabilities_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nbi/devices/{node_id}/mount": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mount Device
+         * @description 🔌 Mount device ใน ODL
+         *
+         *     ใช้ข้อมูล NETCONF credentials จาก Database เพื่อ mount ใน ODL
+         *
+         *     **Error Codes:**
+         *     - `DEVICE_NOT_FOUND`: ไม่พบ device ใน Database
+         *     - `MISSING_NODE_ID`: Device ไม่มี node_id
+         *     - `MISSING_NETCONF_HOST`: Device ไม่มี netconf_host หรือ ip_address
+         *     - `MISSING_NETCONF_CREDENTIALS`: ไม่มี username/password
+         *     - `DEVICE_ALREADY_MOUNTED`: Device mount อยู่แล้ว
+         *     - `ODL_MOUNT_FAILED`: Mount failed
+         *     - `MOUNT_TIMEOUT`: รอ connection timeout
+         */
+        post: operations["mount_device_api_v1_nbi_devices__node_id__mount_post"];
+        /**
+         * Unmount Device
+         * @description 🔌 Unmount device จาก ODL
+         *
+         *     **Error Codes:**
+         *     - `DEVICE_NOT_FOUND`: ไม่พบ device
+         *     - `DEVICE_NOT_MOUNTED`: Device ไม่ได้ mount อยู่
+         *     - `ODL_UNMOUNT_FAILED`: Unmount failed
+         */
+        delete: operations["unmount_device_api_v1_nbi_devices__node_id__mount_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nbi/devices/{node_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check Device Status
+         * @description 📊 Check connection status และ sync กับ Database
+         *
+         *     **Error Codes:**
+         *     - `DEVICE_NOT_FOUND`: ไม่พบ device
+         *     - `DEVICE_NOT_CONNECTED`: Device ยัง connecting หรือ unable to connect
+         *     - `ODL_CONNECTION_FAILED`: ไม่สามารถตรวจสอบ status ได้
+         */
+        get: operations["check_device_status_api_v1_nbi_devices__node_id__status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nbi/devices/{node_id}/wait-ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Wait For Device Ready
+         * @description ⏳ Poll ODL until the device becomes **fully connected** (or timeout).
+         *
+         *     Use this endpoint **immediately after** `POST /devices/{node_id}/mount` to
+         *     wait for ODL to finish downloading and compiling all YANG modules before
+         *     issuing any data-plane requests (get-interfaces, push-config, etc.).
+         *
+         *     ### Why this matters
+         *     ODL reports HTTP 201 / 200 as soon as the mount entry is written to the
+         *     *configuration* datastore.  The actual NETCONF session establishment and
+         *     YANG schema compilation happen **asynchronously** in the background and can
+         *     take 30–120 seconds on real Cisco ASR hardware.  Sending NETCONF RPCs
+         *     (e.g. `get-config`) while `connection_status == 'connecting'` floods the
+         *     internal RPC queue, which causes ODL to tear down the session permanently
+         *     and leaves the node in a stuck state that survives unmount/remount.
+         *
+         *     ### Flow
+         *     ```
+         *     POST /mount  → 200 OK (mount entry created)
+         *           ↓
+         *     GET  /wait-ready  → polls every {check_interval}s
+         *           ↓  (when connected)
+         *     GET  /interfaces/sync     → safe to call
+         *     ```
+         *
+         *     ### Response codes
+         *     | `ready` | `connection_status`    | Meaning                              |
+         *     |---------|------------------------|--------------------------------------|
+         *     | `true`  | `connected`            | Safe to call interface / config APIs |
+         *     | `false` | `connecting`           | Timed out — keep polling             |
+         *     | `false` | `unable-to-connect`    | Auth / reachability failure          |
+         */
+        get: operations["wait_for_device_ready_api_v1_nbi_devices__node_id__wait_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nbi/devices/{node_id}/force-remount": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Force Remount Device
+         * @description 🔄 Force-remount a stuck device in ODL.
+         *
+         *     Use this when a device node is **stuck** in ODL (e.g. it survived `unmount`
+         *     and cannot be mounted again).  This endpoint:
+         *
+         *     1. `DELETE` the node from ODL **config** datastore (handles 404 gracefully)
+         *     2. Waits 10 seconds for ODL to fully tear down the NETCONF session
+         *     3. Verifies the node is gone from **operational** datastore
+         *     4. Re-mounts the device using credentials from the database
+         *     5. Polls until `connected` (respects `max_wait_seconds`)
+         *
+         *     ### When to use
+         *     - Keepalive RPCs are flooding the log with "session is disconnected"
+         *     - `GET /status` returns `connection_status: none` or `unable-to-connect`
+         *       even though you already called `unmount` + `mount`
+         *     - The node is visible in ODL operational DS but not in config DS
+         *
+         *     ### Concurrency safety
+         *     Uses per-device locking — concurrent force-remount calls on the same
+         *     device will be serialized automatically.
+         */
+        post: operations["force_remount_device_api_v1_nbi_devices__node_id__force_remount_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1384,7 +1572,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/nbi/devices/{node_id}/mount": {
+    "/api/v1/nbi/devices/{node_id}/sync-status": {
         parameters: {
             query?: never;
             header?: never;
@@ -1394,37 +1582,75 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Mount Device
-         * @description 🔌 Mount device ใน ODL
+         * Sync Single Device Status
+         * @description Sync connection status ของ device ตัวเดียวจาก ODL → DB
          *
-         *     ใช้ข้อมูล NETCONF credentials จาก Database เพื่อ mount ใน ODL
+         *     รองรับทั้ง NETCONF และ OpenFlow:
+         *     - **NETCONF**: ดึง connection-status จาก topology-netconf
+         *     - **OpenFlow**: ตรวจสอบว่ามีอยู่ใน opendaylight-inventory หรือไม่
+         *
+         *     **Response:**
+         *     - `previous_status`: สถานะก่อน sync
+         *     - `current_status`: สถานะหลัง sync
+         *     - `connection_status`: raw status จาก ODL (เช่น "connected", "not-mounted")
+         *     - `protocol`: NETCONF หรือ OPENFLOW
          *
          *     **Error Codes:**
-         *     - `DEVICE_NOT_FOUND`: ไม่พบ device ใน Database
-         *     - `MISSING_NODE_ID`: Device ไม่มี node_id
-         *     - `MISSING_NETCONF_HOST`: Device ไม่มี netconf_host หรือ ip_address
-         *     - `MISSING_NETCONF_CREDENTIALS`: ไม่มี username/password
-         *     - `DEVICE_ALREADY_MOUNTED`: Device mount อยู่แล้ว
-         *     - `ODL_MOUNT_FAILED`: Mount failed
-         *     - `MOUNT_TIMEOUT`: รอ connection timeout
+         *     - `404`: Device ไม่พบใน database
+         *     - `502`: ODL ไม่ตอบ
          */
-        post: operations["mount_device_api_v1_nbi_devices__node_id__mount_post"];
+        post: operations["sync_single_device_status_api_v1_nbi_devices__node_id__sync_status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nbi/intents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         /**
-         * Unmount Device
-         * @description 🔌 Unmount device จาก ODL
+         * List Supported Intents
+         * @description Get all supported intents grouped by OS
+         *
+         *     **Always returns 200**
+         */
+        get: operations["list_supported_intents_api_v1_nbi_intents_get"];
+        put?: never;
+        /**
+         * Handle Intent
+         * @description Execute an Intent-based network operation
          *
          *     **Error Codes:**
+         *     - `INTENT_NOT_FOUND`: Intent ไม่มีในระบบ
          *     - `DEVICE_NOT_FOUND`: ไม่พบ device
-         *     - `DEVICE_NOT_MOUNTED`: Device ไม่ได้ mount อยู่
-         *     - `ODL_UNMOUNT_FAILED`: Unmount failed
+         *     - `DEVICE_NOT_CONNECTED`: Device ยังไม่ connected
+         *     - `INVALID_PARAMS`: Parameters ไม่ถูกต้อง
+         *     - `ODL_REQUEST_FAILED`: ODL request failed
+         *
+         *     **Example Request:**
+         *     ```json
+         *     {
+         *         "intent": "show.interface",
+         *         "node_id": "CSR1000vT",
+         *         "params": {
+         *             "interface": "GigabitEthernet1"
+         *         }
+         *     }
+         *     ```
          */
-        delete: operations["unmount_device_api_v1_nbi_devices__node_id__mount_delete"];
+        post: operations["handle_intent_api_v1_nbi_intents_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/nbi/devices/{node_id}/status": {
+    "/api/v1/nbi/intents/{intent_name}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1432,15 +1658,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Check Device Status
-         * @description 📊 Check connection status และ sync กับ Database
+         * Get Intent Info
+         * @description Get detailed information about a specific intent
          *
          *     **Error Codes:**
-         *     - `DEVICE_NOT_FOUND`: ไม่พบ device
-         *     - `DEVICE_NOT_CONNECTED`: Device ยัง connecting หรือ unable to connect
-         *     - `ODL_CONNECTION_FAILED`: ไม่สามารถตรวจสอบ status ได้
+         *     - `INTENT_NOT_FOUND`: Intent ไม่มีในระบบ
          */
-        get: operations["check_device_status_api_v1_nbi_devices__node_id__status_get"];
+        get: operations["get_intent_info_api_v1_nbi_intents__intent_name__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1449,71 +1673,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/nbi/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Nbi Health Check
-         * @description NBI Health Check - ตรวจสอบการเชื่อมต่อ ODL และ Database
-         *
-         *     **Returns:**
-         *     - `odl_status`: ODL connection status
-         *     - `db_status`: Database connection status
-         */
-        get: operations["nbi_health_check_api_v1_nbi_health_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/nbi/devices/{node_id}/interfaces/discover": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Discover interfaces from device
-         * @description ดึง interface list จาก device ผ่าน ODL ใช้สำหรับ dropdown ให้ user เลือก interface
-         */
-        get: operations["discover_interfaces_api_v1_nbi_devices__node_id__interfaces_discover_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/nbi/devices/{node_id}/interfaces/names": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get interface name list
-         * @description ดึงเฉพาะชื่อ interface สำหรับ dropdown
-         */
-        get: operations["get_interface_names_api_v1_nbi_devices__node_id__interfaces_names_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/nbi/devices/{node_id}/interfaces/cache": {
+    "/api/v1/nbi/intents/bulk": {
         parameters: {
             query?: never;
             header?: never;
@@ -1522,12 +1682,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post?: never;
         /**
-         * Invalidate interface cache
-         * @description ล้าง cache interface list ของ device
+         * Bulk execute intents (Fail-Fast)
+         * @description Execute multiple intents sequentially on one or more devices.
+         *
+         *     **Fail-Fast Behavior:** If any intent fails, all subsequent intents in the queue are immediately cancelled and marked as `CANCELLED`.
+         *
+         *     Returns `200` if all intents succeed, `207 Multi-Status` if there are partial failures.
          */
-        delete: operations["invalidate_cache_api_v1_nbi_devices__node_id__interfaces_cache_delete"];
+        post: operations["handle_bulk_intent_api_v1_nbi_intents_bulk_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2002,44 +2166,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/debug/odl": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Probe Odl
-         * @description เช็คว่า backend ยิงไปหา ODL ได้ไหม (RESTCONF up + auth ok)
-         *     RFC-8040 RESTCONF uses /rests/data as base path for data operations
-         */
-        get: operations["probe_odl_api_v1_debug_odl_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/debug/env": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Debug Env */
-        get: operations["debug_env_api_v1_debug_env_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/devices/backups/stats/summary": {
         parameters: {
             query?: never;
@@ -2175,6 +2301,394 @@ export interface paths {
          * @description Fetch the status of a bulk deployment job and its associated device records.
          */
         get: operations["get_deployment_status_deployments__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chatops/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Chatops Status
+         * @description ดูสถานะระบบ ChatOps
+         *
+         *     Returns:
+         *         - chatops_enabled: ระบบเปิดใช้งานหรือไม่
+         *         - webhook_configured: Webhook URL ตั้งค่าแล้วหรือไม่
+         *         - event_bus_handlers: รายการ handlers ที่ register ไว้
+         *         - recent_events_count: จำนวน events ล่าสุด
+         */
+        get: operations["chatops_status_api_v1_chatops_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chatops/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Slack Connection
+         * @description ทดสอบการเชื่อมต่อ Slack Webhook
+         *
+         *     ส่ง test message ไปยัง Slack channel ที่ตั้งค่าไว้
+         *     เพื่อยืนยันว่า webhook ทำงานได้ปกติ
+         */
+        post: operations["test_slack_connection_api_v1_chatops_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chatops/notify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Manual Notification
+         * @description ส่ง notification ไปยัง Slack ด้วยมือ
+         *
+         *     Body:
+         *         - title: หัวข้อข้อความ
+         *         - message: เนื้อหาข้อความ
+         *         - severity: ระดับความรุนแรง (CRITICAL, WARNING, INFO, RESOLVED)
+         */
+        post: operations["send_manual_notification_api_v1_chatops_notify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chatops/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Recent Events
+         * @description ดู recent events จาก Event Bus (สำหรับ debug)
+         *
+         *     Returns:
+         *         - events: รายการ events ล่าสุด (max 50)
+         *         - total: จำนวน events ทั้งหมดใน buffer
+         */
+        get: operations["get_recent_events_api_v1_chatops_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zabbix/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Receive Zabbix Event
+         * @description รับ event จาก Zabbix Webhook
+         *
+         *     Zabbix จะ POST JSON payload มาเมื่อเกิด trigger event
+         *     Backend จะ normalize ข้อมูลให้อ่านง่าย แล้วส่งต่อไปยัง Slack
+         *
+         *     Flow:
+         *       Zabbix → POST /api/v1/zabbix/webhook → Normalize → Slack
+         *
+         *     Returns:
+         *       - status: "sent" / "failed"
+         *       - event_id: Zabbix event ID
+         *       - host: ชื่อ host ที่เกิด event
+         *       - severity: ระดับความรุนแรง
+         *       - trigger: ชื่อ trigger
+         */
+        post: operations["receive_zabbix_event_api_v1_zabbix_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zabbix/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Zabbix Events
+         * @description ดู Zabbix events ที่ประมวลผลแล้ว (recent)
+         *
+         *     Returns:
+         *       - events: รายการ events ล่าสุด (max 50)
+         *       - total: จำนวน events ทั้งหมดใน buffer
+         */
+        get: operations["get_zabbix_events_api_v1_zabbix_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zabbix/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Zabbix Stats
+         * @description ดูสถิติการรับ events จาก Zabbix
+         *
+         *     Returns:
+         *       - total_events_processed: จำนวน events ที่ประมวลผลแล้ว
+         *       - problems: จำนวน PROBLEM events
+         *       - resolved: จำนวน RESOLVED events
+         *       - failed_slack_sends: จำนวนที่ส่ง Slack ไม่สำเร็จ
+         *       - webhook_active: Slack webhook ตั้งค่าแล้วหรือไม่
+         */
+        get: operations["get_zabbix_stats_api_v1_zabbix_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zabbix/dashboard/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Zabbix Health Check
+         * @description ตรวจสอบการเชื่อมต่อ Zabbix API
+         *
+         *     Returns:
+         *         - status: "ok" / "error"
+         *         - zabbix_version: เวอร์ชัน Zabbix
+         *         - api_url: URL ที่ใช้เชื่อมต่อ
+         */
+        get: operations["zabbix_health_check_api_v1_zabbix_dashboard_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zabbix/dashboard/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Dashboard Overview
+         * @description ภาพรวม Dashboard: จำนวน hosts, problems, severity breakdown
+         *
+         *     สำหรับ Frontend แสดง:
+         *     - จำนวน hosts ทั้งหมด / available / unavailable
+         *     - จำนวน problems แยกตาม severity
+         *     - รายชื่อ host groups
+         */
+        get: operations["get_dashboard_overview_api_v1_zabbix_dashboard_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zabbix/dashboard/top-metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Dashboard Top Metrics
+         * @description ดึงข้อมูล Top N แบบเรียลไทม์ (ใช้งานหนาแน่นที่สุด) สำหรับหน้า Dashboard
+         *     ใช้ Zabbix Tag-based filtering (component: cpu / memory / network)
+         *     ประกอบด้วย:
+         *     - top_bandwidth (Interface traffic In/Out — tag: component=network)
+         *     - top_cpu (Device CPU utilization — tag: component=cpu)
+         *     - top_memory (Device RAM utilization — tag: component=memory)
+         */
+        get: operations["get_dashboard_top_metrics_api_v1_zabbix_dashboard_top_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zabbix/dashboard/hosts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Hosts
+         * @description รายการ hosts ทั้งหมดที่ Zabbix monitor
+         *
+         *     Returns array of hosts with:
+         *     - hostid, hostname, name, status, availability
+         *     - interfaces (agent, snmp, ipmi, jmx)
+         *     - groups
+         */
+        get: operations["get_hosts_api_v1_zabbix_dashboard_hosts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zabbix/dashboard/hosts/{host_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Host Detail
+         * @description รายละเอียด host เดียว:
+         *     - ข้อมูล host + interfaces + templates
+         *     - SNMP items ทั้งหมด + ค่าล่าสุด
+         *     - Active problems ของ host นี้
+         */
+        get: operations["get_host_detail_api_v1_zabbix_dashboard_hosts__host_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zabbix/dashboard/hosts/{host_id}/traffic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Host Traffic
+         * @description Traffic data สำหรับแสดงกราฟ
+         *
+         *     ดึง ifInOctets, ifOutOctets, ifSpeed ย้อนหลังตาม period
+         *     Returns time-series data ที่พร้อมใช้กับ chart library
+         *
+         *     period:
+         *     - 1 = 1 ชั่วโมงล่าสุด
+         *     - 6 = 6 ชั่วโมง
+         *     - 24 = 1 วัน
+         *     - 168 = 1 สัปดาห์
+         */
+        get: operations["get_host_traffic_api_v1_zabbix_dashboard_hosts__host_id__traffic_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zabbix/dashboard/hosts/{host_id}/snmp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Host Snmp Overview
+         * @description SNMP items overview ของ host:
+         *     - จัดหมวดหมู่: interface, traffic, cpu, memory, disk, system
+         *     - แต่ละ item มีค่าล่าสุด (lastvalue)
+         *
+         *     ใช้สำหรับแสดง SNMP data ในหน้า Host Detail
+         */
+        get: operations["get_host_snmp_overview_api_v1_zabbix_dashboard_hosts__host_id__snmp_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zabbix/dashboard/problems": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Problems
+         * @description Active problems (unresolved triggers)
+         *
+         *     severity levels:
+         *     - 0 = Not classified
+         *     - 1 = Information
+         *     - 2 = Warning
+         *     - 3 = Average
+         *     - 4 = High
+         *     - 5 = Disaster
+         *
+         *     Returns problems list + severity breakdown counts
+         */
+        get: operations["get_problems_api_v1_zabbix_dashboard_problems_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2661,6 +3175,36 @@ export interface components {
             /** @default RUNNING */
             config_type: components["schemas"]["ConfigType"];
         };
+        /**
+         * BulkIntentItemResult
+         * @description Result of a single intent within a bulk request
+         */
+        BulkIntentItemResult: {
+            /**
+             * Index
+             * @description 0-based position in the original request list
+             */
+            index: number;
+            status: components["schemas"]["BulkIntentStatus"];
+            /** Intent */
+            intent: string;
+            /** Node Id */
+            node_id: string;
+            /** Driver Used */
+            driver_used?: string | null;
+            /** Result */
+            result?: {
+                [key: string]: unknown;
+            };
+            /** Error */
+            error?: string | null;
+        };
+        /**
+         * BulkIntentStatus
+         * @description Status of each intent in a bulk request
+         * @enum {string}
+         */
+        BulkIntentStatus: "SUCCESS" | "FAILED" | "CANCELLED";
         /**
          * ConfigType
          * @enum {string}
@@ -3613,6 +4157,49 @@ export interface components {
             table_id: number;
         };
         /**
+         * IntentBulkRequest
+         * @description Bulk Intent API Request
+         *
+         *     Allows submitting multiple intents to be executed sequentially on the device.
+         *     Uses Fail-Fast: if one intent fails, remaining intents are cancelled.
+         *
+         *     Attributes:
+         *         intents: Ordered list of intent requests to execute
+         */
+        IntentBulkRequest: {
+            /**
+             * Intents
+             * @description Ordered list of intent requests (max 50)
+             */
+            intents: components["schemas"]["IntentRequest"][];
+        };
+        /**
+         * IntentBulkResponse
+         * @description Bulk Intent API Response
+         *
+         *     Attributes:
+         *         success: True only if ALL intents succeeded
+         *         total: Total number of intents submitted
+         *         succeeded: Count of successfully executed intents
+         *         failed: Count of failed intents (0 or 1 in Fail-Fast)
+         *         cancelled: Count of intents skipped due to Fail-Fast abort
+         *         results: Per-intent result details
+         */
+        IntentBulkResponse: {
+            /** Success */
+            success: boolean;
+            /** Total */
+            total: number;
+            /** Succeeded */
+            succeeded: number;
+            /** Failed */
+            failed: number;
+            /** Cancelled */
+            cancelled: number;
+            /** Results */
+            results: components["schemas"]["BulkIntentItemResult"][];
+        };
+        /**
          * IntentRequest
          * @description Intent API Request
          *
@@ -3672,60 +4259,6 @@ export interface components {
             error?: {
                 [key: string]: unknown;
             } | null;
-        };
-        /** InterfaceCreate */
-        InterfaceCreate: {
-            /**
-             * Name
-             * @description ชื่อ Interface (เช่น GigabitEthernet0/1, eth0)
-             */
-            name: string;
-            /**
-             * Device Id
-             * @description Device Network ID ที่เชื่อมโยง
-             */
-            device_id: string;
-            /**
-             * Label
-             * @description ชื่อย่อหรือป้ายกำกับ
-             */
-            label?: string | null;
-            /**
-             * @description สถานะของ Interface
-             * @default DOWN
-             */
-            status: components["schemas"]["InterfaceStatus"];
-            /**
-             * @description ประเภทของ Interface
-             * @default PHYSICAL
-             */
-            type: components["schemas"]["InterfaceType"];
-            /**
-             * Description
-             * @description คำอธิบาย Interface
-             */
-            description?: string | null;
-            /**
-             * Tp Id
-             * @description Termination Point ID จาก ODL สำหรัยใส่ข้อมูล topology
-             */
-            tp_id?: string | null;
-            /**
-             * Port Number
-             * @description หมายเลขพอร์ตที่ใช้เขียน rule (เช่น 1, 2, 3)
-             */
-            port_number?: number | null;
-            /**
-             * Mac Address
-             * @description MAC address ของ Interface
-             */
-            mac_address?: string | null;
-        };
-        /** InterfaceCreateResponse */
-        InterfaceCreateResponse: {
-            /** Message */
-            message: string;
-            interface: components["schemas"]["InterfaceResponse"];
         };
         /** InterfaceDeleteResponse */
         InterfaceDeleteResponse: {
@@ -3807,49 +4340,6 @@ export interface components {
          * @enum {string}
          */
         InterfaceType: "PHYSICAL" | "VIRTUAL" | "LOOPBACK" | "VLAN" | "TUNNEL" | "OTHER";
-        /** InterfaceUpdate */
-        InterfaceUpdate: {
-            /**
-             * Name
-             * @description ชื่อ Interface
-             */
-            name?: string | null;
-            /**
-             * Label
-             * @description ชื่อย่อหรือป้ายกำกับ
-             */
-            label?: string | null;
-            /** @description สถานะของ Interface */
-            status?: components["schemas"]["InterfaceStatus"] | null;
-            /** @description ประเภทของ Interface */
-            type?: components["schemas"]["InterfaceType"] | null;
-            /**
-             * Description
-             * @description คำอธิบาย Interface
-             */
-            description?: string | null;
-            /**
-             * Tp Id
-             * @description Termination Point ID จาก ODL
-             */
-            tp_id?: string | null;
-            /**
-             * Port Number
-             * @description หมายเลขพอร์ต
-             */
-            port_number?: number | null;
-            /**
-             * Mac Address
-             * @description MAC address ของ Interface
-             */
-            mac_address?: string | null;
-        };
-        /** InterfaceUpdateResponse */
-        InterfaceUpdateResponse: {
-            /** Message */
-            message: string;
-            interface: components["schemas"]["InterfaceResponse"];
-        };
         /** IpAddressCreateRequest */
         IpAddressCreateRequest: {
             /** Subnet Id */
@@ -4310,6 +4800,18 @@ export interface components {
          * @enum {string}
          */
         ManagementProtocol: "NETCONF" | "OPENFLOW";
+        /** ManualNotifyRequest */
+        ManualNotifyRequest: {
+            /** Title */
+            title: string;
+            /** Message */
+            message: string;
+            /**
+             * Severity
+             * @default INFO
+             */
+            severity: string | null;
+        };
         /**
          * MountRequest
          * @description Request body สำหรับ mount device
@@ -4317,14 +4819,12 @@ export interface components {
         MountRequest: {
             /**
              * Wait For Connection
-             * @description รอจนกว่าจะ connected (max 30s)
              * @default true
              */
             wait_for_connection: boolean;
             /**
              * Max Wait Seconds
-             * @description เวลารอสูงสุด (วินาที) - 5 ถึง 120
-             * @default 30
+             * @default 120
              */
             max_wait_seconds: number;
         };
@@ -8238,39 +8738,6 @@ export interface operations {
             };
         };
     };
-    create_interface_interfaces__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["InterfaceCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InterfaceCreateResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_interfaces_by_device_interfaces_device__device_id__get: {
         parameters: {
             query?: never;
@@ -8333,41 +8800,6 @@ export interface operations {
             };
         };
     };
-    update_interface_interfaces__interface_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                interface_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["InterfaceUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InterfaceUpdateResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     delete_interface_interfaces__interface_id__delete: {
         parameters: {
             query?: never;
@@ -8386,6 +8818,105 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InterfaceDeleteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_interfaces_from_db_interfaces_odl__node_id__get: {
+        parameters: {
+            query?: {
+                /** @description รวม interface ที่ status=DOWN ด้วย */
+                include_down?: boolean;
+            };
+            header?: never;
+            path: {
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_interfaces_interfaces_odl__node_id__sync_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_interface_names_interfaces_odl__node_id__names_get: {
+        parameters: {
+            query?: {
+                /** @description Force refresh cache */
+                force_refresh?: boolean;
+            };
+            header?: never;
+            path: {
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -8470,6 +9001,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IpAddressListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_first_free_ip_ipam_subnets__subnet_id__first_free_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subnet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -9086,7 +9650,7 @@ export interface operations {
             };
         };
     };
-    list_supported_intents_api_v1_nbi_intents_get: {
+    nbi_health_check_api_v1_nbi_health_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -9102,70 +9666,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
-                };
-            };
-        };
-    };
-    handle_intent_api_v1_nbi_intents_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["IntentRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IntentResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_intent_info_api_v1_nbi_intents__intent_name__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                intent_name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -9262,86 +9762,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_odl_mounted_nodes_api_v1_nbi_odl_nodes_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    sync_netconf_devices_from_odl_api_v1_nbi_odl_sync_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SyncResponse"];
-                };
-            };
-        };
-    };
-    get_odl_config_api_v1_nbi_odl_config_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OdlConfigResponse"];
-                };
-            };
-        };
-    };
-    sync_all_devices_api_v1_nbi_odl_sync_all_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SyncResponse"];
                 };
             };
         };
@@ -9443,7 +9863,78 @@ export interface operations {
             };
         };
     };
-    nbi_health_check_api_v1_nbi_health_get: {
+    wait_for_device_ready_api_v1_nbi_devices__node_id__wait_ready_get: {
+        parameters: {
+            query?: {
+                /** @description Maximum seconds to wait for ODL to finish mounting (default 120s). Cisco ASR hardware typically needs 30–90 s to download YANG modules. */
+                max_wait_seconds?: number;
+                /** @description Polling interval in seconds (default 5s) */
+                check_interval?: number;
+            };
+            header?: never;
+            path: {
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    force_remount_device_api_v1_nbi_devices__node_id__force_remount_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MountRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MountResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_odl_mounted_nodes_api_v1_nbi_odl_nodes_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -9463,16 +9954,11 @@ export interface operations {
             };
         };
     };
-    discover_interfaces_api_v1_nbi_devices__node_id__interfaces_discover_get: {
+    sync_netconf_devices_from_odl_api_v1_nbi_odl_sync_post: {
         parameters: {
-            query?: {
-                /** @description Force refresh cache */
-                force_refresh?: boolean;
-            };
+            query?: never;
             header?: never;
-            path: {
-                node_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -9483,30 +9969,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["SyncResponse"];
                 };
             };
         };
     };
-    get_interface_names_api_v1_nbi_devices__node_id__interfaces_names_get: {
+    get_odl_config_api_v1_nbi_odl_config_get: {
         parameters: {
-            query?: {
-                /** @description Force refresh cache */
-                force_refresh?: boolean;
-            };
+            query?: never;
             header?: never;
-            path: {
-                node_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -9517,21 +9989,32 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["OdlConfigResponse"];
                 };
             };
         };
     };
-    invalidate_cache_api_v1_nbi_devices__node_id__interfaces_cache_delete: {
+    sync_all_devices_api_v1_nbi_odl_sync_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncResponse"];
+                };
+            };
+        };
+    };
+    sync_single_device_status_api_v1_nbi_devices__node_id__sync_status_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -9549,6 +10032,123 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_supported_intents_api_v1_nbi_intents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    handle_intent_api_v1_nbi_intents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_intent_info_api_v1_nbi_intents__intent_name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                intent_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    handle_bulk_intent_api_v1_nbi_intents_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntentBulkRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntentBulkResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10355,46 +10955,6 @@ export interface operations {
             };
         };
     };
-    probe_odl_api_v1_debug_odl_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    debug_env_api_v1_debug_env_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
     get_backup_stats_summary_api_v1_devices_backups_stats_summary_get: {
         parameters: {
             query?: never;
@@ -10586,6 +11146,410 @@ export interface operations {
             path: {
                 job_id: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chatops_status_api_v1_chatops_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    test_slack_connection_api_v1_chatops_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    send_manual_notification_api_v1_chatops_notify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualNotifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_recent_events_api_v1_chatops_events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    receive_zabbix_event_api_v1_zabbix_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_zabbix_events_api_v1_zabbix_events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_zabbix_stats_api_v1_zabbix_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    zabbix_health_check_api_v1_zabbix_dashboard_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_dashboard_overview_api_v1_zabbix_dashboard_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_dashboard_top_metrics_api_v1_zabbix_dashboard_top_metrics_get: {
+        parameters: {
+            query?: {
+                /** @description Number of top items to return */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_hosts_api_v1_zabbix_dashboard_hosts_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by host group ID */
+                group_id?: string | null;
+                /** @description Search by host name */
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_host_detail_api_v1_zabbix_dashboard_hosts__host_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_host_traffic_api_v1_zabbix_dashboard_hosts__host_id__traffic_get: {
+        parameters: {
+            query?: {
+                /** @description Period in hours (1, 6, 12, 24) */
+                period?: number;
+                /** @description Filter by interface name */
+                interface?: string | null;
+            };
+            header?: never;
+            path: {
+                host_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_host_snmp_overview_api_v1_zabbix_dashboard_hosts__host_id__snmp_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_problems_api_v1_zabbix_dashboard_problems_get: {
+        parameters: {
+            query?: {
+                /** @description Min severity (0-5) */
+                severity_min?: number;
+                /** @description Filter by host ID */
+                host_id?: string | null;
+                /** @description Max problems to return */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
