@@ -14,6 +14,7 @@ export interface ZabbixAlert {
   trigger_name: string;
   item_name: string;
   item_value: string;
+  frontend_message?: string;
   event_time: string;
   tags: Record<string, string>;
   description: string;
@@ -65,7 +66,7 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setSnackbar({
       open: true,
       title: `${alert.severity_label} - ${alert.host_name}`,
-      message: alert.trigger_name,
+      message: alert.frontend_message || alert.trigger_name,
       severity,
     });
   }, []);

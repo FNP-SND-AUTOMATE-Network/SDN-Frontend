@@ -156,7 +156,7 @@ export const NotificationBell: React.FC = () => {
                             lineHeight: 1.4,
                           }}
                         >
-                          {alert.trigger_name}
+                          {alert.frontend_message || alert.trigger_name}
                         </Typography>
                         <Typography variant="caption" component="div" color="text.disabled" sx={{ mt: 0.5 }}>
                           {(() => {
