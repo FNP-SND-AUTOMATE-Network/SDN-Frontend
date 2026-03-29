@@ -8,8 +8,8 @@ export default function ResetPasswordPage() {
     return (
         <PublicRoute>
             <AuthPageLayout
-                title="รีเซ็ตรหัสผ่าน"
-                description="กรอกรหัส OTP และรหัสผ่านใหม่ของคุณ"
+                title="Reset Password"
+                description="Enter your OTP code and new password"
             >
                 <ResetPasswordForm />
             </AuthPageLayout>
