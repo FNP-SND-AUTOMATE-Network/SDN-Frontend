@@ -12,8 +12,19 @@ export type ConfigurationTemplateResponse =
 export type ConfigurationTemplateDetailResponse =
   components["schemas"]["ConfigurationTemplateDetailResponse"];
 
+/** A single intent queued for bulk execution */
+export interface StagedIntent {
+  intent: string;
+  node_id: string;
+  params: Record<string, any>;
+  /** UI label for the pending changes list */
+  label?: string;
+}
+
 export interface ConfigPanelProps {
   device: DeviceNetwork;
   nodeId: string;
   showData: Record<string, any> | null;
+  /** Queue an intent for bulk push instead of firing immediately */
+  onStageIntent?: (intent: StagedIntent) => void;
 }
