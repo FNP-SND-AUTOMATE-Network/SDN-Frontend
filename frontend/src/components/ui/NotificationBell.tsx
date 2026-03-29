@@ -159,7 +159,12 @@ export const NotificationBell: React.FC = () => {
                           {alert.trigger_name}
                         </Typography>
                         <Typography variant="caption" component="div" color="text.disabled" sx={{ mt: 0.5 }}>
-                          {formatDistanceToNow(new Date(alert.received_at), { addSuffix: true })}
+                          {(() => {
+                            const d = new Date(alert.received_at);
+                            return !isNaN(d.getTime()) 
+                              ? formatDistanceToNow(d, { addSuffix: true }) 
+                              : "Just now";
+                          })()}
                         </Typography>
                       </Box>
                     }
@@ -175,12 +180,6 @@ export const NotificationBell: React.FC = () => {
             ))
           )}
         </List>
-
-        <Box sx={{ p: 1, bgcolor: "grey.50", textAlign: "center" }}>
-          <Button size="small" sx={{ textTransform: "none", color: "text.secondary" }}>
-            View All History
-          </Button>
-        </Box>
       </Popover>
     </>
   );
