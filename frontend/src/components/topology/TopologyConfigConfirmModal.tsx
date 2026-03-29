@@ -98,12 +98,13 @@ export function TopologyConfigConfirmModal({
                                                     </Alert>
                                                 )}
                                                 {res?.status === "CANCELLED" && (
-                                                    <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.5, pl: StatusIcon ? 3.5 : 0, fontStyle: 'italic' }}>
+                                                    <Typography component="div" variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.5, pl: StatusIcon ? 3.5 : 0, fontStyle: 'italic' }}>
                                                         Skipped due to previous failure
                                                     </Typography>
                                                 )}
                                             </Box>
                                         }
+                                        secondaryTypographyProps={{ component: 'div' }}
                                         sx={{ my: 0.5 }}
                                     />
                                     {idx < stagedIntents.length - 1 && <Divider sx={{ my: 1 }} />}
