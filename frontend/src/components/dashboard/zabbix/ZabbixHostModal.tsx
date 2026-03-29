@@ -63,7 +63,7 @@ export function ZabbixHostModal({ open, onClose, hostId, hostName }: ZabbixHostM
     return (
         <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
             <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6" fontWeight={700}>Host Details: {hostName}</Typography>
+                <Typography component="div" variant="h6" fontWeight={700}>Host Details: {hostName}</Typography>
                 <IconButton onClick={onClose}><Close /></IconButton>
             </DialogTitle>
             <Divider />
