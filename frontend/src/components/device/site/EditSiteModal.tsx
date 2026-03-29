@@ -41,7 +41,7 @@ const SectionHeader = ({ step, title, description, icon }: { step: number; title
     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2, mt: step === 1 ? 0 : 4 }}>
         <Box sx={{
             width: 36, height: 36, borderRadius: 2,
-            bgcolor: "#eff6ff", color: "#3b82f6",
+            bgcolor: "#eff6ff", color: "primary.main",
             display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 2
         }}>
             <FontAwesomeIcon icon={icon} style={{ fontSize: 16 }} />
@@ -171,7 +171,7 @@ export default function EditSiteModal({
         <Dialog open={isOpen} onClose={!isLoading ? onClose : undefined} maxWidth="md" fullWidth>
             <DialogTitle sx={{ m: 0, p: 3, pb: 2, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-                    <Box sx={{ width: 44, height: 44, borderRadius: 2, bgcolor: "#007bff", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Box sx={{ width: 44, height: 44, borderRadius: 2, bgcolor: "primary.main", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <FontAwesomeIcon icon={faServer} style={{ fontSize: 20 }} />
                     </Box>
                     <Box>
@@ -420,7 +420,7 @@ export default function EditSiteModal({
                     form="edit-site-form"
                     disabled={isLoading}
                     variant="contained"
-                    sx={{ boxShadow: "none", bgcolor: "#007bff" }}
+                    sx={{ boxShadow: "none", bgcolor: "primary.main" }}
                 >
                     {isLoading ? "Saving..." : "Save Changes"}
                 </Button>
