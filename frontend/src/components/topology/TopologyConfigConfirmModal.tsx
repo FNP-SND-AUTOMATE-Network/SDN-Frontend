@@ -120,16 +120,20 @@ export function TopologyConfigConfirmModal({
                     </Alert>
                 )}
             </DialogContent>
-            <Box sx={{ p: 2, px: 3, display: 'flex', justifyContent: 'flex-end', gap: 1.5, borderTop: 1, borderColor: "divider" }}>
-                {!isFinished && (
+            <Box sx={{ p: 2, px: 3, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1.5, borderTop: 1, borderColor: "divider" }}>
+                {!isFinished ? (
                     <>
                         <Button variant="outlined" color="inherit" onClick={onClose} disabled={isPushing}>
                             Cancel
                         </Button>
                         <Button variant="contained" color="primary" onClick={onConfirm} disabled={isPushing}>
-                            {isPushing ? "Processing..." : "Confirm Changes"}
+                            {isPushing ? "Processing Config..." : "Confirm Changes"}
                         </Button>
                     </>
+                ) : (
+                    <Typography variant="body2" color="primary" fontWeight={600} sx={{ py: 1, display: 'flex', alignItems: 'center' }}>
+                        Operation complete.
+                    </Typography>
                 )}
             </Box>
         </Dialog>
