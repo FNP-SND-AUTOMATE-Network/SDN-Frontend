@@ -61,7 +61,7 @@ export default function AlertsDemoPage() {
                   onClick={() => showAlert('success', 'บันทึกข้อมูลสำเร็จ!', 'สำเร็จ', 'slide')}
                   className="w-full"
                 >
-                  ✅ Success
+                  Success
                 </Button>
                 
                 <Button
@@ -69,7 +69,7 @@ export default function AlertsDemoPage() {
                   onClick={() => showAlert('info', 'ข้อมูลถูกอัปเดตแล้ว', 'ข้อมูล', 'slide')}
                   className="w-full"
                 >
-                  ℹ️ Info
+                  Info
                 </Button>
                 
                 <Button
