@@ -178,9 +178,9 @@ export function DeviceInterfaceForm({
         // 1. Admin Status
         const currentAdminUp = interfaceData.admin_status?.toLowerCase() === "up";
         if (adminStatus && !currentAdminUp) {
-            intents.push({ intent: "interface.enable", node_id: deviceId, params: { interface: ifName }, label: `${ifName}: Enable` });
+            intents.push({ intent: "interface.enable", node_id: deviceId, params: { interface: ifName, admin_status: "up" }, label: `${ifName}: Enable (no shutdown)` });
         } else if (!adminStatus && currentAdminUp) {
-            intents.push({ intent: "interface.disable", node_id: deviceId, params: { interface: ifName }, label: `${ifName}: Disable` });
+            intents.push({ intent: "interface.disable", node_id: deviceId, params: { interface: ifName, admin_status: "down" }, label: `${ifName}: Disable (shutdown)` });
         }
 
         // 2. IPv4
@@ -302,9 +302,9 @@ export function DeviceInterfaceForm({
 
             // Auto-sync interfaces after config push
             try {
-                fetchClient.GET("/interfaces/odl/{node_id}/sync", {
+                await fetchClient.GET("/interfaces/odl/{node_id}/sync", {
                     params: { path: { node_id: deviceId } }
-                }).catch(e => console.error("Auto-sync failed", e));
+                });
             } catch (syncErr) {
                 console.error("Failed to run sync:", syncErr);
             }

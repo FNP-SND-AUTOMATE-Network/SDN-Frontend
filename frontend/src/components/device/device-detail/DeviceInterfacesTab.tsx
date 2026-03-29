@@ -118,7 +118,7 @@ export function DeviceInterfacesTab({ device }: DeviceInterfacesTabProps) {
                 params: { path: { node_id: nodeId } }
             });
             if (error) throw error;
-            showSuccess("Sync สำเร็จ");
+            showSuccess("Sync success");
             refetch();
         } catch (err: any) {
             showError(err?.message || "DB sync failed");
