@@ -322,7 +322,12 @@ export default function TopologyConfigModal({
             const bulkRes = data as any;
             if (response?.status === 200 || bulkRes?.success) {
                 showSuccess(`Config Push ${bulkRes.total_executed} success`);
-                if (bulkRes.results) setBulkResults(bulkRes.results);
+                
+                // Clear state and close the modal completely on full success
+                setBulkResults(null);
+                setStagedIntents([]);
+                setConfirmDialogOpen(false);
+                onClose();
             } else if (response?.status === 207) {
                 showWarning(
                     `Config Push ${bulkRes.total_executed - bulkRes.total_failed} / ${bulkRes.total_executed} success (${bulkRes.total_failed} failed)`
