@@ -42,6 +42,7 @@ interface BackupHeaderProps {
     selectedCount: number;
     isTriggering: boolean;
     sites: { id: string; name: string }[];
+    onScheduleBackup?: () => void;
 }
 
 // Status Card Component
@@ -91,6 +92,7 @@ export default function BackupHeader({
     selectedCount,
     isTriggering,
     sites,
+    onScheduleBackup,
 }: BackupHeaderProps) {
     const [localSearch, setLocalSearch] = useState(searchTerm);
 
@@ -107,18 +109,6 @@ export default function BackupHeader({
 
     return (
         <Box sx={{ mb: 3 }}>
-            {/* Page Title */}
-            <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <Box>
-                    <Typography variant="h5" fontWeight={700}>
-                        Device Backups
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        Manage configuration backups across network devices
-                    </Typography>
-                </Box>
-            </Box>
-
             {/* Status Cards */}
             {/* Search + Filters + Action */}
             <Stack direction={{ xs: "column", sm: "row" }}
@@ -192,6 +182,17 @@ export default function BackupHeader({
                         <Typography variant="body2" color="text.secondary">
                             {selectedCount} selected
                         </Typography>
+                    )}
+                    {onScheduleBackup && (
+                        <Button
+                            variant="outlined"
+                            disabled={selectedCount === 0 || isTriggering}
+                            startIcon={<AccessTime />}
+                            onClick={onScheduleBackup}
+                            sx={{ whiteSpace: "nowrap", borderRadius: 2 }}
+                        >
+                            Schedule Backup
+                        </Button>
                     )}
                     <Button
                         variant="contained"

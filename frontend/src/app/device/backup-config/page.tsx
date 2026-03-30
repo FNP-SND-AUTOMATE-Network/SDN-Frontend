@@ -1,16 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Box,
   TablePagination,
   Stack,
+  Tabs,
+  Tab,
+  Typography,
 } from "@mui/material";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ProtectedRoute } from "@/components/auth/AuthGuard";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 import { useSnackbar } from "@/hooks/useSnackbar";
-import { BackupHeader, BackupTable, BackupStatusOverlay, BackupJobResult, BackupJobStatus } from "@/components/device/backup";
+import { BackupHeader, BackupTable, BackupStatusOverlay, BackupJobResult, BackupJobStatus, BackupScheduleModal, BackupScheduleList } from "@/components/device/backup";
 import { DeviceSkeleton } from "@/components/device/device-list";
 import { $api, fetchClient } from "@/lib/apiv2/fetch";
 import { paths } from "@/lib/apiv2/schema";
@@ -19,6 +23,7 @@ type FilterQuery = NonNullable<paths["/device-networks/"]["get"]["parameters"]["
 
 export default function DeviceBackupPage() {
   const { snackbar, hideSnackbar, showSuccess, showError } = useSnackbar();
+  const queryClient = useQueryClient();
 
   // --- Filter & Pagination State ---
   const [page, setPage] = useState(0);
@@ -32,6 +37,8 @@ export default function DeviceBackupPage() {
   const [isTriggering, setIsTriggering] = useState(false);
   const [backupResult, setBackupResult] = useState<BackupJobResult[] | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [tabIndex, setTabIndex] = useState(0);
 
   // Debounce search
   useEffect(() => {
@@ -181,6 +188,14 @@ export default function DeviceBackupPage() {
     }
   };
 
+  const handleScheduleBackup = () => {
+    setIsScheduleModalOpen(true);
+  };
+
+  const selectedDeviceObjects = devices
+    .filter((d) => selectedIds.includes(d.id))
+    .map((d) => ({ id: d.id, device_name: d.device_name || d.id }));
+
   return (
     <ProtectedRoute>
       <PageLayout>
@@ -188,44 +203,71 @@ export default function DeviceBackupPage() {
           <DeviceSkeleton />
         ) : (
           <Box>
-            <BackupHeader
-              onSearch={handleSearch}
-              onFilterChange={handleFilterChange}
-              onRunBackup={handleRunBackup}
-              searchTerm={search}
-              selectedType={deviceType ?? ""}
-              selectedSite={siteId}
-              selectedCount={selectedIds.length}
-              isTriggering={isTriggering}
-              sites={uniqueSites}
-              statusCounts={{
-                total: totalDevices,
-                online: onlineCount,
-                lastSuccess: backupStatsResponse?.last_success || 0,
-                lastFailed: backupStatsResponse?.last_failed || 0,
-              }}
-            />
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+              {/* Page Title */}
+              <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <Box>
+                  <Typography variant="h5" fontWeight={700}>
+                    Device Backups
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Manage configuration backups across network devices
+                  </Typography>
+                </Box>
+              </Box>
+              <Tabs value={tabIndex} onChange={(_, nv) => setTabIndex(nv)}>
+                <Tab label="Devices" sx={{ textTransform: 'none', fontWeight: 600 }} />
+                <Tab label="Scheduled Tasks" sx={{ textTransform: 'none', fontWeight: 600 }} />
+              </Tabs>
+            </Box>
 
-            <BackupTable
-              devices={devices}
-              selectedIds={selectedIds}
-              onSelectAll={handleSelectAll}
-              onSelectRow={handleSelectRow}
-            />
+            {tabIndex === 0 && (
+              <Box>
+                <BackupHeader
+                  onSearch={handleSearch}
+                  onFilterChange={handleFilterChange}
+                  onRunBackup={handleRunBackup}
+                  onScheduleBackup={handleScheduleBackup}
+                  searchTerm={search}
+                  selectedType={deviceType ?? ""}
+                  selectedSite={siteId}
+                  selectedCount={selectedIds.length}
+                  isTriggering={isTriggering}
+                  sites={uniqueSites}
+                  statusCounts={{
+                    total: totalDevices,
+                    online: onlineCount,
+                    lastSuccess: backupStatsResponse?.last_success || 0,
+                    lastFailed: backupStatsResponse?.last_failed || 0,
+                  }}
+                />
 
-            <TablePagination
-              component="div"
-              count={totalDevices}
-              page={page}
-              onPageChange={(_, newPage) => setPage(newPage)}
-              rowsPerPage={pageSize}
-              onRowsPerPageChange={(e) => {
-                setPageSize(parseInt(e.target.value, 10));
-                setPage(0);
-              }}
-              rowsPerPageOptions={[10, 20, 50]}
-              sx={{ borderTop: 1, borderColor: "divider" }}
-            />
+                <BackupTable
+                  devices={devices}
+                  selectedIds={selectedIds}
+                  onSelectAll={handleSelectAll}
+                  onSelectRow={handleSelectRow}
+                />
+
+                <TablePagination
+                  component="div"
+                  count={totalDevices}
+                  page={page}
+                  onPageChange={(_, newPage) => setPage(newPage)}
+                  rowsPerPage={pageSize}
+                  onRowsPerPageChange={(e) => {
+                    setPageSize(parseInt(e.target.value, 10));
+                    setPage(0);
+                  }}
+                  rowsPerPageOptions={[10, 20, 50]}
+                  sx={{ borderTop: 1, borderColor: "divider" }}
+                />
+              </Box>
+            )}
+
+            {tabIndex === 1 && (
+              <BackupScheduleList onTriggerNew={() => setIsScheduleModalOpen(true)} />
+            )}
           </Box>
         )}
 
@@ -233,6 +275,21 @@ export default function DeviceBackupPage() {
           open={showOverlay}
           jobs={backupResult}
           onClose={() => setShowOverlay(false)}
+        />
+
+        <BackupScheduleModal
+          open={isScheduleModalOpen}
+          onClose={() => setIsScheduleModalOpen(false)}
+          selectedDevices={selectedDeviceObjects}
+          onSuccess={() => {
+            setSelectedIds([]);
+            refetchBackupStats();
+            // Invalidate the /backups/ query so BackupScheduleList refetches
+            queryClient.invalidateQueries({ queryKey: ["get", "/backups/"] });
+            // Switch to Schedules tab to show the new card
+            setTabIndex(1);
+            showSuccess("Backup schedule created successfully!");
+          }}
         />
 
         <MuiSnackbar
