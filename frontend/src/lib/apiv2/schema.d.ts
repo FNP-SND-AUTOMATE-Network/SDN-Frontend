@@ -2894,35 +2894,41 @@ export interface components {
         BackupCreate: {
             /**
              * Backup Name
-             * @description ชื่อ Backup (ต้องไม่ซ้ำ)
+             * @description Backup Profile Name (Must be unique)
              */
             backup_name: string;
             /**
              * Description
-             * @description คำอธิบาย Backup
+             * @description Backup Profile Description
              */
             description?: string | null;
             /**
-             * Policy Id
-             * @description Policy ID ที่เชื่อมโยง
-             */
-            policy_id?: string | null;
-            /**
-             * Os Id
-             * @description Operating System ID ที่เชื่อมโยง
-             */
-            os_id?: string | null;
-            /**
-             * @description สถานะของ Backup
+             * @description Profile Status
              * @default ONLINE
              */
             status: components["schemas"]["BackupStatus"];
             /**
              * Auto Backup
-             * @description เปิดใช้งาน Auto Backup
+             * @description Enable Auto Backup
              * @default false
              */
             auto_backup: boolean;
+            /**
+             * @description Schedule Type
+             * @default NONE
+             */
+            schedule_type: components["schemas"]["ScheduleType"];
+            /**
+             * Cron Expression
+             * @description Cron expression for scheduling
+             */
+            cron_expression?: string | null;
+            /**
+             * Retention Days
+             * @description Keep backups for this many days
+             * @default 30
+             */
+            retention_days: number;
         };
         /** BackupCreateResponse */
         BackupCreateResponse: {
@@ -2951,22 +2957,22 @@ export interface components {
         BackupListResponse: {
             /**
              * Total
-             * @description จำนวนทั้งหมด
+             * @description Total profiles
              */
             total: number;
             /**
              * Page
-             * @description หน้าปัจจุบัน
+             * @description Current page
              */
             page: number;
             /**
              * Page Size
-             * @description ขนาดหน้า
+             * @description Page size
              */
             page_size: number;
             /**
              * Backups
-             * @description รายการ Backup
+             * @description List of backups
              */
             backups: components["schemas"]["BackupResponse"][];
         };
@@ -2974,38 +2980,44 @@ export interface components {
         BackupResponse: {
             /**
              * Backup Name
-             * @description ชื่อ Backup (ต้องไม่ซ้ำ)
+             * @description Backup Profile Name (Must be unique)
              */
             backup_name: string;
             /**
              * Description
-             * @description คำอธิบาย Backup
+             * @description Backup Profile Description
              */
             description?: string | null;
             /**
-             * Policy Id
-             * @description Policy ID ที่เชื่อมโยง
-             */
-            policy_id?: string | null;
-            /**
-             * Os Id
-             * @description Operating System ID ที่เชื่อมโยง
-             */
-            os_id?: string | null;
-            /**
-             * @description สถานะของ Backup
+             * @description Profile Status
              * @default ONLINE
              */
             status: components["schemas"]["BackupStatus"];
             /**
              * Auto Backup
-             * @description เปิดใช้งาน Auto Backup
+             * @description Enable Auto Backup
              * @default false
              */
             auto_backup: boolean;
             /**
+             * @description Schedule Type
+             * @default NONE
+             */
+            schedule_type: components["schemas"]["ScheduleType"];
+            /**
+             * Cron Expression
+             * @description Cron expression for scheduling
+             */
+            cron_expression?: string | null;
+            /**
+             * Retention Days
+             * @description Keep backups for this many days
+             * @default 30
+             */
+            retention_days: number;
+            /**
              * Id
-             * @description ID ของ Backup
+             * @description Backup ID
              */
             id: string;
             /**
@@ -3018,11 +3030,14 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
-            policy?: components["schemas"]["RelatedPolicyInfoBackup"] | null;
-            operating_system?: components["schemas"]["RelatedOSInfoBackup"] | null;
+            /**
+             * Devices
+             * @description Devices using this backup profile
+             */
+            devices?: components["schemas"]["RelatedDeviceBackup"][];
             /**
              * Device Count
-             * @description จำนวน Device ที่ใช้ Backup นี้
+             * @description Number of devices using this backup
              * @default 0
              */
             device_count: number | null;
@@ -3056,31 +3071,33 @@ export interface components {
         BackupUpdate: {
             /**
              * Backup Name
-             * @description ชื่อ Backup (ต้องไม่ซ้ำ)
+             * @description Backup Profile Name (Must be unique)
              */
             backup_name?: string | null;
             /**
              * Description
-             * @description คำอธิบาย Backup
+             * @description Backup Profile Description
              */
             description?: string | null;
-            /**
-             * Policy Id
-             * @description Policy ID ที่เชื่อมโยง
-             */
-            policy_id?: string | null;
-            /**
-             * Os Id
-             * @description Operating System ID ที่เชื่อมโยง
-             */
-            os_id?: string | null;
-            /** @description สถานะของ Backup */
+            /** @description Profile Status */
             status?: components["schemas"]["BackupStatus"] | null;
             /**
              * Auto Backup
-             * @description เปิดใช้งาน Auto Backup
+             * @description Enable Auto Backup
              */
             auto_backup?: boolean | null;
+            /** @description Schedule Type */
+            schedule_type?: components["schemas"]["ScheduleType"] | null;
+            /**
+             * Cron Expression
+             * @description Cron expression for scheduling
+             */
+            cron_expression?: string | null;
+            /**
+             * Retention Days
+             * @description Keep backups for this many days
+             */
+            retention_days?: number | null;
         };
         /** BackupUpdateResponse */
         BackupUpdateResponse: {
@@ -5227,6 +5244,13 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** RelatedDeviceBackup */
+        RelatedDeviceBackup: {
+            /** Id */
+            id: string;
+            /** Device Name */
+            device_name: string;
+        };
         /** RelatedDeviceInfo */
         RelatedDeviceInfo: {
             /** Id */
@@ -5247,13 +5271,6 @@ export interface components {
             /** Os Type */
             os_type: string;
         };
-        /** RelatedOSInfoBackup */
-        RelatedOSInfoBackup: {
-            /** Id */
-            id: string;
-            /** Os Type */
-            os_type: string;
-        };
         /** RelatedOSInfoFile */
         RelatedOSInfoFile: {
             /** Id */
@@ -5263,13 +5280,6 @@ export interface components {
         };
         /** RelatedPolicyInfo */
         RelatedPolicyInfo: {
-            /** Id */
-            id: string;
-            /** Policy Name */
-            policy_name: string;
-        };
-        /** RelatedPolicyInfoBackup */
-        RelatedPolicyInfoBackup: {
             /** Id */
             id: string;
             /** Policy Name */
@@ -5377,6 +5387,11 @@ export interface components {
             /** Message */
             message: string;
         };
+        /**
+         * ScheduleType
+         * @enum {string}
+         */
+        ScheduleType: "DAILY" | "WEEKLY" | "CUSTOM_CRON" | "NONE";
         /** SectionCreateRequest */
         SectionCreateRequest: {
             /** Name */
@@ -8012,10 +8027,6 @@ export interface operations {
                 status?: string | null;
                 /** @description Search by backup_name, description */
                 search?: string | null;
-                /** @description Filter by Policy ID */
-                policy_id?: string | null;
-                /** @description Filter by OS ID */
-                os_id?: string | null;
                 /** @description Filter by auto_backup */
                 auto_backup?: boolean | null;
                 /** @description Include usage count */
