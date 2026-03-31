@@ -13,12 +13,12 @@ import { paths } from "@/lib/apiv2/schema";
 
 type OverviewData = paths["/api/v1/zabbix/dashboard/overview"]["get"]["responses"]["200"]["content"]["application/json"];
 
-// Severity card config
+// Severity card config — severity numbers match Zabbix API: 5=Disaster, 4=High, 3=Average, 2=Warning
 const severityCards = [
-    { key: "disaster", label: "Disaster", icon: ErrorIcon, gradient: "linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%)", lightBg: "#fde8e8" },
-    { key: "high", label: "High", icon: Warning, gradient: "linear-gradient(135deg, #e65100 0%, #bf360c 100%)", lightBg: "#fff3e0" },
-    { key: "average", label: "Average", icon: WarningAmber, gradient: "linear-gradient(135deg, #f9a825 0%, #f57f17 100%)", lightBg: "#fffde7" },
-    { key: "warning", label: "Warning", icon: CheckCircle, gradient: "linear-gradient(135deg, #0288d1 0%, #01579b 100%)", lightBg: "#e1f5fe" },
+    { severity: 5, label: "Disaster", icon: ErrorIcon, gradient: "linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%)", lightBg: "#fde8e8" },
+    { severity: 4, label: "High", icon: Warning, gradient: "linear-gradient(135deg, #e65100 0%, #bf360c 100%)", lightBg: "#fff3e0" },
+    { severity: 3, label: "Average", icon: WarningAmber, gradient: "linear-gradient(135deg, #f9a825 0%, #f57f17 100%)", lightBg: "#fffde7" },
+    { severity: 2, label: "Warning", icon: CheckCircle, gradient: "linear-gradient(135deg, #0288d1 0%, #01579b 100%)", lightBg: "#e1f5fe" },
 ] as const;
 
 export function ZabbixSummaryCards() {
@@ -160,10 +160,11 @@ export function ZabbixSummaryCards() {
             </Grid>
 
             {/* Severity Cards */}
-            {severityCards.map(({ key, label, icon: Icon, gradient, lightBg }) => {
-                const count = d.problems?.[key] || 0;
+            {severityCards.map(({ severity: sev, label, icon: Icon, gradient, lightBg }) => {
+                const breakdown: any[] = d.problems?.severity_breakdown || [];
+                const count = breakdown.find((b: any) => b.severity === sev)?.count || 0;
                 return (
-                    <Grid key={key} size={{ xs: 6, sm: 3, md: 2 }}>
+                    <Grid key={sev} size={{ xs: 6, sm: 3, md: 2 }}>
                         <Box
                             sx={{
                                 p: 2.5,

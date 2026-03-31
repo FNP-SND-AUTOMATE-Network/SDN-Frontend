@@ -58,7 +58,7 @@ export function ZabbixHostModal({ open, onClose, hostId, hostName }: ZabbixHostM
     });
 
     const detail: any = detailData;
-    const isMonitored = detail?.host?.status === "0";
+    const isMonitored = detail?.host?.status === "0" || detail?.host?.status === "enabled";
 
     return (
         <Dialog
@@ -155,10 +155,10 @@ export function ZabbixHostModal({ open, onClose, hostId, hostName }: ZabbixHostM
                                     <Typography variant="subtitle2" fontWeight={700}>Interfaces</Typography>
                                 </Stack>
                                 <Stack spacing={1}>
-                                    {((detail?.interfaces || []) as any[]).length === 0 ? (
+                                    {((detail?.host?.interfaces || []) as any[]).length === 0 ? (
                                         <Typography variant="caption" color="text.secondary">No interfaces</Typography>
                                     ) : (
-                                        (detail.interfaces as any[]).map((iface: any, idx: number) => (
+                                        (detail.host.interfaces as any[]).map((iface: any, idx: number) => (
                                             <Box
                                                 key={idx}
                                                 sx={{

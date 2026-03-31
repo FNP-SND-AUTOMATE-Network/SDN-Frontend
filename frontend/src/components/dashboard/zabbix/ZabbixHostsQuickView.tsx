@@ -57,8 +57,8 @@ export function ZabbixHostsQuickView({ onSelectHost }: ZabbixHostsQuickViewProps
     }
 
     const hostList: any[] = Array.isArray(data) ? data : ((data as any).hosts || []);
-    const available = hostList.filter(h => h.available === "1").length;
-    const unavailable = hostList.filter(h => h.available === "2").length;
+    const available = hostList.filter(h => h.availability === "available").length;
+    const unavailable = hostList.filter(h => h.availability === "unavailable").length;
 
     return (
         <Box
@@ -116,9 +116,9 @@ export function ZabbixHostsQuickView({ onSelectHost }: ZabbixHostsQuickViewProps
                 ) : (
                     <Stack spacing={0}>
                         {hostList.slice(0, 15).map((h: any, idx: number) => {
-                            const ip = h.interfaces?.find((i: any) => i.main === "1")?.ip || h.interfaces?.[0]?.ip || "-";
-                            const isAvailable = h.available === "1";
-                            const isUnknown = h.available === "0";
+                            const ip = h.interfaces?.find((i: any) => i.main === true || i.main === "1")?.ip || h.interfaces?.[0]?.ip || "-";
+                            const isAvailable = h.availability === "available";
+                            const isUnknown = h.availability === "unknown";
                             const statusColor = isAvailable ? "#4caf50" : isUnknown ? "#9e9e9e" : "#f44336";
                             const statusLabel = isAvailable ? "Online" : isUnknown ? "Unknown" : "Offline";
 

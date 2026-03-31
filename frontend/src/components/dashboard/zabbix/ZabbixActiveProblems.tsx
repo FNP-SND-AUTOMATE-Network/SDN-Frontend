@@ -3,7 +3,7 @@
 import React from "react";
 import {
     Box, Typography, CircularProgress, Alert,
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Stack, Tooltip, Skeleton
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Stack, Tooltip, Skeleton, alpha
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { fetchClient } from "@/lib/apiv2/fetch";
@@ -69,8 +69,9 @@ export function ZabbixActiveProblems() {
         );
     }
 
-    const { problems } = data as any;
-    const problemList: any[] = Array.isArray(problems) ? problems : [];
+    const rawData = data as any;
+    const problemList: any[] = Array.isArray(rawData?.problems) ? rawData.problems : [];
+    const severityCounts: Record<string, number> = rawData?.severity_counts || {};
 
     return (
         <Box
@@ -103,12 +104,34 @@ export function ZabbixActiveProblems() {
                 <Typography variant="subtitle2" fontWeight={700}>
                     Active Problems
                 </Typography>
-                <Chip
-                    label={problemList.length}
-                    size="small"
-                    color={problemList.length > 0 ? "error" : "default"}
-                    sx={{ fontWeight: 700, minWidth: 32 }}
-                />
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                    {(["5", "4", "3", "2"] as const).map((sKey) => {
+                        const count = severityCounts[sKey] || 0;
+                        if (count === 0) return null;
+                        const sConf = severityConfig[sKey];
+                        return (
+                            <Tooltip key={sKey} title={`${sConf.label}: ${count}`} arrow>
+                                <Chip
+                                    size="small"
+                                    label={`${sConf.label.charAt(0)} ${count}`}
+                                    sx={{
+                                        fontSize: "0.65rem",
+                                        height: 22,
+                                        fontWeight: 700,
+                                        bgcolor: alpha(sConf.color, 0.1),
+                                        color: sConf.color,
+                                    }}
+                                />
+                            </Tooltip>
+                        );
+                    })}
+                    <Chip
+                        label={problemList.length}
+                        size="small"
+                        color={problemList.length > 0 ? "error" : "default"}
+                        sx={{ fontWeight: 700, minWidth: 32 }}
+                    />
+                </Stack>
             </Box>
 
             {/* Problem List */}
@@ -176,7 +199,7 @@ export function ZabbixActiveProblems() {
                                         </Typography>
                                         <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
                                             <Typography variant="caption" color="text.secondary">
-                                                {p.host || "Unknown"}
+                                                {p.host || p.name?.match(/^[^:]+:\s*(.+?):/)?.[0]?.replace(/:$/, '') || "Unknown"}
                                             </Typography>
                                             <Typography variant="caption" color="text.disabled">•</Typography>
                                             <Tooltip title={fullTime} arrow placement="top">
