@@ -25,6 +25,6 @@ export interface ConfigPanelProps {
   device: DeviceNetwork;
   nodeId: string;
   showData: Record<string, any> | null;
-  /** Queue an intent for bulk push instead of firing immediately */
-  onStageIntent?: (intent: StagedIntent) => void;
+  /** Queue an intent (or array of intents) for bulk push */
+  onStageIntent?: (intent: StagedIntent | StagedIntent[]) => void;
 }

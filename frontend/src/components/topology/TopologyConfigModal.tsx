@@ -108,7 +108,7 @@ export default function TopologyConfigModal({
     // ==================== Staged Intents (Bulk Queue) ====================
     const [stagedIntents, setStagedIntents] = useState<StagedIntent[]>([]);
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-    
+
     // Bulk execution states
     const [isBulkPushing, setIsBulkPushing] = useState(false);
     const [bulkResults, setBulkResults] = useState<BulkIntentItemResult[] | null>(null);
@@ -116,26 +116,32 @@ export default function TopologyConfigModal({
     /** Accept a single intent OR an array of intents (from DeviceInterfaceForm) and prevent duplicates */
     const handleStageIntent = useCallback((staged: StagedIntent | StagedIntent[]) => {
         const incomingIntents = Array.isArray(staged) ? staged : [staged];
-        
+
         setStagedIntents((prev) => {
             const next = [...prev];
-            
+
             incomingIntents.forEach(incoming => {
-                // Determine a unique identifier for this intent type to prevent functional duplicates
                 const getIdentity = (intent: StagedIntent) => {
                     const params = intent.params || {};
-                    // Interfaces are uniquely identified by their interface name and intent type
-                    if (intent.intent.startsWith('interface.')) {
-                        return `${intent.intent}-${params.interface || ''}`;
+
+                    // Per-interface intents (interface.*, routing.ospf.add_network_interface, etc.)
+                    if (params.interface) {
+                        return `${intent.intent}-${params.interface}`;
                     }
-                    // Static routes are uniquely identified by their destination network
-                    if (intent.intent === 'routing.set_static_route') {
-                        return `${intent.intent}-${params.dest || ''}-${params.dest_mask || ''}`;
+                    // Static routes: unique by prefix + next_hop
+                    if (intent.intent === 'routing.static.add' || intent.intent === 'routing.static.delete'
+                        || intent.intent === 'routing.set_static_route') {
+                        return `${intent.intent}-${params.prefix || params.dest || ''}-${params.next_hop || ''}`;
                     }
-                    if (intent.intent === 'routing.set_ospf') {
+                    // OSPF network statements: unique by network + area
+                    if (intent.intent === 'routing.ospf.add_network' || intent.intent === 'routing.ospf.remove_network') {
+                        return `${intent.intent}-${params.network || ''}-${params.area ?? ''}`;
+                    }
+                    // OSPF process-level intents (enable, disable, set_router_id): unique by process_id
+                    if (intent.intent.startsWith('routing.ospf.')) {
                         return `${intent.intent}-${params.process_id || ''}`;
                     }
-                    // System-wide singletons (hostname, ntp, dns) are unique by intent name alone
+                    // System-wide singletons (hostname, ntp, dns)
                     return intent.intent;
                 };
 
@@ -150,7 +156,7 @@ export default function TopologyConfigModal({
                     next.push(incoming);
                 }
             });
-            
+
             return next;
         });
     }, []);
@@ -163,7 +169,7 @@ export default function TopologyConfigModal({
         setStagedIntents((prev) => prev.filter((_, i) => i !== index));
     };
 
-    // Initialize when device changes
+    const deviceId = device?.id;
     useEffect(() => {
         if (device) {
             setShowData(null);
@@ -175,9 +181,8 @@ export default function TopologyConfigModal({
             setStagedIntents([]);
             setInterfaceDrafts({});
         }
-    }, [device]);
+    }, [deviceId]);
 
-    // Load show data when section changes — uses fetchClient directly
     const loadSectionData = useCallback(
         async (section: string) => {
             if (!nodeId) return;
@@ -314,7 +319,7 @@ export default function TopologyConfigModal({
             const bulkRes = data as any;
             if (response?.status === 200 || bulkRes?.success) {
                 showSuccess(`Config Push success`);
-                
+
                 // Show the success results on the modal temporarily
                 if (bulkRes.results) {
                     setBulkResults(bulkRes.results);

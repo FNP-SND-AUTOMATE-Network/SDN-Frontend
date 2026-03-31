@@ -9,9 +9,10 @@ import {
     Stack,
     IconButton,
     Paper,
+    Divider,
 } from "@mui/material";
-import { Delete, Add } from "@mui/icons-material";
-import { ConfigPanelProps } from "./types";
+import { Delete, Add, PlaylistAdd, PlaylistRemove } from "@mui/icons-material";
+import { ConfigPanelProps, StagedIntent } from "./types";
 
 export function StaticRoutePanel({ nodeId, showData, onStageIntent }: ConfigPanelProps) {
     const [staticRoutes, setStaticRoutes] = useState<
@@ -22,6 +23,31 @@ export function StaticRoutePanel({ nodeId, showData, onStageIntent }: ConfigPane
         if (onStageIntent) {
             onStageIntent({ intent, node_id: nodeId, params, label });
         }
+    };
+
+    // Get all valid routes (both prefix and next_hop filled)
+    const validRoutes = staticRoutes.filter(r => r.prefix && r.next_hop);
+
+    const handleQueueAllAdd = () => {
+        if (!onStageIntent || validRoutes.length === 0) return;
+        const intents: StagedIntent[] = validRoutes.map(route => ({
+            intent: "routing.static.add",
+            node_id: nodeId,
+            params: { prefix: route.prefix, next_hop: route.next_hop, ...(route.mask && { mask: route.mask }) },
+            label: `Add route ${route.prefix} → ${route.next_hop}`,
+        }));
+        onStageIntent(intents);
+    };
+
+    const handleQueueAllDelete = () => {
+        if (!onStageIntent || validRoutes.length === 0) return;
+        const intents: StagedIntent[] = validRoutes.map(route => ({
+            intent: "routing.static.delete",
+            node_id: nodeId,
+            params: { prefix: route.prefix, next_hop: route.next_hop },
+            label: `Delete route ${route.prefix}`,
+        }));
+        onStageIntent(intents);
     };
 
     return (
@@ -108,6 +134,35 @@ export function StaticRoutePanel({ nodeId, showData, onStageIntent }: ConfigPane
             >
                 Add Static Route
             </Button>
+
+            {/* Queue All buttons */}
+            {validRoutes.length > 1 && (
+                <>
+                    <Divider />
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            startIcon={<PlaylistRemove />}
+                            onClick={handleQueueAllDelete}
+                            sx={{ textTransform: "none" }}
+                        >
+                            Queue All Delete ({validRoutes.length})
+                        </Button>
+                        <Button
+                            variant="contained"
+                            color="warning"
+                            size="small"
+                            startIcon={<PlaylistAdd />}
+                            onClick={handleQueueAllAdd}
+                            sx={{ textTransform: "none" }}
+                        >
+                            Queue All Add ({validRoutes.length})
+                        </Button>
+                    </Stack>
+                </>
+            )}
         </Stack>
     );
 }

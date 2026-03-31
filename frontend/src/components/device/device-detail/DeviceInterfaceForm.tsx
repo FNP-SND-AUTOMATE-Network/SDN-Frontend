@@ -270,14 +270,14 @@ export function DeviceInterfaceForm({
                     try {
                         const str = JSON.stringify(error);
                         if (str !== "{}") errorMsg = str;
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             } else if (typeof error === 'string') {
                 errorMsg = error;
             }
             throw new Error(errorMsg);
         }
-        
+
         if (data && !(data as any).success) {
             const backendError = (data as any).error;
             const errMsg = typeof backendError === 'string' ? backendError : JSON.stringify(backendError);

@@ -9,9 +9,10 @@ import {
     Stack,
     IconButton,
     Paper,
+    Divider,
 } from "@mui/material";
-import { Delete, Add } from "@mui/icons-material";
-import { ConfigPanelProps } from "./types";
+import { Delete, Add, PlaylistAdd, PlaylistRemove } from "@mui/icons-material";
+import { ConfigPanelProps, StagedIntent } from "./types";
 
 export function OspfPanel({ nodeId, onStageIntent }: ConfigPanelProps) {
     const [ospfProcessId, setOspfProcessId] = useState("1");
@@ -24,6 +25,31 @@ export function OspfPanel({ nodeId, onStageIntent }: ConfigPanelProps) {
         if (onStageIntent) {
             onStageIntent({ intent, node_id: nodeId, params, label });
         }
+    };
+
+    // Get all valid networks (both network and wildcard filled)
+    const validNetworks = ospfNetworks.filter(n => n.network && n.wildcard);
+
+    const handleQueueAllAddNetworks = () => {
+        if (!onStageIntent || validNetworks.length === 0) return;
+        const intents: StagedIntent[] = validNetworks.map(net => ({
+            intent: "routing.ospf.add_network",
+            node_id: nodeId,
+            params: { process_id: parseInt(ospfProcessId), network: net.network, wildcard_mask: net.wildcard, area: parseInt(net.area) },
+            label: `Add OSPF net ${net.network} area ${net.area}`,
+        }));
+        onStageIntent(intents);
+    };
+
+    const handleQueueAllRemoveNetworks = () => {
+        if (!onStageIntent || validNetworks.length === 0) return;
+        const intents: StagedIntent[] = validNetworks.map(net => ({
+            intent: "routing.ospf.remove_network",
+            node_id: nodeId,
+            params: { process_id: parseInt(ospfProcessId), network: net.network, wildcard_mask: net.wildcard, area: parseInt(net.area) },
+            label: `Remove OSPF net ${net.network}`,
+        }));
+        onStageIntent(intents);
     };
 
     return (
@@ -125,7 +151,7 @@ export function OspfPanel({ nodeId, onStageIntent }: ConfigPanelProps) {
                             variant="outlined"
                             color="error"
                             size="small"
-                            onClick={() => handleStage("routing.ospf.remove_network", { process_id: parseInt(ospfProcessId), network: net.network, wildcard: net.wildcard, area: parseInt(net.area) }, `Remove OSPF net ${net.network}`)}
+                            onClick={() => handleStage("routing.ospf.remove_network", { process_id: parseInt(ospfProcessId), network: net.network, wildcard_mask: net.wildcard, area: parseInt(net.area) }, `Remove OSPF net ${net.network}`)}
                             disabled={!net.network || !net.wildcard}
                             sx={{ textTransform: "none" }}
                         >
@@ -134,7 +160,7 @@ export function OspfPanel({ nodeId, onStageIntent }: ConfigPanelProps) {
                         <Button
                             variant="outlined"
                             size="small"
-                            onClick={() => handleStage("routing.ospf.add_network", { process_id: parseInt(ospfProcessId), network: net.network, wildcard: net.wildcard, area: parseInt(net.area) }, `Add OSPF net ${net.network} area ${net.area}`)}
+                            onClick={() => handleStage("routing.ospf.add_network", { process_id: parseInt(ospfProcessId), network: net.network, wildcard_mask: net.wildcard, area: parseInt(net.area) }, `Add OSPF net ${net.network} area ${net.area}`)}
                             disabled={!net.network || !net.wildcard}
                             startIcon={<Add />}
                             sx={{ textTransform: "none" }}
@@ -154,6 +180,35 @@ export function OspfPanel({ nodeId, onStageIntent }: ConfigPanelProps) {
             >
                 Add OSPF Network
             </Button>
+
+            {/* Queue All buttons for networks */}
+            {validNetworks.length > 1 && (
+                <>
+                    <Divider />
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            startIcon={<PlaylistRemove />}
+                            onClick={handleQueueAllRemoveNetworks}
+                            sx={{ textTransform: "none" }}
+                        >
+                            Queue All Remove ({validNetworks.length})
+                        </Button>
+                        <Button
+                            variant="contained"
+                            color="warning"
+                            size="small"
+                            startIcon={<PlaylistAdd />}
+                            onClick={handleQueueAllAddNetworks}
+                            sx={{ textTransform: "none" }}
+                        >
+                            Queue All Add ({validNetworks.length})
+                        </Button>
+                    </Stack>
+                </>
+            )}
         </Stack>
     );
 }
