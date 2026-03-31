@@ -72,9 +72,7 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const connectWebSocket = useCallback(() => {
-    // Determine the WS base URL based on HTTP origin or fallback to strict URL
-    // In production, you might want to configure this using environment variables.
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws/alerts";
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "";
     
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
