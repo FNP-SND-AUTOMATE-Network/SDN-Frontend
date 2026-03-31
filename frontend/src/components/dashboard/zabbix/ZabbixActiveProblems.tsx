@@ -1,15 +1,36 @@
 "use client";
 
 import React from "react";
-import { 
-    Card, CardContent, Typography, Box, CircularProgress, Alert,
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip 
+import {
+    Box, Typography, CircularProgress, Alert,
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Stack, Tooltip, Skeleton
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { fetchClient } from "@/lib/apiv2/fetch";
 import { paths } from "@/lib/apiv2/schema";
 
 type ProblemsData = paths["/api/v1/zabbix/dashboard/problems"]["get"]["responses"]["200"]["content"]["application/json"];
+
+const severityConfig: Record<string, { label: string; color: string; bg: string; chipColor: "default" | "info" | "success" | "warning" | "error" }> = {
+    "0": { label: "N/A", color: "#9e9e9e", bg: "#f5f5f5", chipColor: "default" },
+    "1": { label: "Info", color: "#2196f3", bg: "#e3f2fd", chipColor: "info" },
+    "2": { label: "Warning", color: "#ff9800", bg: "#fff3e0", chipColor: "warning" },
+    "3": { label: "Average", color: "#ff9800", bg: "#fff3e0", chipColor: "warning" },
+    "4": { label: "High", color: "#f44336", bg: "#fce4ec", chipColor: "error" },
+    "5": { label: "Disaster", color: "#b71c1c", bg: "#ffebee", chipColor: "error" },
+};
+
+function formatTimeAgo(clock: string | number): string {
+    const ts = Number(clock) * 1000;
+    const diff = Date.now() - ts;
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+}
 
 export function ZabbixActiveProblems() {
     const { data, isLoading, isError, error } = useQuery<ProblemsData>({
@@ -24,89 +45,165 @@ export function ZabbixActiveProblems() {
 
     if (isLoading) {
         return (
-            <Card variant="outlined" sx={{ minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CircularProgress />
-            </Card>
+            <Box sx={{ borderRadius: 3, border: "1px solid", borderColor: "divider", overflow: "hidden" }}>
+                <Box sx={{ px: 2.5, py: 1.5, bgcolor: "grey.50" }}>
+                    <Skeleton width={160} height={24} />
+                </Box>
+                <Stack spacing={0}>
+                    {[...Array(5)].map((_, i) => (
+                        <Box key={i} sx={{ px: 2.5, py: 1.5, borderTop: "1px solid", borderColor: "divider" }}>
+                            <Skeleton width="80%" height={20} />
+                            <Skeleton width="40%" height={16} sx={{ mt: 0.5 }} />
+                        </Box>
+                    ))}
+                </Stack>
+            </Box>
         );
     }
 
     if (isError || !data) {
         return (
-            <Alert severity="error">
+            <Alert severity="error" sx={{ borderRadius: 3 }}>
                 Failed to load problems: {error instanceof Error ? error.message : "No data"}
             </Alert>
         );
     }
 
-    const { problems } = data as any; // Cast for now, will refine type if needed by IDE
+    const { problems } = data as any;
     const problemList: any[] = Array.isArray(problems) ? problems : [];
 
-    // Severity mapping
-    // 0 = Not classified, 1 = Information, 2 = Warning, 3 = Average, 4 = High, 5 = Disaster
-    const getSeverityLabel = (sev: number | string) => {
-        const severityMap: Record<string, { label: string, color: "default" | "info" | "success" | "warning" | "error" }> = {
-            "0": { label: "Not classified", color: "default" },
-            "1": { label: "Information", color: "info" },
-            "2": { label: "Warning", color: "success" }, // using info/success just for differentiation
-            "3": { label: "Average", color: "warning" },
-            "4": { label: "High", color: "warning" },
-            "5": { label: "Disaster", color: "error" },
-        };
-        return severityMap[String(sev)] || { label: "Unknown", color: "default" };
-    };
-
     return (
-        <Card variant="outlined" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-            <CardContent sx={{ flexGrow: 1, p: 2 }}>
-                <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-                    Recent Problems ({problemList.length})
+        <Box
+            sx={{
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor: "divider",
+                overflow: "hidden",
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                bgcolor: "background.paper",
+                transition: "box-shadow 0.2s",
+                "&:hover": { boxShadow: "0 4px 24px rgba(0,0,0,0.06)" },
+            }}
+        >
+            {/* Header */}
+            <Box
+                sx={{
+                    px: 2.5,
+                    py: 1.5,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    bgcolor: "grey.50",
+                }}
+            >
+                <Typography variant="subtitle2" fontWeight={700}>
+                    Active Problems
                 </Typography>
-                <TableContainer sx={{ maxHeight: 320 }}>
-                    <Table size="small" stickyHeader>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Time</TableCell>
-                                <TableCell>Host</TableCell>
-                                <TableCell>Problem</TableCell>
-                                <TableCell>Severity</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {problemList.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={4} align="center">No active problems</TableCell>
-                                </TableRow>
-                            ) : (
-                                problemList.slice(0, 10).map((p: any, idx: number) => {
-                                    const sevInfo = getSeverityLabel(p.severity);
-                                    // Use clock (Unix timestamp) if available
-                                    const timeStr = p.clock 
-                                        ? new Date(Number(p.clock) * 1000).toLocaleString() 
-                                        : "Unknown";
+                <Chip
+                    label={problemList.length}
+                    size="small"
+                    color={problemList.length > 0 ? "error" : "default"}
+                    sx={{ fontWeight: 700, minWidth: 32 }}
+                />
+            </Box>
 
-                                    return (
-                                        <TableRow key={p.eventid || idx} hover>
-                                            <TableCell>{timeStr}</TableCell>
-                                            <TableCell>{p.host || "Unknown"}</TableCell>
-                                            <TableCell sx={{ maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                                {p.name || p.description}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip 
-                                                    size="small" 
-                                                    label={sevInfo.label} 
-                                                    color={sevInfo.color} 
-                                                    variant={sevInfo.color === "error" || sevInfo.color === "warning" ? "filled" : "outlined"} 
-                                                />
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </CardContent>
-        </Card>
+            {/* Problem List */}
+            <Box sx={{ flex: 1, overflowY: "auto", maxHeight: 400 }}>
+                {problemList.length === 0 ? (
+                    <Box sx={{ py: 6, textAlign: "center" }}>
+                        <Typography variant="h4" sx={{ mb: 1 }}>✅</Typography>
+                        <Typography color="text.secondary" variant="body2" fontWeight={500}>
+                            No active problems
+                        </Typography>
+                        <Typography color="text.disabled" variant="caption">
+                            All systems operating normally
+                        </Typography>
+                    </Box>
+                ) : (
+                    <Stack spacing={0}>
+                        {problemList.slice(0, 15).map((p: any, idx: number) => {
+                            const sev = severityConfig[String(p.severity)] || severityConfig["0"];
+                            const timeAgo = p.clock ? formatTimeAgo(p.clock) : "Unknown";
+                            const fullTime = p.clock ? new Date(Number(p.clock) * 1000).toLocaleString() : "";
+
+                            return (
+                                <Box
+                                    key={p.eventid || idx}
+                                    sx={{
+                                        px: 2.5,
+                                        py: 1.5,
+                                        borderBottom: "1px solid",
+                                        borderColor: "divider",
+                                        display: "flex",
+                                        alignItems: "flex-start",
+                                        gap: 1.5,
+                                        transition: "background 0.15s",
+                                        "&:hover": { bgcolor: "action.hover" },
+                                        "&:last-child": { borderBottom: 0 },
+                                    }}
+                                >
+                                    {/* Severity dot */}
+                                    <Box
+                                        sx={{
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: "50%",
+                                            bgcolor: sev.color,
+                                            mt: 0.8,
+                                            flexShrink: 0,
+                                            animation: Number(p.severity) >= 4 ? "pulse 2s infinite" : "none",
+                                            "@keyframes pulse": {
+                                                "0%, 100%": { opacity: 1 },
+                                                "50%": { opacity: 0.4 },
+                                            },
+                                        }}
+                                    />
+                                    <Box flex={1} minWidth={0}>
+                                        <Typography
+                                            variant="body2"
+                                            fontWeight={500}
+                                            sx={{
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                whiteSpace: "nowrap",
+                                            }}
+                                        >
+                                            {p.name || p.description}
+                                        </Typography>
+                                        <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {p.host || "Unknown"}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.disabled">•</Typography>
+                                            <Tooltip title={fullTime} arrow placement="top">
+                                                <Typography variant="caption" color="text.disabled">
+                                                    {timeAgo}
+                                                </Typography>
+                                            </Tooltip>
+                                        </Stack>
+                                    </Box>
+                                    <Chip
+                                        size="small"
+                                        label={sev.label}
+                                        sx={{
+                                            fontSize: "0.65rem",
+                                            height: 22,
+                                            fontWeight: 600,
+                                            bgcolor: sev.bg,
+                                            color: sev.color,
+                                            flexShrink: 0,
+                                        }}
+                                    />
+                                </Box>
+                            );
+                        })}
+                    </Stack>
+                )}
+            </Box>
+        </Box>
     );
 }
