@@ -4804,12 +4804,14 @@ export interface components {
         MountRequest: {
             /**
              * Wait For Connection
-             * @default true
+             * @description Deprecated: Backend decides wait strategy automatically for /mount
+             * @default false
              */
             wait_for_connection: boolean;
             /**
              * Max Wait Seconds
-             * @default 120
+             * @description Used by /wait-ready or explicit wait flows. /mount returns async-first by backend policy.
+             * @default 300
              */
             max_wait_seconds: number;
         };
@@ -4822,6 +4824,8 @@ export interface components {
             success: boolean;
             /** Code */
             code: string;
+            /** Status */
+            status?: string | null;
             /** Message */
             message: string;
             /** Node Id */
@@ -9845,7 +9849,7 @@ export interface operations {
     wait_for_device_ready_api_v1_nbi_devices__node_id__wait_ready_get: {
         parameters: {
             query?: {
-                /** @description Maximum seconds to wait for ODL to finish mounting (default 120s). Cisco ASR hardware typically needs 30–90 s to download YANG modules. */
+                /** @description Maximum seconds to wait for ODL to finish mounting (default 300s). Cisco ASR hardware typically needs 30–90 s to download YANG modules. */
                 max_wait_seconds?: number;
                 /** @description Polling interval in seconds (default 5s) */
                 check_interval?: number;
