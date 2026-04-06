@@ -38,7 +38,7 @@ export default function TopologyPage() {
         {
             params: {
                 query: {
-                    site_id: selectedSiteId as string,
+                    local_site_id: selectedSiteId as string,
                     page: 1,
                     page_size: 100,
                 },

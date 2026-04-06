@@ -69,7 +69,7 @@ function SiteItem({
         {
             params: {
                 query: {
-                    site_id: site.id,
+                    local_site_id: site.id,
                     page: 1,
                     page_size: 100,
                 },

@@ -32,7 +32,8 @@ import {
     ListItemText,
     Chip,
     Checkbox,
-    Button
+    Button,
+    TableSortLabel
 } from "@mui/material";
 
 import { fetchClient } from "@/lib/apiv2/fetch";
@@ -42,6 +43,8 @@ import TopologyConfigModal from "./TopologyConfigModal";
 import BackupStatusOverlay, { BackupJobResult } from "../device/backup/BackupStatusOverlay";
 import DeployTemplateModal from "./DeployTemplateModal";
 import { components } from "@/lib/apiv2/schema";
+import { useSnackbar } from "@/hooks/useSnackbar";
+import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 
 type DeviceNetwork = components["schemas"]["DeviceNetworkResponse"];
 type StatusDevice = components["schemas"]["StatusDevice"];
@@ -100,6 +103,48 @@ export default function TopologyDeviceTable({
     const [configModalDevice, setConfigModalDevice] = useState<any | null>(null);
     const [configEditorDevice, setConfigEditorDevice] = useState<any | null>(null);
     const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
+
+    // Snackbar notifications
+    const { snackbar, showSuccess, showError, showWarning, hideSnackbar } = useSnackbar();
+
+    // Sorting state
+    const [order, setOrder] = useState<"asc" | "desc">("asc");
+    const [orderBy, setOrderBy] = useState<string>("device_name");
+
+    const handleRequestSort = (property: string) => {
+        const isAsc = orderBy === property && order === "asc";
+        setOrder(isAsc ? "desc" : "asc");
+        setOrderBy(property);
+    };
+
+    const sortedDevices = React.useMemo(() => {
+        return [...devices].sort((a, b) => {
+            let valueA = "";
+            let valueB = "";
+            
+            if (orderBy === "device_name") {
+                valueA = String(a.device_name || "").toLowerCase();
+                valueB = String(b.device_name || "").toLowerCase();
+            } else if (orderBy === "type") {
+                valueA = String(a.type || "").toLowerCase();
+                valueB = String(b.type || "").toLowerCase();
+            } else if (orderBy === "ip_address") {
+                valueA = String(a.ip_address || "").toLowerCase();
+                valueB = String(b.ip_address || "").toLowerCase();
+            } else if (orderBy === "status") {
+                valueA = String(a.status || "").toLowerCase();
+                valueB = String(b.status || "").toLowerCase();
+            }
+
+            if (valueA < valueB) {
+                return order === "asc" ? -1 : 1;
+            }
+            if (valueA > valueB) {
+                return order === "asc" ? 1 : -1;
+            }
+            return 0;
+        });
+    }, [devices, order, orderBy]);
 
     // Backup Task tracking
     const [backupJobs, setBackupJobs] = useState<BackupJobResult[]>([]);
@@ -240,10 +285,42 @@ export default function TopologyDeviceTable({
                                     }}
                                 />
                             </TableCell>
-                            <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>Name</TableCell>
-                            <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>Type</TableCell>
-                            <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>IP Management</TableCell>
-                            <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>Status</TableCell>
+                            <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>
+                                <TableSortLabel
+                                    active={orderBy === "device_name"}
+                                    direction={orderBy === "device_name" ? order : "asc"}
+                                    onClick={() => handleRequestSort("device_name")}
+                                >
+                                    Name
+                                </TableSortLabel>
+                            </TableCell>
+                            <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>
+                                <TableSortLabel
+                                    active={orderBy === "type"}
+                                    direction={orderBy === "type" ? order : "asc"}
+                                    onClick={() => handleRequestSort("type")}
+                                >
+                                    Type
+                                </TableSortLabel>
+                            </TableCell>
+                            <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>
+                                <TableSortLabel
+                                    active={orderBy === "ip_address"}
+                                    direction={orderBy === "ip_address" ? order : "asc"}
+                                    onClick={() => handleRequestSort("ip_address")}
+                                >
+                                    IP Management
+                                </TableSortLabel>
+                            </TableCell>
+                            <TableCell sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}>
+                                <TableSortLabel
+                                    active={orderBy === "status"}
+                                    direction={orderBy === "status" ? order : "asc"}
+                                    onClick={() => handleRequestSort("status")}
+                                >
+                                    Status
+                                </TableSortLabel>
+                            </TableCell>
                             <TableCell align="right" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}></TableCell>
                         </TableRow>
                     </TableHead>
@@ -257,7 +334,7 @@ export default function TopologyDeviceTable({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                        devices.map((device) => {
+                        sortedDevices.map((device) => {
                             const isSelected = selectedDeviceIds?.includes(device.id) || false;
                             const deviceType = (device.type as string) || "OTHER";
                             const typeProps = typeConfig[deviceType] || typeConfig.OTHER;
@@ -268,7 +345,12 @@ export default function TopologyDeviceTable({
                                     key={device.id}
                                     hover
                                     selected={isSelected}
-                                    onClick={() => onDeviceSelect?.(device.id)}
+                                    onClick={() => {
+                                        const newSelected = isSelected 
+                                            ? (selectedDeviceIds || []).filter(id => id !== device.id)
+                                            : [...(selectedDeviceIds || []), device.id];
+                                        onSelectionChange?.(newSelected);
+                                    }}
                                     sx={{
                                         cursor: "pointer",
                                         "&.Mui-selected": { bgcolor: "primary.50", "&:hover": { bgcolor: "primary.100" } },
@@ -411,6 +493,13 @@ export default function TopologyDeviceTable({
                 onSuccess={() => {
                     setIsDeployModalOpen(false);
                     onSelectionChange?.([]);
+                    showSuccess("Template deployed successfully to selected devices");
+                }}
+                onError={(err) => {
+                    showError(err || "Failed to deploy template");
+                }}
+                onWarning={(warn) => {
+                    showWarning(warn);
                 }}
             />
 
@@ -419,6 +508,14 @@ export default function TopologyDeviceTable({
                 open={showBackupOverlay}
                 jobs={backupJobs}
                 onClose={() => setShowBackupOverlay(false)}
+            />
+
+            <MuiSnackbar
+                open={snackbar.open}
+                message={snackbar.message}
+                severity={snackbar.severity}
+                onClose={hideSnackbar}
+                title={snackbar.title}
             />
         </Box>
     );

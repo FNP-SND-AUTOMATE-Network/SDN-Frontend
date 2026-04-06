@@ -22,10 +22,12 @@ interface DeployTemplateModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    onError?: (error: string) => void;
+    onWarning?: (warning: string) => void;
     selectedDevices: any[]; // Using any to be compatible with DeviceNetwork or raw items
 }
 
-export default function DeployTemplateModal({ isOpen, onClose, onSuccess, selectedDevices }: DeployTemplateModalProps) {
+export default function DeployTemplateModal({ isOpen, onClose, onSuccess, onError, onWarning, selectedDevices }: DeployTemplateModalProps) {
     const [templateId, setTemplateId] = useState<string>("");
     const [error, setError] = useState<string | null>(null);
     const [editedConfigContent, setEditedConfigContent] = useState<string>("");
@@ -99,6 +101,7 @@ export default function DeployTemplateModal({ isOpen, onClose, onSuccess, select
                     errorMessage = error;
                 }
                 setError(errorMessage);
+                if (onError) onError(errorMessage);
             }
         }
     );
@@ -106,6 +109,7 @@ export default function DeployTemplateModal({ isOpen, onClose, onSuccess, select
     const handleSubmit = () => {
         if (!templateId) {
             setError("Please select a template");
+            if (onError) onError("Please select a template");
             return;
         }
 
