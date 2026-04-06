@@ -277,7 +277,7 @@ export function ZabbixHostModal({ open, onClose, hostId, hostName }: ZabbixHostM
                                                 showMark: false,
                                                 curve: "linear",
                                             }))}
-                                            margin={{ left: 75, right: 20, top: 20, bottom: 50 }}
+                                            margin={{ left: 75, right: 20, top: 120, bottom: 50 }}
                                         />
                                     </Box>
                                 ) : (
