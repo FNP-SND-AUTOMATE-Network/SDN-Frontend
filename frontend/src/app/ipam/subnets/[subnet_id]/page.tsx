@@ -189,8 +189,8 @@ export default function SubnetDetailPage() {
         }
     };
 
-    const usagePercent = usage?.Used_percent || 0;
-    const freePercent = usage?.freehosts_percent || 0;
+    const usagePercent = parseFloat(usage?.Used_percent ?? usage?.used_percent ?? 0) || 0;
+    const freePercent = parseFloat(usage?.freehosts_percent ?? 0) || 0;
 
     return (
         <ProtectedRoute>
@@ -279,7 +279,7 @@ export default function SubnetDetailPage() {
                                     <Box>
                                         <Typography variant="body2" color="grey.500" gutterBottom>Usage</Typography>
                                         <Typography variant="body2">
-                                            Used: {usage?.used || 0} | Free: {usage?.freehosts || 0} ({freePercent.toFixed(1)}%) | Total: {usage?.maxhosts || 0}
+                                            Used: {parseFloat(usage?.used ?? 0) || 0} | Free: {parseFloat(usage?.freehosts ?? 0) || 0} ({freePercent.toFixed(1)}%) | Total: {parseFloat(usage?.maxhosts ?? 0) || 0}
                                         </Typography>
                                     </Box>
 

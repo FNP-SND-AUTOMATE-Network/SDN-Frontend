@@ -91,7 +91,7 @@ export default function IPAddressFormModal({
                 const { error } = await fetchClient.POST("/ipam/addresses", {
                     body: {
                         subnet_id: subnetId,
-                        ip: ip.trim(),
+                        ip_address: ip.trim(),
                         hostname: hostname.trim() || undefined,
                         description: description.trim() || undefined,
                         mac: mac.trim() || undefined,

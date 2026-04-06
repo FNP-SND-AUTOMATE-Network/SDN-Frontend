@@ -132,8 +132,8 @@ export default function SectionDetailPage() {
     const childSubnets = childSubnetsData?.subnets || [];
     const subnetUsage = subnetUsageData as any;
     
-    const usagePercent = subnetUsage?.Used_percent || 0;
-    const freePercent = subnetUsage?.freehosts_percent || 0;
+    const usagePercent = parseFloat(subnetUsage?.Used_percent ?? subnetUsage?.used_percent ?? 0) || 0;
+    const freePercent = parseFloat(subnetUsage?.freehosts_percent ?? 0) || 0;
 
     const isLoading = viewType === "section" ? isLoadingSection : isLoadingSubnetDetail;
     const error = viewType === "section" ? sectionError : subnetDetailError;
@@ -370,7 +370,7 @@ export default function SectionDetailPage() {
                                             <Box>
                                                 <Typography variant="body2" color="grey.500" gutterBottom>Usage</Typography>
                                                 <Typography variant="body2">
-                                                    Used: {subnetUsage?.used || 0} | Free: {subnetUsage?.freehosts || 0} ({freePercent.toFixed(1)}%) | Total: {subnetUsage?.maxhosts || 0}
+                                                    Used: {parseFloat(subnetUsage?.used ?? 0) || 0} | Free: {parseFloat(subnetUsage?.freehosts ?? 0) || 0} ({freePercent.toFixed(1)}%) | Total: {parseFloat(subnetUsage?.maxhosts ?? 0) || 0}
                                                 </Typography>
                                             </Box>
                                             {(() => {
