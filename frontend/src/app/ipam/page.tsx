@@ -61,7 +61,16 @@ export default function IPAMPage() {
     );
 
     const sections = sectionsData?.sections || [];
-    const error = fetchError ? (fetchError as any).message || "Failed to load sections" : null;
+    let error = null;
+    if (fetchError) {
+        const errObj = fetchError as any;
+        if (typeof errObj === "string") error = errObj;
+        else error = errObj.detail || errObj.message || "Failed to load sections";
+        
+        if (typeof error === "object") {
+            error = JSON.stringify(error);
+        }
+    }
 
     const toggleSection = (sectionId: string, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -273,15 +282,27 @@ export default function IPAMPage() {
                             </Box>
 
                             {error ? (
-                                <Box sx={{ p: 3 }}>
-                                    <Alert severity="error" action={
-                                        <Button color="inherit" size="small" onClick={() => refetch()}>
-                                            Retry
-                                        </Button>
-                                    }>
-                                        {error}
-                                    </Alert>
-                                </Box>
+                                error === "phpIPAM integration is not enabled" ? (
+                                    <Box sx={{ p: 6, textAlign: "center" }}>
+                                        <AccountTreeIcon sx={{ fontSize: 64, color: "text.disabled", mb: 2 }} />
+                                        <Typography variant="h6" fontWeight="medium" color="text.primary" gutterBottom>
+                                            phpIPAM Integration Disabled
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                            The IP Address Management system requires phpIPAM integration. Please enable it in the backend configuration to use this feature.
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    <Box sx={{ p: 3 }}>
+                                        <Alert severity="error" action={
+                                            <Button color="inherit" size="small" onClick={() => refetch()}>
+                                                Retry
+                                            </Button>
+                                        }>
+                                            {error}
+                                        </Alert>
+                                    </Box>
+                                )
                             ) : rootSections.length === 0 ? (
                                 <Box sx={{ p: 6, textAlign: "center" }}>
                                     <FolderIcon sx={{ fontSize: 64, color: "text.disabled", mb: 2 }} />
