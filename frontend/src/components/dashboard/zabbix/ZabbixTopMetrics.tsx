@@ -22,6 +22,15 @@ function getProgressColor(value: number): string {
     return "#22c55e";
 }
 
+const normalizeBandwidth = (val: number, unit: string) => {
+    if (!unit) return val;
+    const u = unit.toLowerCase();
+    if (u === 'kbps' || u === 'k') return val * 1000;
+    if (u === 'mbps' || u === 'm') return val * 1000 * 1000;
+    if (u === 'gbps' || u === 'g') return val * 1000 * 1000 * 1000;
+    return val;
+};
+
 export function ZabbixTopMetrics() {
     const { data, isLoading, isError, error } = useQuery<TopMetricsData>({
         queryKey: ["zabbix-top-metrics"],
@@ -105,8 +114,29 @@ export function ZabbixTopMetrics() {
                                     <Stack spacing={1.5}>
                                         {items.slice(0, 5).map((item: any, idx: number) => {
                                             const value = Number(item.value || 0);
-                                            const displayValue = value > 100 ? value.toFixed(1) : value.toFixed(1);
-                                            const barPercent = unit === "%" ? Math.min(value, 100) : Math.min((value / Math.max(...items.map((i: any) => Number(i.value || 0)))) * 100, 100);
+                                            const itemUnit = item.unit || unit;
+                                            
+                                            const displayValue = value % 1 === 0 ? value.toString() : value.toFixed(1);
+                                            
+                                            // Normalized calculation for progress bar
+                                            let barPercent = 0;
+                                            if (key === "top_bandwidth") {
+                                                const maxVal = Math.max(...items.map((i: any) => normalizeBandwidth(Number(i.value || 0), i.unit || itemUnit)));
+                                                const normalizedValue = normalizeBandwidth(value, itemUnit);
+                                                barPercent = maxVal > 0 ? (normalizedValue / maxVal) * 100 : 0;
+                                            } else {
+                                                barPercent = Math.min(value, 100);
+                                            }
+                                            
+                                            // Format name
+                                            let displayName = "Unknown";
+                                            if (key === "top_bandwidth") {
+                                                const dir = item.direction ? `(${item.direction})` : "";
+                                                displayName = `${item.host || ""} ${item.interface || ""} ${dir}`.trim();
+                                            } else {
+                                                const nameSection = item.name ? `- ${item.name.replace('Processor: ', '')}` : ''; // Simplify memory processor string if needed
+                                                displayName = item.host ? `${item.host} ${nameSection}` : (item.name || "Unknown");
+                                            }
 
                                             return (
                                                 <Box key={idx}>
@@ -123,6 +153,7 @@ export function ZabbixTopMetrics() {
                                                                     placeItems: "center",
                                                                     fontSize: "0.65rem",
                                                                     fontWeight: 700,
+                                                                    flexShrink: 0
                                                                 }}
                                                             >
                                                                 {idx + 1}
@@ -130,22 +161,24 @@ export function ZabbixTopMetrics() {
                                                             <Typography
                                                                 variant="body2"
                                                                 fontWeight={500}
+                                                                title={displayName}
                                                                 sx={{
-                                                                    maxWidth: 140,
+                                                                    maxWidth: 180,
                                                                     overflow: "hidden",
                                                                     textOverflow: "ellipsis",
                                                                     whiteSpace: "nowrap",
                                                                 }}
                                                             >
-                                                                {item.name || item.host || "Unknown"}
+                                                                {displayName}
                                                             </Typography>
                                                         </Box>
                                                         <Typography
                                                             variant="body2"
                                                             fontWeight={700}
-                                                            color={unit === "%" ? getProgressColor(value) : "text.primary"}
+                                                            color={itemUnit === "%" || unit === "%" ? getProgressColor(value) : "text.primary"}
+                                                            sx={{ whiteSpace: "nowrap", pl: 1 }}
                                                         >
-                                                            {displayValue}{unit}
+                                                            {displayValue} {itemUnit}
                                                         </Typography>
                                                     </Box>
                                                     <LinearProgress
@@ -157,7 +190,7 @@ export function ZabbixTopMetrics() {
                                                             bgcolor: alpha(color, 0.08),
                                                             "& .MuiLinearProgress-bar": {
                                                                 borderRadius: 3,
-                                                                bgcolor: unit === "%" ? getProgressColor(value) : color,
+                                                                bgcolor: itemUnit === "%" || unit === "%" ? getProgressColor(value) : color,
                                                             },
                                                         }}
                                                     />
