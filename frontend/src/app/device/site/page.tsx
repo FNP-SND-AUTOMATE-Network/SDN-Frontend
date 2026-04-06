@@ -163,7 +163,7 @@ export default function DeviceSitePage() {
       const { error } = await fetchClient.PUT("/local-sites/{site_id}", {
         params: {
           path: {
-            site_id: modalState.site.site_code, // Assuming site.id maps to site_code based on schema
+            site_id: modalState.site.id,
           },
         },
         body: data,
