@@ -265,7 +265,11 @@ export function ZabbixHostModal({ open, onClose, hostId, hostName }: ZabbixHostM
                                         <LineChart
                                             xAxis={[{
                                                 data: (trafficData as any).timestamps ? (trafficData as any).timestamps.map((t: number) => new Date(t * 1000)) : [],
-                                                scaleType: "time"
+                                                scaleType: "time",
+                                                label: "Time"
+                                            }]}
+                                            yAxis={[{
+                                                label: "Traffic (bps)"
                                             }]}
                                             series={(trafficData as any).series.map((s: any) => ({
                                                 data: s.data,
@@ -273,7 +277,7 @@ export function ZabbixHostModal({ open, onClose, hostId, hostName }: ZabbixHostM
                                                 showMark: false,
                                                 curve: "linear",
                                             }))}
-                                            margin={{ left: 60, right: 20, top: 20, bottom: 30 }}
+                                            margin={{ left: 75, right: 20, top: 20, bottom: 50 }}
                                         />
                                     </Box>
                                 ) : (
