@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { authApi } from '../lib/api';
 
 export interface User {
   id: string;
@@ -14,10 +15,10 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
+  token: string | null; // Kept for backward compatibility, will be null
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (userData: User, accessToken: string) => void;
+  login: (userData: User, accessToken?: string) => void;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
   getUserDisplayName: () => string;
@@ -35,49 +36,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Helper function to check if token is expired
-  const isTokenExpired = (token: string): boolean => {
-    try {
-      // Decode JWT token to check expiration
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const currentTime = Date.now() / 1000;
-      return payload.exp < currentTime;
-    } catch (error) {
-      console.error('Error checking token expiration:', error);
-      return true; // Consider invalid token as expired
-    }
-  };
-
-  // Load user data from localStorage on mount
+  // Load user data from API on mount
   useEffect(() => {
-    const loadUser = () => {
+    const loadUser = async () => {
       try {
-        const storedToken = localStorage.getItem('access_token');
-        const storedUser = localStorage.getItem('user');
-
-        if (storedToken && storedUser) {
-          // Check if token is expired
-          if (isTokenExpired(storedToken)) {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('user');
-            localStorage.removeItem('registration_email');
-            setUser(null);
-            setToken(null);
-          } else {
-            setToken(storedToken);
-            setUser(JSON.parse(storedUser));
-          }
+        const userData = await authApi.me();
+        console.log('[Auth] /auth/me response:', JSON.stringify(userData));
+        setUser(userData as User);
+      } catch (error: any) {
+        // 401 = ไม่ได้ Login เป็นเรื่องปกติ ไม่ต้องตะโกน Error
+        if (error?.status === 401 || error?.status === 0) {
+          console.log('[Auth] Not authenticated — skipping.');
         } else {
-          // No token or user data found
-          setToken(null);
-          setUser(null);
+          console.error('[Auth] Unexpected error loading user:', error);
         }
-      } catch (error) {
-        console.error('Error loading user data:', error);
-        // Clear invalid data
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('registration_email');
+        setUser(null);
       } finally {
         // Add small delay to prevent flicker
         setTimeout(() => {
@@ -90,24 +63,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // Login function
-  const login = (userData: User, accessToken: string) => {
-    
+  const login = (userData: User, accessToken?: string) => {
     // Validate user data
     if (!userData.id || !userData.email || !userData.name || !userData.surname) {
       console.error("Invalid user data provided to login:", userData);
       return;
     }
     
-    if (!accessToken) {
-      console.error("No access token provided to login");
-      return;
-    }
-    
     setUser(userData);
-    setToken(accessToken);
-    setIsLoading(false); // Set loading to false immediately
-    localStorage.setItem('access_token', accessToken);
-    localStorage.setItem('user', JSON.stringify(userData));
+    setIsLoading(false);
   };
 
   // Update user data function
@@ -116,16 +80,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     const updatedUser = { ...user, ...userData };
     setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   // Logout function
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await authApi.logout();
+    } catch (err) {
+      console.error('Failed to logout from API API', err);
+    }
+    
     setUser(null);
     setToken(null);
     setIsLoading(false); // Set loading to false immediately
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user');
     localStorage.removeItem('registration_email'); // Clear any leftover registration data
     
     // Redirect to home page
@@ -133,7 +100,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Check if user is authenticated
-  const isAuthenticated = !!user && !!token;
+  const isAuthenticated = !!user;
 
   // Get user initials for avatar
   const getUserInitials = () => {
