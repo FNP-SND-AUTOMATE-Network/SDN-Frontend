@@ -121,7 +121,8 @@ async function apiRequest<T>(
     let response = await fetch(url, config);
 
     // Auto-refresh token logic on 401 Unauthorized
-    if (response.status === 401 && !endpoint.includes("/auth/")) {
+    const isAuthRouteThatShouldNotRefresh = endpoint.includes("/auth/refresh") || endpoint.includes("/auth/login") || endpoint.includes("/auth/register");
+    if (response.status === 401 && !isAuthRouteThatShouldNotRefresh) {
       try {
         const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
           method: "POST",

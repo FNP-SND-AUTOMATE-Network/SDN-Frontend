@@ -17,9 +17,10 @@ const fetchClient = createFetchClient<paths>({
 fetchClient.use({
   async onResponse({ request, response }) {
     // If we get 401 and it's NOT a login/refresh route, try to refresh
-    if (response.status === 401 && !request.url.includes('/auth/')) {
+    const isAuthRouteThatShouldNotRefresh = request.url.includes('/auth/refresh') || request.url.includes('/auth/login') || request.url.includes('/auth/register');
+    if (response.status === 401 && !isAuthRouteThatShouldNotRefresh) {
       try {
-        const refreshResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/refresh`, {
+        const refreshResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
           method: "POST",
           credentials: "include", // Send the HttpOnly refresh_token cookie
         });

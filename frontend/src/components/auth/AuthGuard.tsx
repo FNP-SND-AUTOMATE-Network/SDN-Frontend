@@ -39,7 +39,16 @@ export function AuthGuard({ children, redirectTo = "/" }: AuthGuardProps) {
 
   // ถ้าไม่มี user login ไม่แสดงเนื้อหา (จะ redirect แล้ว)
   if (!isAuthenticated) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <p className="text-gray-600 font-sf-pro-text">
+            Redirecting...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   // ถ้ามี user login แสดงเนื้อหาปกติ
@@ -82,7 +91,16 @@ export function PublicRoute({ children }: { children: ReactNode }) {
 
   // ถ้ามี user login แล้ว ไม่แสดงเนื้อหา (จะ redirect แล้ว)
   if (isAuthenticated) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <p className="text-gray-600 font-sf-pro-text">
+            Redirecting to Dashboard...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   // ถ้าไม่มี user login แสดงเนื้อหาปกติ
