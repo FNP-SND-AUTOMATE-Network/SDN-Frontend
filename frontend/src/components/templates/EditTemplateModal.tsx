@@ -55,7 +55,7 @@ export default function EditTemplateModal({
     onClose,
     onSuccess,
 }: EditTemplateModalProps) {
-    const { token } = useAuth();
+    const { isAuthenticated } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const queryClient = useQueryClient();
     const { snackbar, showError, hideSnackbar } = useSnackbar();
@@ -83,7 +83,7 @@ export default function EditTemplateModal({
             },
         },
         {
-            enabled: !!token && isOpen,
+            enabled: isAuthenticated && isOpen,
         }
     );
 
@@ -92,11 +92,10 @@ export default function EditTemplateModal({
     // Edit Mutation
     const editMutation = useMutation({
         mutationFn: async () => {
-            if (!token || !template) throw new Error("Missing requirements");
+            if (!isAuthenticated || !template) throw new Error("Missing requirements");
 
             // 1. Update metadata
             await configurationTemplateService.updateTemplate(
-                token,
                 template.id,
                 {
                     template_name: templateName.trim(),
@@ -109,13 +108,11 @@ export default function EditTemplateModal({
             // 2. Upload content
             if (contentMode === "upload" && selectedFile) {
                 await configurationTemplateService.uploadTemplateContent(
-                    token,
                     template.id,
                     selectedFile
                 );
             } else if (contentMode === "edit") {
                 await configurationTemplateService.uploadTemplateContent(
-                    token,
                     template.id,
                     configContent
                 );

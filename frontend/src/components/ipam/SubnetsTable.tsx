@@ -38,7 +38,7 @@ export default function SubnetsTable({
     subnets,
     onRefresh,
 }: SubnetsTableProps) {
-    const { token } = useAuth();
+    const { isAuthenticated } = useAuth();
     const [expandedSubnets, setExpandedSubnets] = useState<Set<string>>(
         new Set()
     );
@@ -69,7 +69,7 @@ export default function SubnetsTable({
                 params: { path: { subnet_id: subnet.id } }
             },
             {
-                enabled: isExpanded && !!token
+                enabled: isExpanded && isAuthenticated
             }
         );
 

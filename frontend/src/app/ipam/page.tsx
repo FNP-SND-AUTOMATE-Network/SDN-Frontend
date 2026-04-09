@@ -35,7 +35,7 @@ import { fetchClient } from "@/lib/apiv2/fetch";
 type SectionResponse = components["schemas"]["SectionResponse"];
 
 export default function IPAMPage() {
-    const { token } = useAuth();
+    const { isAuthenticated } = useAuth();
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
     // Modal states
@@ -56,7 +56,7 @@ export default function IPAMPage() {
         "/ipam/sections",
         {},
         {
-            enabled: !!token,
+            enabled: isAuthenticated,
         }
     );
 
@@ -103,7 +103,7 @@ export default function IPAMPage() {
     };
 
     const handleConfirmDelete = async () => {
-        if (!token || !deletingSection) return;
+        if (!isAuthenticated || !deletingSection) return;
 
         setIsDeleting(true);
         try {

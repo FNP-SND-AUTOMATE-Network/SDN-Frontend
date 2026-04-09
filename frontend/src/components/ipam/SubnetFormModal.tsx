@@ -42,7 +42,7 @@ export default function SubnetFormModal({
     parentSubnetId,
     allSections = [],
 }: SubnetFormModalProps) {
-    const { token } = useAuth();
+    const { isAuthenticated } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -76,7 +76,7 @@ export default function SubnetFormModal({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!token) return;
+        if (!isAuthenticated) return;
 
         setIsLoading(true);
         setError(null);

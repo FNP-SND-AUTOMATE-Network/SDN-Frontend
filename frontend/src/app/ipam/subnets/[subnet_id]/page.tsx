@@ -44,7 +44,7 @@ type IPAddressResponse = components["schemas"]["IpAddressResponse"];
 export default function SubnetDetailPage() {
     const params = useParams();
     const router = useRouter();
-    const { token } = useAuth();
+    const { isAuthenticated } = useAuth();
     const subnetId = params.subnet_id as string;
 
     const [activeTab, setActiveTab] = useState<"details" | "spacemap">("details");
@@ -65,7 +65,7 @@ export default function SubnetDetailPage() {
         "get",
         "/ipam/sections",
         {},
-        { enabled: !!token }
+        { enabled: isAuthenticated }
     );
     const allSections = sectionsData?.sections || [];
 
@@ -78,7 +78,7 @@ export default function SubnetDetailPage() {
         "get",
         "/ipam/subnets/{subnet_id}",
         { params: { path: { subnet_id: subnetId } } },
-        { enabled: !!token }
+        { enabled: isAuthenticated }
     );
 
     const {
@@ -88,21 +88,21 @@ export default function SubnetDetailPage() {
         "get",
         "/ipam/subnets/{subnet_id}/addresses",
         { params: { path: { subnet_id: subnetId } } },
-        { enabled: !!token }
+        { enabled: isAuthenticated }
     );
 
     const { data: subnetUsageData } = $api.useQuery(
         "get",
         "/ipam/subnets/{subnet_id}/usage",
         { params: { path: { subnet_id: subnetId } } },
-        { enabled: !!token }
+        { enabled: isAuthenticated }
     );
 
     const { data: childSubnetsData, refetch: refetchChildSubnets } = $api.useQuery(
         "get",
         "/ipam/subnets/{subnet_id}/children",
         { params: { path: { subnet_id: subnetId } } },
-        { enabled: !!token }
+        { enabled: isAuthenticated }
     );
 
     const subnetDetail = subnetDetailData as any;

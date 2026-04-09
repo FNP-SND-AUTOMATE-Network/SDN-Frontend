@@ -142,8 +142,8 @@ export class IPAMAPIError extends Error {
 }
 
 // Helper function สำหรับสร้าง headers
-const createHeaders = (token: string) => ({
-  Authorization: `Bearer ${token}`,
+const createHeaders = () => ({
+  
   "Content-Type": "application/json",
 });
 
@@ -170,10 +170,10 @@ export const ipamService = {
   /**
    * ดึงรายการ sections ทั้งหมด
    */
-  async getSections(token: string): Promise<SectionListResponse> {
+  async getSections(): Promise<SectionListResponse> {
     const response = await fetch(`${API_BASE_URL}/ipam/sections`, {
       method: "GET",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },
@@ -182,12 +182,12 @@ export const ipamService = {
    * สร้าง section ใหม่
    */
   async createSection(
-    token: string,
+    
     sectionData: SectionCreateRequest,
   ): Promise<Section> {
     const response = await fetch(`${API_BASE_URL}/ipam/sections`, {
       method: "POST",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
       body: JSON.stringify(sectionData),
     });
     return handleResponse(response);
@@ -197,13 +197,13 @@ export const ipamService = {
    * อัปเดต section
    */
   async updateSection(
-    token: string,
+    
     sectionId: string,
     sectionData: SectionUpdateRequest,
   ): Promise<Section> {
     const response = await fetch(`${API_BASE_URL}/ipam/sections/${sectionId}`, {
       method: "PATCH",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
       body: JSON.stringify(sectionData),
     });
     return handleResponse(response);
@@ -212,10 +212,10 @@ export const ipamService = {
   /**
    * ลบ section
    */
-  async deleteSection(token: string, sectionId: string): Promise<void> {
+  async deleteSection(sectionId: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/ipam/sections/${sectionId}`, {
       method: "DELETE",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },
@@ -224,14 +224,14 @@ export const ipamService = {
    * ดึงรายการ subnets ใน section
    */
   async getSectionSubnets(
-    token: string,
+    
     sectionId: string,
   ): Promise<SubnetListResponse> {
     const response = await fetch(
       `${API_BASE_URL}/ipam/sections/${sectionId}/subnets`,
       {
         method: "GET",
-        headers: createHeaders(token),
+        headers: createHeaders(), credentials: 'include',
       },
     );
     return handleResponse(response);
@@ -242,10 +242,10 @@ export const ipamService = {
   /**
    * ดึงรายการ subnets ทั้งหมด
    */
-  async getSubnets(token: string): Promise<SubnetListResponse> {
+  async getSubnets(): Promise<SubnetListResponse> {
     const response = await fetch(`${API_BASE_URL}/ipam/subnets`, {
       method: "GET",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },
@@ -254,12 +254,12 @@ export const ipamService = {
    * ดึงรายละเอียด subnet
    */
   async getSubnetDetail(
-    token: string,
+    
     subnetId: string,
   ): Promise<SubnetDetail> {
     const response = await fetch(`${API_BASE_URL}/ipam/subnets/${subnetId}`, {
       method: "GET",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },
@@ -267,12 +267,12 @@ export const ipamService = {
   /**
    * ดึงข้อมูล usage ของ subnet
    */
-  async getSubnetUsage(token: string, subnetId: string): Promise<SubnetUsage> {
+  async getSubnetUsage(subnetId: string): Promise<SubnetUsage> {
     const response = await fetch(
       `${API_BASE_URL}/ipam/subnets/${subnetId}/usage`,
       {
         method: "GET",
-        headers: createHeaders(token),
+        headers: createHeaders(), credentials: 'include',
       },
     );
     return handleResponse(response);
@@ -282,14 +282,14 @@ export const ipamService = {
    * ดึงรายการ IP addresses ใน subnet
    */
   async getSubnetAddresses(
-    token: string,
+    
     subnetId: string,
   ): Promise<IPAddressListResponse> {
     const response = await fetch(
       `${API_BASE_URL}/ipam/subnets/${subnetId}/addresses`,
       {
         method: "GET",
-        headers: createHeaders(token),
+        headers: createHeaders(), credentials: 'include',
       },
     );
     return handleResponse(response);
@@ -299,12 +299,12 @@ export const ipamService = {
    * สร้าง subnet ใหม่
    */
   async createSubnet(
-    token: string,
+    
     subnetData: SubnetCreateRequest,
   ): Promise<SubnetDetail> {
     const response = await fetch(`${API_BASE_URL}/ipam/subnets`, {
       method: "POST",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
       body: JSON.stringify(subnetData),
     });
     return handleResponse(response);
@@ -314,13 +314,13 @@ export const ipamService = {
    * อัปเดต subnet
    */
   async updateSubnet(
-    token: string,
+    
     subnetId: string,
     subnetData: Partial<SubnetCreateRequest>,
   ): Promise<SubnetDetail> {
     const response = await fetch(`${API_BASE_URL}/ipam/subnets/${subnetId}`, {
       method: "PATCH",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
       body: JSON.stringify(subnetData),
     });
     return handleResponse(response);
@@ -329,10 +329,10 @@ export const ipamService = {
   /**
    * ลบ subnet
    */
-  async deleteSubnet(token: string, subnetId: string): Promise<void> {
+  async deleteSubnet(subnetId: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/ipam/subnets/${subnetId}`, {
       method: "DELETE",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },
@@ -341,14 +341,14 @@ export const ipamService = {
    * ดึงรายการ child subnets ของ subnet
    */
   async getSubnetChildren(
-    token: string,
+    
     subnetId: string,
   ): Promise<SubnetListResponse> {
     const response = await fetch(
       `${API_BASE_URL}/ipam/subnets/${subnetId}/children`,
       {
         method: "GET",
-        headers: createHeaders(token),
+        headers: createHeaders(), credentials: 'include',
       },
     );
     return handleResponse(response);
@@ -360,14 +360,14 @@ export const ipamService = {
    * ดึงรายละเอียด IP address
    */
   async getIPAddress(
-    token: string,
+    
     addressId: string,
   ): Promise<IPAddressDetail> {
     const response = await fetch(
       `${API_BASE_URL}/ipam/addresses/${addressId}`,
       {
         method: "GET",
-        headers: createHeaders(token),
+        headers: createHeaders(), credentials: 'include',
       },
     );
     return handleResponse(response);
@@ -377,7 +377,7 @@ export const ipamService = {
    * ค้นหา IP addresses
    */
   async searchIPAddresses(
-    token: string,
+    
     query: string,
   ): Promise<IPAddressListResponse> {
     const params = new URLSearchParams({ q: query });
@@ -385,7 +385,7 @@ export const ipamService = {
       `${API_BASE_URL}/ipam/addresses/search?${params}`,
       {
         method: "GET",
-        headers: createHeaders(token),
+        headers: createHeaders(), credentials: 'include',
       },
     );
     return handleResponse(response);
@@ -395,7 +395,7 @@ export const ipamService = {
    * สร้าง IP address ใหม่
    */
   async createIPAddress(
-    token: string,
+    
     addressData: {
       subnet_id: string;
       ip: string;
@@ -416,7 +416,7 @@ export const ipamService = {
     };
     const response = await fetch(`${API_BASE_URL}/ipam/addresses`, {
       method: "POST",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
       body: JSON.stringify(apiPayload),
     });
     return handleResponse(response);
@@ -426,7 +426,7 @@ export const ipamService = {
    * อัปเดต IP address
    */
   async updateIPAddress(
-    token: string,
+    
     addressId: string,
     addressData: {
       hostname?: string | null;
@@ -453,7 +453,7 @@ export const ipamService = {
       `${API_BASE_URL}/ipam/addresses/${addressId}`,
       {
         method: "PATCH",
-        headers: createHeaders(token),
+        headers: createHeaders(), credentials: 'include',
         body: JSON.stringify(apiPayload),
       },
     );
@@ -463,12 +463,12 @@ export const ipamService = {
   /**
    * ลบ IP address
    */
-  async deleteIPAddress(token: string, addressId: string): Promise<void> {
+  async deleteIPAddress(addressId: string): Promise<void> {
     const response = await fetch(
       `${API_BASE_URL}/ipam/addresses/${addressId}`,
       {
         method: "DELETE",
-        headers: createHeaders(token),
+        headers: createHeaders(), credentials: 'include',
       },
     );
     return handleResponse(response);

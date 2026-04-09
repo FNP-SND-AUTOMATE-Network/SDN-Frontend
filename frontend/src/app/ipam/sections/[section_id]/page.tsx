@@ -48,7 +48,7 @@ type SubnetResponse = components["schemas"]["SubnetResponse"];
 export default function SectionDetailPage() {
     const params = useParams();
     const router = useRouter();
-    const { token } = useAuth();
+    const { isAuthenticated } = useAuth();
     const initialSectionId = params.section_id as string;
 
     // View state
@@ -72,7 +72,7 @@ export default function SectionDetailPage() {
         "get",
         "/ipam/sections",
         {},
-        { enabled: !!token }
+        { enabled: isAuthenticated }
     );
     const allSections = sectionsData?.sections || [];
     
@@ -86,7 +86,7 @@ export default function SectionDetailPage() {
         "get",
         "/ipam/sections/{section_id}/subnets",
         { params: { path: { section_id: currentViewId } } },
-        { enabled: !!token && viewType === "section" }
+        { enabled: isAuthenticated && viewType === "section" }
     );
     const subnets = sectionSubnetsData?.subnets || [];
     const currentSection = allSections.find((s) => s.id === currentViewId);
@@ -103,28 +103,28 @@ export default function SectionDetailPage() {
         "get",
         "/ipam/subnets/{subnet_id}",
         { params: { path: { subnet_id: currentViewId } } },
-        { enabled: !!token && viewType === "subnet" }
+        { enabled: isAuthenticated && viewType === "subnet" }
     );
     
     const { data: subnetAddressesData, refetch: refetchSubnetAddresses } = $api.useQuery(
         "get",
         "/ipam/subnets/{subnet_id}/addresses",
         { params: { path: { subnet_id: currentViewId } } },
-        { enabled: !!token && viewType === "subnet" }
+        { enabled: isAuthenticated && viewType === "subnet" }
     );
     
     const { data: subnetUsageData } = $api.useQuery(
         "get",
         "/ipam/subnets/{subnet_id}/usage",
         { params: { path: { subnet_id: currentViewId } } },
-        { enabled: !!token && viewType === "subnet" }
+        { enabled: isAuthenticated && viewType === "subnet" }
     );
     
     const { data: childSubnetsData } = $api.useQuery(
         "get",
         "/ipam/subnets/{subnet_id}/children",
         { params: { path: { subnet_id: currentViewId } } },
-        { enabled: !!token && viewType === "subnet" }
+        { enabled: isAuthenticated && viewType === "subnet" }
     );
 
     const subnetDetail = subnetDetailData as any;
