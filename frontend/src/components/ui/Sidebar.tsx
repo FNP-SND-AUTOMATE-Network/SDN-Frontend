@@ -44,12 +44,12 @@ const menuItems: MenuItem[] = [
     icon: faNetworkWired,
     href: "/topology",
   },
-  {
-    id: "policies",
-    label: "Policies",
-    icon: faShieldAlt,
-    href: "/policies",
-  },
+  // {
+  //   id: "policies",
+  //   label: "Policies",
+  //   icon: faShieldAlt,
+  //   href: "/policies",
+  // },
   {
     id: "templates",
     label: "Templates",
