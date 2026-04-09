@@ -199,8 +199,8 @@ export class APIError extends Error {
 }
 
 // Helper function สำหรับสร้าง headers
-const createHeaders = (token: string) => ({
-  Authorization: `Bearer ${token}`,
+const createHeaders = () => ({
+  
   "Content-Type": "application/json",
 });
 
@@ -222,7 +222,7 @@ const handleResponse = async (response: Response) => {
 // Device Network API functions
 export const deviceNetworkService = {
   async getDevices(
-    token: string,
+    
     page = 1,
     pageSize = 20,
     filters?: {
@@ -249,36 +249,36 @@ export const deviceNetworkService = {
 
     const response = await fetch(`${API_BASE_URL}/device-networks/?${params}`, {
       method: "GET",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },
 
-  async getDeviceById(token: string, deviceId: string): Promise<DeviceNetwork> {
+  async getDeviceById(deviceId: string): Promise<DeviceNetwork> {
     const response = await fetch(
       `${API_BASE_URL}/device-networks/${deviceId}`,
       {
         method: "GET",
-        headers: createHeaders(token),
+        headers: createHeaders(), credentials: 'include',
       },
     );
     return handleResponse(response);
   },
 
   async createDevice(
-    token: string,
+    
     data: DeviceNetworkCreateRequest,
   ): Promise<DeviceNetworkCreateResponse> {
     const response = await fetch(`${API_BASE_URL}/device-networks/`, {
       method: "POST",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
       body: JSON.stringify(data),
     });
     return handleResponse(response);
   },
 
   async updateDevice(
-    token: string,
+    
     deviceId: string,
     data: DeviceNetworkUpdateRequest,
   ): Promise<DeviceNetworkUpdateResponse> {
@@ -286,7 +286,7 @@ export const deviceNetworkService = {
       `${API_BASE_URL}/device-networks/${deviceId}`,
       {
         method: "PUT",
-        headers: createHeaders(token),
+        headers: createHeaders(), credentials: 'include',
         body: JSON.stringify(data),
       },
     );
@@ -294,21 +294,21 @@ export const deviceNetworkService = {
   },
 
   async deleteDevice(
-    token: string,
+    
     deviceId: string,
   ): Promise<DeviceNetworkDeleteResponse> {
     const response = await fetch(
       `${API_BASE_URL}/device-networks/${deviceId}`,
       {
         method: "DELETE",
-        headers: createHeaders(token),
+        headers: createHeaders(), credentials: 'include',
       },
     );
     return handleResponse(response);
   },
 
   async assignTagsToDevice(
-    token: string,
+    
     deviceId: string,
     tagIds: string[],
   ): Promise<DeviceNetworkUpdateResponse> {
@@ -316,7 +316,7 @@ export const deviceNetworkService = {
       `${API_BASE_URL}/device-networks/${deviceId}/tags`,
       {
         method: "POST",
-        headers: createHeaders(token),
+        headers: createHeaders(), credentials: 'include',
         body: JSON.stringify({ tag_ids: tagIds }),
       },
     );
@@ -324,7 +324,7 @@ export const deviceNetworkService = {
   },
 
   async removeTagsFromDevice(
-    token: string,
+    
     deviceId: string,
     tagIds: string[],
   ): Promise<DeviceNetworkUpdateResponse> {
@@ -332,64 +332,64 @@ export const deviceNetworkService = {
       `${API_BASE_URL}/device-networks/${deviceId}/tags`,
       {
         method: "DELETE",
-        headers: createHeaders(token),
+        headers: createHeaders(), credentials: 'include',
         body: JSON.stringify({ tag_ids: tagIds }),
       },
     );
     return handleResponse(response);
   },
 
-  async mountDevice(token: string, nodeId: string): Promise<any> {
+  async mountDevice(nodeId: string): Promise<any> {
     const url = `${API_BASE_URL}/api/v1/nbi/devices/${nodeId}/mount`;
     console.log("Calling POST:", url);
     const response = await fetch(url, {
       method: "POST",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },
-  async unmountDevice(token: string, nodeId: string): Promise<any> {
+  async unmountDevice(nodeId: string): Promise<any> {
     const url = `${API_BASE_URL}/api/v1/nbi/devices/${nodeId}/unmount`;
     console.log("Calling POST:", url);
     const response = await fetch(url, {
       method: "POST",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },
 
   async discoverInterfaces(
-    token: string,
+    
     nodeId: string,
   ): Promise<InterfaceDiscoveryResponse> {
     const url = `${API_BASE_URL}/interfaces/odl/${nodeId}`;
     const response = await fetch(url, {
       method: "GET",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },
 
   async syncInterfaces(
-    token: string,
+    
     nodeId: string,
   ): Promise<InterfaceDiscoveryResponse> {
     const url = `${API_BASE_URL}/interfaces/odl/${nodeId}/sync`;
     const response = await fetch(url, {
       method: "GET",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },
 
   async getInterfaceNames(
-    token: string,
+    
     nodeId: string,
   ): Promise<{ success: boolean; names: string[] }> {
     const url = `${API_BASE_URL}/interfaces/odl/${nodeId}/names`;
     const response = await fetch(url, {
       method: "GET",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },

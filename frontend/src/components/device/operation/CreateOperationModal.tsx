@@ -23,7 +23,7 @@ export default function CreateOperationModal({
     onSuccess,
     allTags,
 }: CreateOperationModalProps) {
-    const { token } = useAuth();
+    const { isAuthenticated } = useAuth();
     const queryClient = useQueryClient();
 
     const createMutation = useMutation({
@@ -33,17 +33,17 @@ export default function CreateOperationModal({
             version?: string | null;
             tagIds: string[];
         }) => {
-            if (!token) throw new Error("Not authenticated");
+            if (!isAuthenticated) throw new Error("Not authenticated");
             const { osData, file, version, tagIds } = params;
 
-            const response = await operatingSystemService.createOperatingSystem(token, osData);
+            const response = await operatingSystemService.createOperatingSystem(osData);
             const createdOs = response.operating_system;
 
             if (file) {
-                await operatingSystemService.uploadOsFile(token, createdOs.id, file, version || null);
+                await operatingSystemService.uploadOsFile(createdOs.id, file, version || null);
             }
             if (tagIds && tagIds.length > 0) {
-                await operatingSystemService.assignTagsToOs(token, createdOs.id, tagIds);
+                await operatingSystemService.assignTagsToOs(createdOs.id, tagIds);
             }
         },
         onSuccess: () => {

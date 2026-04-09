@@ -29,7 +29,7 @@ type LocalSite = paths["/local-sites/"]["get"]["responses"]["200"]["content"]["a
 type OperatingSystem = paths["/operating-systems/"]["get"]["responses"]["200"]["content"]["application/json"]["operating_systems"][number];
 
 export default function DevicePage() {
-  const { token, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { snackbar, hideSnackbar, showSuccess, showError } = useSnackbar();
 
   // --- Filter & Pagination State ---
@@ -84,7 +84,7 @@ export default function DevicePage() {
   // --- Load reference data (tags, sites, OS) for modal once ---
   useEffect(() => {
     const fetchReferenceData = async () => {
-      if (!token) return;
+      if (!isAuthenticated) return;
       try {
         const [tagsRes, sitesRes, osRes] = await Promise.all([
           fetchClient.GET("/tags/", { params: { query: { page: 1, page_size: 100, include_usage: false } } }),
@@ -105,7 +105,7 @@ export default function DevicePage() {
     };
     fetchReferenceData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [isAuthenticated]);
 
   // --- Handlers ---
   const handleSearch = (searchTerm: string) => setSearch(searchTerm);

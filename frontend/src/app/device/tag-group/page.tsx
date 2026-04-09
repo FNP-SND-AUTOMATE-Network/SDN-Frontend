@@ -26,7 +26,7 @@ import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export default function DeviceTagGroupPage() {
-  const { token, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { snackbar, hideSnackbar, showSuccess, showError } = useSnackbar();
 
   const [isDataLoading, setIsDataLoading] = useState(false);
@@ -92,7 +92,7 @@ export default function DeviceTagGroupPage() {
         },
       },
     },
-    { enabled: !!token }
+    { enabled: isAuthenticated }
   );
 
   const tags = data?.tags || [];
@@ -137,7 +137,7 @@ export default function DeviceTagGroupPage() {
 
   // CRUD operations
   const handleCreateTag = async (data: TagCreate) => {
-    if (!token) return;
+    if (!isAuthenticated) return;
 
     try {
       const { error } = await fetchClient.POST("/tags/", {
@@ -155,7 +155,7 @@ export default function DeviceTagGroupPage() {
   };
 
   const handleUpdateTag = async (data: TagUpdate) => {
-    if (!token || !modalState.tag) return;
+    if (!isAuthenticated || !modalState.tag) return;
 
     try {
       const { error } = await fetchClient.PUT("/tags/{tag_id}", {
@@ -199,7 +199,7 @@ export default function DeviceTagGroupPage() {
   };
 
   const deleteTag = async () => {
-    if (!token || !confirmModal.tagId) return;
+    if (!isAuthenticated || !confirmModal.tagId) return;
 
     try {
       const { error } = await fetchClient.DELETE("/tags/{tag_id}", {

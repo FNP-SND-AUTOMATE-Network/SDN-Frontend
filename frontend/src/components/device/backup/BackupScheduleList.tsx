@@ -17,6 +17,8 @@ import {
     Tooltip,
     Divider,
     CardActionArea,
+    Menu,
+    MenuItem,
 } from "@mui/material";
 import {
     Delete as DeleteIcon,
@@ -28,10 +30,12 @@ import {
 
     CheckCircleOutline,
     Close as CloseIcon,
+    MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
 import { $api, fetchClient } from "@/lib/apiv2/fetch";
 import { components } from "@/lib/apiv2/schema";
 import { useSnackbar } from "@/hooks/useSnackbar";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface BackupScheduleListProps {
     onTriggerNew?: () => void;
@@ -39,6 +43,7 @@ interface BackupScheduleListProps {
 
 export default function BackupScheduleList({ onTriggerNew }: BackupScheduleListProps) {
     const { showError, showSuccess } = useSnackbar();
+    const { user } = useAuth();
 
     // Fetch schedules
     const { data: listResponse, isLoading, refetch } = $api.useQuery("get", "/backups/", {
@@ -58,8 +63,71 @@ export default function BackupScheduleList({ onTriggerNew }: BackupScheduleListP
 
     // Detail Modal State
     const [detailSchedule, setDetailSchedule] = useState<components["schemas"]["BackupResponse"] | null>(null);
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
 
+    const handleOpenDetail = (schedule: components["schemas"]["BackupResponse"]) => {
+        setDetailSchedule(schedule);
+        setIsDetailOpen(true);
+    };
 
+    const handleCloseDetail = () => {
+        setIsDetailOpen(false);
+        setTimeout(() => setDetailSchedule(null), 300);
+    };
+
+    // Status Menu State
+    const [statusAnchorEl, setStatusAnchorEl] = useState<null | HTMLElement>(null);
+    const [statusSchedule, setStatusSchedule] = useState<components["schemas"]["BackupResponse"] | null>(null);
+
+    const handleStatusMenuOpen = (event: React.MouseEvent<HTMLButtonElement>, schedule: components["schemas"]["BackupResponse"]) => {
+        event.stopPropagation();
+        setStatusAnchorEl(event.currentTarget);
+        setStatusSchedule(schedule);
+    };
+
+    const handleStatusMenuClose = () => {
+        setStatusAnchorEl(null);
+        setStatusSchedule(null);
+    };
+
+    const handleAction = async (action: "pause" | "reactivate" | "offline", targetSchedule: components["schemas"]["BackupResponse"] | null) => {
+        if (!targetSchedule) return;
+        handleStatusMenuClose();
+        
+        try {
+            if (action === "pause") {
+                const { error } = await fetchClient.PUT("/backups/{backup_id}/pause", {
+                    params: { path: { backup_id: targetSchedule.id } }
+                });
+                if (error) throw new Error((error as any)?.detail || "Failed to pause schedule");
+                showSuccess("Schedule paused successfully");
+            } else if (action === "reactivate") {
+                const { error } = await fetchClient.PUT("/backups/{backup_id}/reactivate", {
+                    params: { path: { backup_id: targetSchedule.id } }
+                });
+                if (error) throw new Error((error as any)?.detail || "Failed to reactivate schedule");
+                showSuccess("Schedule reactivated successfully");
+            } else if (action === "offline") {
+                const { error } = await fetchClient.PUT("/backups/{backup_id}", {
+                    params: { path: { backup_id: targetSchedule.id } },
+                    body: { status: "OFFLINE" } as any
+                });
+                if (error) throw new Error((error as any)?.detail || "Failed to set to offline");
+                showSuccess("Status updated to OFFLINE");
+            }
+
+            refetch();
+            
+            if (detailSchedule && detailSchedule.id === targetSchedule.id) {
+                setDetailSchedule({
+                    ...detailSchedule,
+                    status: action === "pause" ? "PAUSED" : (action === "reactivate" ? "ONLINE" : "OFFLINE")
+                });
+            }
+        } catch (err: any) {
+             showError(err.message || "Failed to perform action");
+        }
+    };
 
     const handleDelete = async () => {
         if (!deleteId) return;
@@ -153,20 +221,28 @@ export default function BackupScheduleList({ onTriggerNew }: BackupScheduleListP
                                     borderColor: 'primary.main'
                                 }
                             }}>
-                                <CardActionArea onClick={() => setDetailSchedule(schedule)} sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                                    <CardContent sx={{ flexGrow: 1, pb: 1 }}>
-                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.5 }}>
-                                            <Typography variant="subtitle1" fontWeight={700} sx={{ wordBreak: 'break-word', pr: 1 }}>
-                                                {schedule.backup_name}
-                                            </Typography>
-                                            <Chip 
-                                                label={schedule.auto_backup ? "Active" : "Paused"} 
-                                                size="small" 
-                                                color={schedule.auto_backup ? "success" : "default"}
-                                                sx={{ fontWeight: 600, fontSize: '0.7rem', height: 20 }}
-                                            />
-                                        </Box>
-                                        
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", p: 2, pb: 0 }}>
+                                    <Typography variant="subtitle1" fontWeight={700} sx={{ wordBreak: 'break-word', pr: 1 }}>
+                                        {schedule.backup_name}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Chip 
+                                            label={schedule.status} 
+                                            size="small" 
+                                            color={schedule.status === "ONLINE" ? "success" : schedule.status === "PAUSED" ? "warning" : "default"}
+                                            sx={{ fontWeight: 600, fontSize: '0.7rem', height: 20 }}
+                                        />
+                                        <IconButton 
+                                            size="small" 
+                                            onClick={(e) => handleStatusMenuOpen(e, schedule)}
+                                            sx={{ padding: 0.5 }}
+                                        >
+                                            <MoreVertIcon fontSize="small" />
+                                        </IconButton>
+                                    </Box>
+                                </Box>
+                                <CardActionArea onClick={() => handleOpenDetail(schedule)} sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+                                    <CardContent sx={{ flexGrow: 1, pt: 1, pb: 1 }}>
                                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
                                             {schedule.description || "No description provided."}
                                         </Typography>
@@ -187,8 +263,10 @@ export default function BackupScheduleList({ onTriggerNew }: BackupScheduleListP
                                         </Box>
                                     </CardContent>
                                 </CardActionArea>
-                                <CardActions sx={{ borderTop: "1px solid", borderColor: "grey.100", p: 1.5 }}>
-                                    <Box sx={{ flexGrow: 1 }} />
+                                <CardActions sx={{ borderTop: "1px solid", borderColor: "grey.100", p: 1.5, display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Created By: {schedule.created_by === user?.id ? "You" : schedule.created_by ? `${schedule.created_by.substring(0,8)}...` : "System"}
+                                    </Typography>
                                     <Tooltip title="Delete Schedule">
                                         <IconButton size="small" color="error" onClick={(e) => {
                                             e.stopPropagation();
@@ -221,10 +299,10 @@ export default function BackupScheduleList({ onTriggerNew }: BackupScheduleListP
             </Dialog>
 
             {/* View Detail Modal */}
-            <Dialog open={!!detailSchedule} onClose={() => setDetailSchedule(null)} maxWidth="sm" fullWidth>
+            <Dialog open={isDetailOpen} onClose={handleCloseDetail} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="h6" component="div" fontWeight={600}>Schedule Details</Typography>
-                    <IconButton onClick={() => setDetailSchedule(null)} size="small">
+                    <IconButton onClick={handleCloseDetail} size="small">
                         <CloseIcon />
                     </IconButton>
                 </DialogTitle>
@@ -247,7 +325,12 @@ export default function BackupScheduleList({ onTriggerNew }: BackupScheduleListP
                                 <Grid size={{ xs: 6 }}>
                                     <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase' }}>Status</Typography>
                                     <Box sx={{ mt: 0.5 }}>
-                                        <Chip label={detailSchedule.status} size="small" color="primary" variant="outlined" />
+                                        <Chip 
+                                            label={detailSchedule.status} 
+                                            size="small" 
+                                            color={detailSchedule.status === "ONLINE" ? "success" : detailSchedule.status === "PAUSED" ? "warning" : "default"}
+                                            sx={{ fontWeight: 600 }}
+                                        />
                                     </Box>
                                 </Grid>
                                 <Grid size={{ xs: 6 }}>
@@ -303,10 +386,44 @@ export default function BackupScheduleList({ onTriggerNew }: BackupScheduleListP
                         </Box>
                     )}
                 </DialogContent>
-                <DialogActions sx={{ p: 2 }}>
-                    <Button onClick={() => setDetailSchedule(null)} variant="outlined">Close</Button>
+                <DialogActions sx={{ p: 2, display: 'flex', justifyContent: 'space-between' }}>
+                    <Box>
+                        {detailSchedule?.status === "ONLINE" && (
+                            <Button color="warning" onClick={() => handleAction("pause", detailSchedule)}>
+                                Pause Schedule
+                            </Button>
+                        )}
+                        {detailSchedule?.status === "PAUSED" && (
+                            <Button color="success" onClick={() => handleAction("reactivate", detailSchedule)}>
+                                Reactivate
+                            </Button>
+                        )}
+                        {detailSchedule?.status === "OFFLINE" && (
+                            <Button color="success" onClick={() => handleAction("reactivate", detailSchedule)}>
+                                Bring Online
+                            </Button>
+                        )}
+                    </Box>
+                    <Button onClick={handleCloseDetail} variant="outlined">Close</Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Status Change Menu */}
+            <Menu
+                anchorEl={statusAnchorEl}
+                open={Boolean(statusAnchorEl)}
+                onClose={handleStatusMenuClose}
+            >
+                <MenuItem onClick={() => handleAction("reactivate", statusSchedule)}>
+                    <CheckCircleOutline sx={{ mr: 1, fontSize: 20, color: 'success.main' }} /> ONLINE (Reactivate)
+                </MenuItem>
+                <MenuItem onClick={() => handleAction("pause", statusSchedule)}>
+                    <EventRepeat sx={{ mr: 1, fontSize: 20, color: 'warning.main' }} /> PAUSED (Pause)
+                </MenuItem>
+                <MenuItem onClick={() => handleAction("offline", statusSchedule)}>
+                    <CloseIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} /> OFFLINE
+                </MenuItem>
+            </Menu>
         </Box>
     );
 }

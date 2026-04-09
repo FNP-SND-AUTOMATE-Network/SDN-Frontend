@@ -28,6 +28,7 @@ import {
 import { Search as SearchIcon } from "@mui/icons-material";
 import { $api, fetchClient } from "@/lib/apiv2/fetch";
 import { useSnackbar } from "@/hooks/useSnackbar";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DeviceNetwork {
     id: string;
@@ -43,6 +44,7 @@ interface BackupScheduleModalProps {
 
 export function BackupScheduleModal({ open, onClose, selectedDevices, onSuccess }: BackupScheduleModalProps) {
     const { showSuccess, showError } = useSnackbar();
+    const { user } = useAuth();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [backupName, setBackupName] = useState("");
@@ -101,16 +103,18 @@ export function BackupScheduleModal({ open, onClose, selectedDevices, onSuccess 
     const handleClose = () => {
         if (!isSubmitting) {
             onClose();
-            // Reset form
-            setBackupName("");
-            setDescription("");
-            setAutoBackup(true);
-            setScheduleType("DAILY");
-            setTime("02:00");
-            setDayOfWeek("0");
-            setCustomCron("0 2 * * *");
-            setPickedDeviceIds([]);
-            setDeviceSearch("");
+            // Reset form after modal close animation
+            setTimeout(() => {
+                setBackupName("");
+                setDescription("");
+                setAutoBackup(true);
+                setScheduleType("DAILY");
+                setTime("02:00");
+                setDayOfWeek("0");
+                setCustomCron("0 2 * * *");
+                setPickedDeviceIds([]);
+                setDeviceSearch("");
+            }, 300);
         }
     };
 
@@ -145,7 +149,6 @@ export function BackupScheduleModal({ open, onClose, selectedDevices, onSuccess 
 
         setIsSubmitting(true);
         try {
-            // 1. Create the Backup Profile
             const { data: backupData, error: backupError } = await fetchClient.POST("/backups/", {
                 body: {
                     backup_name: backupName,

@@ -19,7 +19,7 @@ import {
   Add,
   FiberManualRecord,
 } from "@mui/icons-material";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StatusCounts {
   online: number;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ProtectedRoute } from "@/components/auth/AuthGuard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,7 +28,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleXmark } from "@fortawesome/free-solid-svg-icons";
 
 export default function DeviceSitePage() {
-  const { token, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const queryClient = useQueryClient();
   const {
     snackbar,
     hideSnackbar,
@@ -133,12 +135,12 @@ export default function DeviceSitePage() {
   };
 
   const handleModalSuccess = () => {
-    refetch();
+    queryClient.invalidateQueries({ queryKey: ["get", "/local-sites/"] });
   };
 
   // CRUD operations
   const handleCreateSite = async (data: LocalSiteCreate) => {
-    if (!token) return;
+    if (!isAuthenticated) return;
 
     try {
       const { error } = await fetchClient.POST("/local-sites/", {
@@ -148,16 +150,17 @@ export default function DeviceSitePage() {
       if (error) throw error;
 
       showSuccess("Site created successfully");
-      refetch();
+      closeModal();
+      queryClient.invalidateQueries({ queryKey: ["get", "/local-sites/"] });
     } catch (err: any) {
       console.error("Error creating site:", err);
-      showError(err.message || "Unable to create site");
+      showError(err?.detail || err?.message || "Unable to create site");
       throw err;
     }
   };
 
   const handleUpdateSite = async (data: LocalSiteUpdate) => {
-    if (!token || !modalState.site) return;
+    if (!isAuthenticated || !modalState.site) return;
 
     try {
       const { error } = await fetchClient.PUT("/local-sites/{site_id}", {
@@ -172,10 +175,11 @@ export default function DeviceSitePage() {
       if (error) throw error;
 
       showSuccess("Site updated successfully");
-      refetch();
+      closeModal();
+      queryClient.invalidateQueries({ queryKey: ["get", "/local-sites/"] });
     } catch (err: any) {
       console.error("Error updating site:", err);
-      showError(err.message || "Unable to update site");
+      showError(err?.detail || err?.message || "Unable to update site");
       throw err;
     }
   };
@@ -198,7 +202,7 @@ export default function DeviceSitePage() {
   };
 
   const deleteSite = async () => {
-    if (!token || !confirmModal.siteId) return;
+    if (!isAuthenticated || !confirmModal.siteId) return;
 
     try {
       const { error } = await fetchClient.DELETE("/local-sites/{site_id}", {
@@ -213,10 +217,10 @@ export default function DeviceSitePage() {
 
       showSuccess("Site deleted successfully");
       closeConfirmModal();
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["get", "/local-sites/"] });
     } catch (err: any) {
       console.error("Error deleting site:", err);
-      showError(err.message || "Unable to delete site");
+      showError(err?.detail || err?.message || "Unable to delete site");
     }
   };
 

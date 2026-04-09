@@ -27,7 +27,7 @@ export default function EditOperationModal({
     onSuccess,
     allTags,
 }: EditOperationModalProps) {
-    const { token } = useAuth();
+    const { isAuthenticated } = useAuth();
     const queryClient = useQueryClient();
 
     // --- OS Files state ---
@@ -36,17 +36,17 @@ export default function EditOperationModal({
 
     // Fetch files when modal opens with an OS
     useEffect(() => {
-        if (open && os && token) {
+        if (open && os && isAuthenticated) {
             setIsFilesLoading(true);
             operatingSystemService
-                .getOsFiles(token, os.id)
+                .getOsFiles(os.id)
                 .then((response) => setOsFiles(response.files as OSFile[]))
                 .catch((err: any) => console.error("Unable to load OS files:", err))
                 .finally(() => setIsFilesLoading(false));
         } else if (!open) {
             setOsFiles([]);
         }
-    }, [open, os, token]);
+    }, [open, os, isAuthenticated]);
 
     // --- Edit mutation ---
     const editMutation = useMutation({
@@ -56,13 +56,13 @@ export default function EditOperationModal({
             version?: string | null;
             tagIds: string[];
         }) => {
-            if (!token || !os) throw new Error("Not authenticated or no OS selected");
+            if (!isAuthenticated || !os) throw new Error("Not authenticated or no OS selected");
             const { osData, file, version, tagIds } = params;
 
-            await operatingSystemService.updateOperatingSystem(token, os.id, osData);
+            await operatingSystemService.updateOperatingSystem(os.id, osData);
 
             if (file) {
-                await operatingSystemService.uploadOsFile(token, os.id, file, version || null);
+                await operatingSystemService.uploadOsFile(os.id, file, version || null);
             }
 
             // Update tags: add new, remove old
@@ -71,14 +71,14 @@ export default function EditOperationModal({
             const toRemove = existingTagIds.filter((id) => !tagIds.includes(id));
 
             if (toAdd.length > 0) {
-                await operatingSystemService.assignTagsToOs(token, os.id, toAdd);
+                await operatingSystemService.assignTagsToOs(os.id, toAdd);
             }
             if (toRemove.length > 0) {
-                await operatingSystemService.removeTagsFromOs(token, os.id, toRemove);
+                await operatingSystemService.removeTagsFromOs(os.id, toRemove);
             }
 
             // Refresh files list
-            const filesResponse = await operatingSystemService.getOsFiles(token, os.id);
+            const filesResponse = await operatingSystemService.getOsFiles(os.id);
             setOsFiles(filesResponse.files as OSFile[]);
         },
         onSuccess: () => {
@@ -93,9 +93,9 @@ export default function EditOperationModal({
     // --- Delete file mutation ---
     const deleteFileMutation = useMutation({
         mutationFn: async (fileId: string) => {
-            if (!token || !os) throw new Error("Not authenticated");
-            await operatingSystemService.deleteOsFile(token, os.id, fileId);
-            const filesResponse = await operatingSystemService.getOsFiles(token, os.id);
+            if (!isAuthenticated || !os) throw new Error("Not authenticated");
+            await operatingSystemService.deleteOsFile(os.id, fileId);
+            const filesResponse = await operatingSystemService.getOsFiles(os.id);
             return filesResponse.files;
         },
         onSuccess: (files) => {
@@ -108,9 +108,9 @@ export default function EditOperationModal({
 
     // --- Download handler ---
     const handleDownloadFile = async (file: OSFile) => {
-        if (!token || !os) return;
+        if (!isAuthenticated || !os) return;
         try {
-            const blob = await operatingSystemService.downloadOsFile(token, os.id, file.id);
+            const blob = await operatingSystemService.downloadOsFile(os.id, file.id);
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;

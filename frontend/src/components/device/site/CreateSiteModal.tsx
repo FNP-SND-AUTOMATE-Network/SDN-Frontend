@@ -165,8 +165,11 @@ export default function CreateSiteModal({
         try {
             await onSubmit(formData);
             onClose();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error submitting site:", error);
+            // Show error detail to user via site_code field or a general form error
+            const errorMessage = error?.detail || error?.message || "Unable to create site";
+            setErrors((prev) => ({ ...prev, site_code: errorMessage }));
         } finally {
             setIsLoading(false);
         }

@@ -20,13 +20,13 @@ export default function DeleteOperationModal({
     onClose,
     onSuccess,
 }: DeleteOperationModalProps) {
-    const { token } = useAuth();
+    const { isAuthenticated } = useAuth();
     const queryClient = useQueryClient();
 
     const { mutate: deleteOs, isPending } = useMutation({
         mutationFn: (id: string) => {
-            if (!token) throw new Error("Not authenticated");
-            return operatingSystemService.deleteOperatingSystem(token, id);
+            if (!isAuthenticated) throw new Error("Not authenticated");
+            return operatingSystemService.deleteOperatingSystem(id);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["get", "/operating-systems/"] });

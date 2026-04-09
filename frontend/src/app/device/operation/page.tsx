@@ -29,7 +29,7 @@ type FilterQuery = NonNullable<
 >;
 
 export default function DeviceOperationPage() {
-  const { token, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { snackbar, hideSnackbar, showSuccess, showError } = useSnackbar();
 
   // --- Filter & Pagination State ---
@@ -85,9 +85,9 @@ export default function DeviceOperationPage() {
 
   useEffect(() => {
     const fetchTags = async () => {
-      if (!token) return;
+      if (!isAuthenticated) return;
       try {
-        const response = await tagService.getTags(token, 1, 100, { include_usage: false });
+        const response = await tagService.getTags(1, 100, { include_usage: false });
         setAllTags(response.tags);
       } catch (err: any) {
         showError(err?.message || "Unable to load tags");
@@ -95,7 +95,7 @@ export default function DeviceOperationPage() {
     };
     fetchTags();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [isAuthenticated]);
 
   // --- Handlers ---
   const handleSearch = (searchTerm: string) => {

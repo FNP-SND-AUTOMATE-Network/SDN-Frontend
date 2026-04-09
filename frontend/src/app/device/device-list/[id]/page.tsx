@@ -39,7 +39,7 @@ export default function DeviceDetailPage() {
   const deviceId = params?.id as string | undefined;
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { snackbar, hideSnackbar, showError, showSuccess, showInfo } = useSnackbar();
   // --- Tab State ---
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
@@ -80,7 +80,7 @@ export default function DeviceDetailPage() {
   // --- Load reference data once ---
   useEffect(() => {
     const fetchReferenceData = async () => {
-      if (!token) return;
+      if (!isAuthenticated) return;
       try {
         const [tagsRes, sitesRes, osRes] = await Promise.all([
           fetchClient.GET("/tags/", { params: { query: { page: 1, page_size: 100, include_usage: false } } }),
@@ -96,7 +96,7 @@ export default function DeviceDetailPage() {
     };
     fetchReferenceData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [isAuthenticated]);
 
   // --- Mount Device ---
   const handleMount = async () => {
