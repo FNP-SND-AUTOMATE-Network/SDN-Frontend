@@ -76,9 +76,8 @@ export class APIError extends Error {
   }
 }
 
-// Helper function สำหรับสร้าง headers
-const createHeaders = (token: string) => ({
-  Authorization: `Bearer ${token}`,
+// Helper function สำหรับสร้าง headers (ไม่ต้องมี Bearer token — ใช้ Cookie แทน)
+const createHeaders = () => ({
   "Content-Type": "application/json",
 });
 
@@ -97,11 +96,10 @@ const handleResponse = async (response: Response) => {
   return response.json();
 };
 
-// Tag API functions
+// Tag API functions — ใช้ credentials: "include" เพื่อส่ง HttpOnly Cookie อัตโนมัติ
 export const tagService = {
   // ดึงข้อมูล Tags ทั้งหมด
   async getTags(
-    token: string,
     page = 1,
     pageSize = 10,
     filters?: {
@@ -120,14 +118,14 @@ export const tagService = {
 
     const response = await fetch(`${API_BASE_URL}/tags/?${params}`, {
       method: "GET",
-      headers: createHeaders(token),
+      headers: createHeaders(),
+      credentials: "include",
     });
     return handleResponse(response);
   },
 
   // ดึงข้อมูล Tag ตาม ID
   async getTagById(
-    token: string,
     tagId: string,
     includeUsage = false
   ): Promise<Tag> {
@@ -139,7 +137,8 @@ export const tagService = {
       `${API_BASE_URL}/tags/${tagId}?${params}`,
       {
         method: "GET",
-        headers: createHeaders(token),
+        headers: createHeaders(),
+        credentials: "include",
       }
     );
     return handleResponse(response);
@@ -147,12 +146,12 @@ export const tagService = {
 
   // สร้าง Tag ใหม่
   async createTag(
-    token: string,
     tagData: TagCreateRequest
   ): Promise<TagCreateResponse> {
     const response = await fetch(`${API_BASE_URL}/tags/`, {
       method: "POST",
-      headers: createHeaders(token),
+      headers: createHeaders(),
+      credentials: "include",
       body: JSON.stringify(tagData),
     });
     return handleResponse(response);
@@ -160,13 +159,13 @@ export const tagService = {
 
   // อัปเดต Tag
   async updateTag(
-    token: string,
     tagId: string,
     tagData: TagUpdateRequest
   ): Promise<TagUpdateResponse> {
     const response = await fetch(`${API_BASE_URL}/tags/${tagId}`, {
       method: "PUT",
-      headers: createHeaders(token),
+      headers: createHeaders(),
+      credentials: "include",
       body: JSON.stringify(tagData),
     });
     return handleResponse(response);
@@ -174,7 +173,6 @@ export const tagService = {
 
   // ลบ Tag
   async deleteTag(
-    token: string,
     tagId: string,
     force = false
   ): Promise<TagDeleteResponse> {
@@ -184,18 +182,19 @@ export const tagService = {
 
     const response = await fetch(`${API_BASE_URL}/tags/${tagId}?${params}`, {
       method: "DELETE",
-      headers: createHeaders(token),
+      headers: createHeaders(),
+      credentials: "include",
     });
     return handleResponse(response);
   },
 
   // ดึงข้อมูลการใช้งาน Tag
-  async getTagUsage(token: string, tagId: string): Promise<TagUsageResponse> {
+  async getTagUsage(tagId: string): Promise<TagUsageResponse> {
     const response = await fetch(`${API_BASE_URL}/tags/${tagId}/usage`, {
       method: "GET",
-      headers: createHeaders(token),
+      headers: createHeaders(),
+      credentials: "include",
     });
     return handleResponse(response);
   },
 };
-

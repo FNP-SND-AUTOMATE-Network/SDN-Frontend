@@ -48,7 +48,7 @@ export const intentService = {
   /**
    * Get all supported intents grouped by category
    */
-  async getIntents(token: string): Promise<IntentListResponse> {
+  async getIntents(): Promise<IntentListResponse> {
     const response = await fetch(`${API_BASE_URL}/api/v1/nbi/intents`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -63,7 +63,7 @@ export const intentService = {
    * Get detailed information about a specific intent
    */
   async getIntentDetail(
-    token: string,
+    
     intentName: string,
   ): Promise<IntentDetailResponse> {
     const response = await fetch(
@@ -83,13 +83,13 @@ export const intentService = {
    * Execute an intent on a device via OpenDaylight
    */
   async executeIntent(
-    token: string,
+    
     request: IntentExecuteRequest,
   ): Promise<IntentExecuteResponse> {
     const response = await fetch(`${API_BASE_URL}/api/v1/nbi/intents`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        
         "Content-Type": "application/json",
       },
       body: JSON.stringify(request),
@@ -107,7 +107,7 @@ export const intentService = {
    * Show running config
    */
   async showRunningConfig(
-    token: string,
+    
     nodeId: string,
     section?: string,
   ): Promise<IntentExecuteResponse> {
@@ -122,7 +122,7 @@ export const intentService = {
    * Show all interfaces
    */
   async showInterfaces(
-    token: string,
+    
     nodeId: string,
   ): Promise<IntentExecuteResponse> {
     return this.executeIntent(token, {
@@ -136,7 +136,7 @@ export const intentService = {
    * Show specific interface
    */
   async showInterface(
-    token: string,
+    
     nodeId: string,
     interfaceName: string,
   ): Promise<IntentExecuteResponse> {
@@ -151,7 +151,7 @@ export const intentService = {
    * Show IP routing table
    */
   async showIpRoute(
-    token: string,
+    
     nodeId: string,
   ): Promise<IntentExecuteResponse> {
     return this.executeIntent(token, {
@@ -165,7 +165,7 @@ export const intentService = {
    * Show all VLANs
    */
   async showVlans(
-    token: string,
+    
     nodeId: string,
   ): Promise<IntentExecuteResponse> {
     return this.executeIntent(token, {
@@ -179,7 +179,7 @@ export const intentService = {
    * Show DHCP pools
    */
   async showDhcpPools(
-    token: string,
+    
     nodeId: string,
   ): Promise<IntentExecuteResponse> {
     return this.executeIntent(token, {
@@ -193,7 +193,7 @@ export const intentService = {
    * Show OSPF neighbors
    */
   async showOspfNeighbors(
-    token: string,
+    
     nodeId: string,
   ): Promise<IntentExecuteResponse> {
     return this.executeIntent(token, {
@@ -207,7 +207,7 @@ export const intentService = {
    * Show OSPF database
    */
   async showOspfDatabase(
-    token: string,
+    
     nodeId: string,
   ): Promise<IntentExecuteResponse> {
     return this.executeIntent(token, {
@@ -221,7 +221,7 @@ export const intentService = {
    * Show IP interface brief
    */
   async showIpInterfaceBrief(
-    token: string,
+    
     nodeId: string,
   ): Promise<IntentExecuteResponse> {
     return this.executeIntent(token, {
@@ -233,7 +233,7 @@ export const intentService = {
 
   // ==================== System Intents ====================
 
-  async setHostname(token: string, nodeId: string, hostname: string) {
+  async setHostname(nodeId: string, hostname: string) {
     return this.executeIntent(token, {
       intent: "system.set_hostname",
       node_id: nodeId,
@@ -241,7 +241,7 @@ export const intentService = {
     });
   },
 
-  async setDns(token: string, nodeId: string, server: string, domain?: string) {
+  async setDns(nodeId: string, server: string, domain?: string) {
     return this.executeIntent(token, {
       intent: "system.set_dns",
       node_id: nodeId,
@@ -250,7 +250,7 @@ export const intentService = {
   },
 
   async setNtp(
-    token: string,
+    
     nodeId: string,
     server: string,
     prefer?: boolean,
@@ -263,7 +263,7 @@ export const intentService = {
   },
 
   async setBanner(
-    token: string,
+    
     nodeId: string,
     banner: string,
     bannerType?: string,
@@ -275,7 +275,7 @@ export const intentService = {
     });
   },
 
-  async saveConfig(token: string, nodeId: string) {
+  async saveConfig(nodeId: string) {
     return this.executeIntent(token, {
       intent: "system.save_config",
       node_id: nodeId,
@@ -286,7 +286,7 @@ export const intentService = {
   // ==================== Routing Intents ====================
 
   async addStaticRoute(
-    token: string,
+    
     nodeId: string,
     params: {
       prefix: string;
@@ -303,7 +303,7 @@ export const intentService = {
   },
 
   async deleteStaticRoute(
-    token: string,
+    
     nodeId: string,
     prefix: string,
     nextHop: string,
@@ -315,7 +315,7 @@ export const intentService = {
     });
   },
 
-  async enableOspf(token: string, nodeId: string, processId: number) {
+  async enableOspf(nodeId: string, processId: number) {
     return this.executeIntent(token, {
       intent: "routing.ospf.enable",
       node_id: nodeId,
@@ -323,7 +323,7 @@ export const intentService = {
     });
   },
 
-  async disableOspf(token: string, nodeId: string, processId: number) {
+  async disableOspf(nodeId: string, processId: number) {
     return this.executeIntent(token, {
       intent: "routing.ospf.disable",
       node_id: nodeId,
@@ -332,7 +332,7 @@ export const intentService = {
   },
 
   async addOspfNetwork(
-    token: string,
+    
     nodeId: string,
     params: {
       process_id: number;
@@ -349,7 +349,7 @@ export const intentService = {
   },
 
   async addOspfNetworkInterface(
-    token: string,
+    
     nodeId: string,
     params: {
       process_id: number;
@@ -365,7 +365,7 @@ export const intentService = {
   },
 
   async removeOspfNetworkInterface(
-    token: string,
+    
     nodeId: string,
     params: {
       process_id: number;
@@ -381,7 +381,7 @@ export const intentService = {
   },
 
   async removeOspfNetwork(
-    token: string,
+    
     nodeId: string,
     params: {
       process_id: number;
@@ -398,7 +398,7 @@ export const intentService = {
   },
 
   async setOspfRouterId(
-    token: string,
+    
     nodeId: string,
     processId: number,
     routerId: string,
@@ -410,7 +410,7 @@ export const intentService = {
     });
   },
 
-  async addDefaultRoute(token: string, nodeId: string, nextHop: string) {
+  async addDefaultRoute(nodeId: string, nextHop: string) {
     return this.executeIntent(token, {
       intent: "routing.default.add",
       node_id: nodeId,
@@ -418,7 +418,7 @@ export const intentService = {
     });
   },
 
-  async deleteDefaultRoute(token: string, nodeId: string, nextHop: string) {
+  async deleteDefaultRoute(nodeId: string, nextHop: string) {
     return this.executeIntent(token, {
       intent: "routing.default.delete",
       node_id: nodeId,
@@ -429,7 +429,7 @@ export const intentService = {
   // ==================== Interface Intents ====================
 
   async setInterfaceIpv4(
-    token: string,
+    
     nodeId: string,
     params: {
       interface: string;
@@ -446,7 +446,7 @@ export const intentService = {
   },
 
   async setInterfaceIpv6(
-    token: string,
+    
     nodeId: string,
     params: { interface: string; ip: string; prefix: string },
   ) {
@@ -458,7 +458,7 @@ export const intentService = {
   },
 
   async setInterfaceDescription(
-    token: string,
+    
     nodeId: string,
     interfaceName: string,
     description: string,
@@ -471,7 +471,7 @@ export const intentService = {
   },
 
   async setInterfaceMtu(
-    token: string,
+    
     nodeId: string,
     interfaceName: string,
     mtu: number,
@@ -483,7 +483,7 @@ export const intentService = {
     });
   },
 
-  async enableInterface(token: string, nodeId: string, interfaceName: string) {
+  async enableInterface(nodeId: string, interfaceName: string) {
     return this.executeIntent(token, {
       intent: "interface.enable",
       node_id: nodeId,
@@ -491,7 +491,7 @@ export const intentService = {
     });
   },
 
-  async disableInterface(token: string, nodeId: string, interfaceName: string) {
+  async disableInterface(nodeId: string, interfaceName: string) {
     return this.executeIntent(token, {
       intent: "interface.disable",
       node_id: nodeId,
@@ -502,7 +502,7 @@ export const intentService = {
   // ==================== VLAN Intents ====================
 
   async createVlan(
-    token: string,
+    
     nodeId: string,
     params: { vlan_id: number; name?: string; description?: string },
   ) {
@@ -513,7 +513,7 @@ export const intentService = {
     });
   },
 
-  async deleteVlan(token: string, nodeId: string, vlanId: number) {
+  async deleteVlan(nodeId: string, vlanId: number) {
     return this.executeIntent(token, {
       intent: "vlan.delete",
       node_id: nodeId,
@@ -522,7 +522,7 @@ export const intentService = {
   },
 
   async updateVlan(
-    token: string,
+    
     nodeId: string,
     params: { vlan_id: number; name?: string; description?: string },
   ) {
@@ -534,7 +534,7 @@ export const intentService = {
   },
 
   async assignVlanPort(
-    token: string,
+    
     nodeId: string,
     params: { interface: string; vlan_id: number; mode?: string },
   ) {
@@ -548,7 +548,7 @@ export const intentService = {
   // ==================== DHCP Intents ====================
 
   async createDhcpPool(
-    token: string,
+    
     nodeId: string,
     params: {
       pool_name: string;
@@ -567,7 +567,7 @@ export const intentService = {
     });
   },
 
-  async deleteDhcpPool(token: string, nodeId: string, poolName: string) {
+  async deleteDhcpPool(nodeId: string, poolName: string) {
     return this.executeIntent(token, {
       intent: "dhcp.delete_pool",
       node_id: nodeId,
@@ -576,7 +576,7 @@ export const intentService = {
   },
 
   async updateDhcpPool(
-    token: string,
+    
     nodeId: string,
     params: Record<string, any>,
   ) {

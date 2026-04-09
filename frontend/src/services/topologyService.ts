@@ -36,8 +36,8 @@ export interface TopologySyncResponse {
 
 // --- Helpers ---
 
-const createHeaders = (token: string) => ({
-  Authorization: `Bearer ${token}`,
+const createHeaders = () => ({
+  
   "Content-Type": "application/json",
 });
 
@@ -63,7 +63,7 @@ export const topologyService = {
    * สามารถ filter ตาม local_site_id ได้
    */
   async getTopology(
-    token: string,
+    
     localSiteId?: string | null,
   ): Promise<TopologyResponse> {
     const params = new URLSearchParams();
@@ -76,7 +76,7 @@ export const topologyService = {
 
     const response = await fetch(url, {
       method: "GET",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },
@@ -84,12 +84,12 @@ export const topologyService = {
   /**
    * Trigger topology sync จาก ODL ไปยัง Database
    */
-  async syncTopology(token: string): Promise<TopologySyncResponse> {
+  async syncTopology(): Promise<TopologySyncResponse> {
     const url = `${API_BASE_URL}/api/v1/nbi/topology/sync`;
 
     const response = await fetch(url, {
       method: "POST",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },

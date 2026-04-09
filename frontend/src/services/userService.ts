@@ -80,9 +80,8 @@ export class APIError extends Error {
     }
 }
 
-// Helper function สำหรับสร้าง headers
-const createHeaders = (token: string) => ({
-    'Authorization': `Bearer ${token}`,
+// Helper function สำหรับสร้าง headers (ไม่ต้องมี Bearer token แล้ว — ใช้ Cookie แทน)
+const createHeaders = () => ({
     'Content-Type': 'application/json',
 });
 
@@ -101,41 +100,45 @@ const handleResponse = async (response: Response) => {
     return response.json();
 };
 
-// User API functions
+// User API functions — ใช้ credentials: "include" เพื่อส่ง HttpOnly Cookie อัตโนมัติ
 export const userService = {
     // ดึงข้อมูล profile ของ user ปัจจุบัน
-    async getMyProfile(token: string): Promise<UserProfile> {
+    async getMyProfile(): Promise<UserProfile> {
         const response = await fetch(`${API_BASE_URL}/users/profile/me`, {
             method: 'GET',
-            headers: createHeaders(token),
+            headers: createHeaders(),
+            credentials: 'include',
         });
         return handleResponse(response);
     },
 
     // ดึงข้อมูล user ตาม ID
-    async getUserById(token: string, userId: string): Promise<UserProfile> {
+    async getUserById(userId: string): Promise<UserProfile> {
         const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
             method: 'GET',
-            headers: createHeaders(token),
+            headers: createHeaders(),
+            credentials: 'include',
         });
         return handleResponse(response);
     },
 
     // อัพเดท profile ของ user (ใช้ user_id)
-    async updateProfile(token: string, userId: string, profileData: UserUpdateRequest): Promise<UserUpdateResponse> {
+    async updateProfile(userId: string, profileData: UserUpdateRequest): Promise<UserUpdateResponse> {
         const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
             method: 'PUT',
-            headers: createHeaders(token),
+            headers: createHeaders(),
+            credentials: 'include',
             body: JSON.stringify(profileData),
         });
         return handleResponse(response);
     },
 
     // เปลี่ยนรหัสผ่าน (ใช้ user_id)
-    async changePassword(token: string, userId: string, passwordData: ChangePasswordRequest): Promise<PasswordChangeResponse> {
+    async changePassword(userId: string, passwordData: ChangePasswordRequest): Promise<PasswordChangeResponse> {
         const response = await fetch(`${API_BASE_URL}/users/${userId}/change-password`, {
             method: 'POST',
-            headers: createHeaders(token),
+            headers: createHeaders(),
+            credentials: 'include',
             body: JSON.stringify(passwordData),
         });
         return handleResponse(response);
@@ -143,7 +146,6 @@ export const userService = {
 
     // ดึงข้อมูล user ทั้งหมด (สำหรับ admin)
     async getAllUsers(
-        token: string, 
         page = 1, 
         pageSize = 10,
         filters?: {
@@ -170,35 +172,39 @@ export const userService = {
 
         const response = await fetch(`${API_BASE_URL}/users/?${params}`, {
             method: 'GET',
-            headers: createHeaders(token),
+            headers: createHeaders(),
+            credentials: 'include',
         });
         return handleResponse(response);
     },
 
     // สร้าง user ใหม่ (สำหรับ admin)
-    async createUser(token: string, userData: UserCreateRequest): Promise<UserCreateResponse> {
+    async createUser(userData: UserCreateRequest): Promise<UserCreateResponse> {
         const response = await fetch(`${API_BASE_URL}/users/`, {
             method: 'POST',
-            headers: createHeaders(token),
+            headers: createHeaders(),
+            credentials: 'include',
             body: JSON.stringify(userData),
         });
         return handleResponse(response);
     },
 
     // ลบ user (สำหรับ admin)
-    async deleteUser(token: string, userId: string): Promise<{ message: string; user_id: string }> {
+    async deleteUser(userId: string): Promise<{ message: string; user_id: string }> {
         const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
             method: 'DELETE',
-            headers: createHeaders(token),
+            headers: createHeaders(),
+            credentials: 'include',
         });
         return handleResponse(response);
     },
 
     // รีเซ็ตรหัสผ่าน user โดย admin
-    async resetPasswordByAdmin(token: string, userId: string, newPassword: string): Promise<PasswordChangeResponse> {
+    async resetPasswordByAdmin(userId: string, newPassword: string): Promise<PasswordChangeResponse> {
         const response = await fetch(`${API_BASE_URL}/users/${userId}/reset-password`, {
             method: 'POST',
-            headers: createHeaders(token),
+            headers: createHeaders(),
+            credentials: 'include',
             body: JSON.stringify({
                 user_id: userId,
                 new_password: newPassword
@@ -208,10 +214,11 @@ export const userService = {
     },
 
     // เปลี่ยน role ของ user (สำหรับ admin)
-    async promoteUserRole(token: string, userId: string, targetRole: UserRole): Promise<UserUpdateResponse> {
+    async promoteUserRole(userId: string, targetRole: UserRole): Promise<UserUpdateResponse> {
         const response = await fetch(`${API_BASE_URL}/users/${userId}/promote-role?target_role=${targetRole}`, {
             method: 'POST',
-            headers: createHeaders(token),
+            headers: createHeaders(),
+            credentials: 'include',
         });
         return handleResponse(response);
     }

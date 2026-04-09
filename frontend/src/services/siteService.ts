@@ -92,8 +92,8 @@ export class APIError extends Error {
 }
 
 // Helper function สำหรับสร้าง headers
-const createHeaders = (token: string) => ({
-  Authorization: `Bearer ${token}`,
+const createHeaders = () => ({
+  
   "Content-Type": "application/json",
 });
 
@@ -116,7 +116,7 @@ const handleResponse = async (response: Response) => {
 export const siteService = {
   // ดึงข้อมูล Local Sites ทั้งหมด
   async getLocalSites(
-    token: string,
+    
     page = 1,
     pageSize = 20,
     filters?: {
@@ -133,28 +133,28 @@ export const siteService = {
 
     const response = await fetch(`${API_BASE_URL}/local-sites/?${params}`, {
       method: "GET",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },
 
   // ดึงข้อมูล Local Site ตาม ID
-  async getLocalSiteById(token: string, siteId: string): Promise<LocalSite> {
+  async getLocalSiteById(siteId: string): Promise<LocalSite> {
     const response = await fetch(`${API_BASE_URL}/local-sites/${siteId}`, {
       method: "GET",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },
 
   // สร้าง Local Site ใหม่
   async createLocalSite(
-    token: string,
+    
     siteData: LocalSiteCreateRequest
   ): Promise<LocalSiteCreateResponse> {
     const response = await fetch(`${API_BASE_URL}/local-sites/`, {
       method: "POST",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
       body: JSON.stringify(siteData),
     });
     return handleResponse(response);
@@ -162,13 +162,13 @@ export const siteService = {
 
   // อัปเดต Local Site
   async updateLocalSite(
-    token: string,
+    
     siteId: string,
     siteData: LocalSiteUpdateRequest
   ): Promise<LocalSiteUpdateResponse> {
     const response = await fetch(`${API_BASE_URL}/local-sites/${siteId}`, {
       method: "PUT",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
       body: JSON.stringify(siteData),
     });
     return handleResponse(response);
@@ -176,12 +176,12 @@ export const siteService = {
 
   // ลบ Local Site
   async deleteLocalSite(
-    token: string,
+    
     siteId: string
   ): Promise<LocalSiteDeleteResponse> {
     const response = await fetch(`${API_BASE_URL}/local-sites/${siteId}`, {
       method: "DELETE",
-      headers: createHeaders(token),
+      headers: createHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },

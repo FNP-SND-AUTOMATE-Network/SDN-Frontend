@@ -58,9 +58,8 @@ export class APIError extends Error {
     }
 }
 
-// Helper function สำหรับสร้าง headers
-const createHeaders = (token: string) => ({
-    'Authorization': `Bearer ${token}`,
+// Helper function สำหรับสร้าง headers (ไม่ต้องมี Bearer token แล้ว — ใช้ Cookie แทน)
+const createHeaders = () => ({
     'Content-Type': 'application/json',
 });
 
@@ -79,11 +78,10 @@ const handleResponse = async (response: Response) => {
     return response.json();
 };
 
-// Audit API functions
+// Audit API functions — ใช้ credentials: "include" เพื่อส่ง HttpOnly Cookie อัตโนมัติ
 export const auditService = {
     // ดึงรายการ audit logs
     async getAuditLogs(
-        token: string,
         filters: AuditLogFilters = {}
     ): Promise<AuditLogListResponse> {
         const params = new URLSearchParams();
@@ -102,26 +100,29 @@ export const auditService = {
 
         const response = await fetch(url, {
             method: 'GET',
-            headers: createHeaders(token),
+            headers: createHeaders(),
+            credentials: 'include',
         });
 
         return handleResponse(response);
     },
 
     // ดึง audit log ตาม ID
-    async getAuditLogById(token: string, auditId: string): Promise<AuditLogResponse> {
+    async getAuditLogById(auditId: string): Promise<AuditLogResponse> {
         const response = await fetch(`${API_BASE_URL}/audit/logs/${auditId}`, {
             method: 'GET',
-            headers: createHeaders(token),
+            headers: createHeaders(),
+            credentials: 'include',
         });
         return handleResponse(response);
     },
 
     // ดึง audit stats
-    async getAuditStats(token: string): Promise<any> {
+    async getAuditStats(): Promise<any> {
         const response = await fetch(`${API_BASE_URL}/audit/stats`, {
             method: 'GET',
-            headers: createHeaders(token),
+            headers: createHeaders(),
+            credentials: 'include',
         });
         return handleResponse(response);
     }

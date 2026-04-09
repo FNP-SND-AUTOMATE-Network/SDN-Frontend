@@ -53,15 +53,15 @@ export interface ConfigurationTemplateUpdate {
 }
 
 class ConfigurationTemplateService {
-  private getHeaders(token: string) {
+  private getHeaders() {
     return {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      
     };
   }
 
   async getTemplates(
-    token: string,
+    
     page: number = 1,
     pageSize: number = 8,
     filters?: {
@@ -86,7 +86,7 @@ class ConfigurationTemplateService {
       `${API_BASE_URL}/configuration-templates/?${params.toString()}`,
       {
         method: "GET",
-        headers: this.getHeaders(token),
+        headers: this.getHeaders(), credentials: "include",
       },
     );
 
@@ -99,7 +99,7 @@ class ConfigurationTemplateService {
   }
 
   async getTemplate(
-    token: string,
+    
     templateId: string,
     includeUsage: boolean = false,
   ): Promise<ConfigurationTemplate> {
@@ -110,7 +110,7 @@ class ConfigurationTemplateService {
       `${API_BASE_URL}/configuration-templates/${templateId}?${params.toString()}`,
       {
         method: "GET",
-        headers: this.getHeaders(token),
+        headers: this.getHeaders(), credentials: "include",
       },
     );
 
@@ -126,7 +126,7 @@ class ConfigurationTemplateService {
    * Create template - backend expects FormData with optional file/config_content
    */
   async createTemplate(
-    token: string,
+    
     data: ConfigurationTemplateCreate,
     content?: string | File,
   ): Promise<{ message: string; template: ConfigurationTemplate }> {
@@ -152,7 +152,7 @@ class ConfigurationTemplateService {
     const response = await fetch(`${API_BASE_URL}/configuration-templates/`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        
         // Don't set Content-Type - let browser set it with boundary for FormData
       },
       body: formData,
@@ -167,7 +167,7 @@ class ConfigurationTemplateService {
   }
 
   async updateTemplate(
-    token: string,
+    
     templateId: string,
     data: ConfigurationTemplateUpdate,
   ): Promise<{ message: string; template: ConfigurationTemplate }> {
@@ -175,7 +175,7 @@ class ConfigurationTemplateService {
       `${API_BASE_URL}/configuration-templates/${templateId}`,
       {
         method: "PUT",
-        headers: this.getHeaders(token),
+        headers: this.getHeaders(), credentials: "include",
         body: JSON.stringify(data),
       },
     );
@@ -189,7 +189,7 @@ class ConfigurationTemplateService {
   }
 
   async deleteTemplate(
-    token: string,
+    
     templateId: string,
     force: boolean = false,
   ): Promise<{ message: string }> {
@@ -200,7 +200,7 @@ class ConfigurationTemplateService {
       `${API_BASE_URL}/configuration-templates/${templateId}?${params.toString()}`,
       {
         method: "DELETE",
-        headers: this.getHeaders(token),
+        headers: this.getHeaders(), credentials: "include",
       },
     );
 
@@ -216,7 +216,7 @@ class ConfigurationTemplateService {
    * Upload content to a template - supports both file upload and text content
    */
   async uploadTemplateContent(
-    token: string,
+    
     templateId: string,
     content: string | File,
   ): Promise<{ message: string; template: ConfigurationTemplate }> {
@@ -235,7 +235,7 @@ class ConfigurationTemplateService {
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          
           // Don't set Content-Type - let browser set it with boundary for FormData
         },
         body: formData,
