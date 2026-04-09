@@ -25,7 +25,6 @@ interface UserModalProps {
   mode: "add" | "edit";
   user?: UserProfile;
   onSuccess: () => void;
-  token: string;
 }
 
 export function UserModal({
@@ -34,7 +33,6 @@ export function UserModal({
   mode,
   user,
   onSuccess,
-  token,
 }: UserModalProps) {
   const [formData, setFormData] = useState({
     name: "",
@@ -139,7 +137,7 @@ export function UserModal({
           role: formData.role,
         };
 
-        await userService.createUser(token, createData);
+        await userService.createUser(createData);
         showSnackbar("Add user successfully!", "success");
       } else if (mode === "edit" && user) {
         const updateData: UserUpdateRequest = {
@@ -149,7 +147,7 @@ export function UserModal({
           role: formData.role,
         };
 
-        await userService.updateProfile(token, user.id, updateData);
+        await userService.updateProfile(user.id, updateData);
         showSnackbar("Update user profile successfully!", "success");
       }
 

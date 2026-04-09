@@ -26,7 +26,7 @@ interface DeviceCredentialsSectionProps {
 export default function DeviceCredentialsSection({
     onSuccess,
 }: DeviceCredentialsSectionProps) {
-    const { token } = useAuth();
+    const { isAuthenticated } = useAuth();
     const { showSuccess, showError, showWarning } = useSnackbar();
     const queryClient = useQueryClient();
 
@@ -47,7 +47,7 @@ export default function DeviceCredentialsSection({
             params: {},
         },
         {
-            enabled: !!token, // Ensure we check if user is logged in
+            enabled: isAuthenticated, // Ensure we check if user is logged in
             onSuccess: (data: Record<string, unknown>) => {
                 setCredentialData((prev) => ({
                     ...prev,
@@ -74,7 +74,7 @@ export default function DeviceCredentialsSection({
 
     // Actions
     const handleSaveCredentials = async () => {
-        if (!token) return;
+        if (!isAuthenticated) return;
 
         if (!credentialData.device_username.trim() && !hasExistingCredentials) {
             showWarning("Device username is required");
@@ -145,7 +145,7 @@ export default function DeviceCredentialsSection({
     };
 
     const handleDeleteCredentials = async () => {
-        if (!token || !hasExistingCredentials) return;
+        if (!isAuthenticated || !hasExistingCredentials) return;
 
         if (
             !confirm(

@@ -18,7 +18,7 @@ import {
 import { UserProfile } from "@/services/userService";
 
 export default function ProfilePage() {
-    const { token, updateUser } = useAuth();
+    const { isAuthenticated, updateUser } = useAuth();
     const { snackbar, showSuccess, showError, showWarning, hideSnackbar } = useSnackbar();
     const queryClient = useQueryClient();
 
@@ -46,7 +46,7 @@ export default function ProfilePage() {
             params: {},
         },
         {
-            enabled: !!token,
+            enabled: isAuthenticated,
             onSuccess: (data: Record<string, unknown>) => {
                 setFormData({
                     name: (data?.name as string) || "",
@@ -78,7 +78,7 @@ export default function ProfilePage() {
 
     // Update logic using fetchClient
     const updateUserProfile = async () => {
-        if (!token || !userProfile) return;
+        if (!isAuthenticated || !userProfile) return;
 
         try {
             setSaving(true);
@@ -118,7 +118,7 @@ export default function ProfilePage() {
     };
 
     const changePassword = async () => {
-        if (!token || !userProfile) return;
+        if (!isAuthenticated || !userProfile) return;
 
         if (passwordData.new_password !== passwordData.confirm_password) {
             showWarning("New passwords do not match");

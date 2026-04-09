@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { userService } from "@/services/userService";
 
 export default function MFAPage() {
-  const { user, token, updateUser } = useAuth();
+  const { user, isAuthenticated, updateUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
@@ -35,25 +35,25 @@ export default function MFAPage() {
 
   // Refresh user profile to get latest MFA status
   useEffect(() => {
-    if (token && user) {
+    if (isAuthenticated && user) {
       userService
-        .getMyProfile(token)
+        .getMyProfile()
         .then((profile) => {
           updateUser(profile);
         })
         .catch(console.error);
     }
-  }, [token]);
+  }, [isAuthenticated]);
 
   const handleEnableClick = async () => {
-    if (!token) {
+    if (!isAuthenticated) {
       setError("Please login again");
       return;
     }
     setIsLoading(true);
     setError("");
     try {
-      const response = await authApi.setupMfa(token);
+      const response = await authApi.setupMfa();
       const normalizedSecret = response.secret
         .replace(/\s+/g, "")
         .toUpperCase();
@@ -81,7 +81,7 @@ export default function MFAPage() {
   };
 
   const handleVerifySetup = async () => {
-    if (!token) {
+    if (!isAuthenticated) {
       setError("Please login again");
       return;
     }
@@ -99,7 +99,7 @@ export default function MFAPage() {
     setIsLoading(true);
     setError("");
     try {
-      await authApi.verifyMfa(token, otpCode, secret);
+      await authApi.verifyMfa(otpCode, secret);
       setSuccessMessage("Enable 2FA successfully");
       setIsSetupMode(false);
       setOtpCode("");
@@ -107,8 +107,8 @@ export default function MFAPage() {
       setQrCodeUrl("");
 
       // Refresh profile
-      if (token) {
-        const profile = await userService.getMyProfile(token);
+      if (isAuthenticated) {
+        const profile = await userService.getMyProfile();
         updateUser(profile);
       }
     } catch (err) {
@@ -125,7 +125,7 @@ export default function MFAPage() {
   };
 
   const handleConfirmDisable = async () => {
-    if (!token) {
+    if (!isAuthenticated) {
       setError("Please login again");
       return;
     }
@@ -137,14 +137,14 @@ export default function MFAPage() {
     setIsLoading(true);
     setError("");
     try {
-      await authApi.disableMfa(token, password);
+      await authApi.disableMfa(password);
       setSuccessMessage("Disable 2FA successfully");
       setIsDisableMode(false);
       setPassword("");
 
       // Refresh profile
-      if (token) {
-        const profile = await userService.getMyProfile(token);
+      if (isAuthenticated) {
+        const profile = await userService.getMyProfile();
         updateUser(profile);
       }
     } catch (err) {

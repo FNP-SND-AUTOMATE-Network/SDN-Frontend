@@ -22,7 +22,7 @@ import {
 } from "@/components/account";
 
 export default function AccountPage() {
-    const { token } = useAuth();
+    const { isAuthenticated } = useAuth();
     const { snackbar, showSuccess, showError, hideSnackbar } = useSnackbar();
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
@@ -67,15 +67,15 @@ export default function AccountPage() {
 
     // Delete user (called from confirm modal)
     const deleteUser = async () => {
-        if (!token) {
-            setError("No authentication token found");
+        if (!isAuthenticated) {
+            setError("Not authenticated");
             return;
         }
 
         setConfirmModal(prev => ({ ...prev, isLoading: true }));
 
         try {
-            await userService.deleteUser(token, confirmModal.userId);
+            await userService.deleteUser(confirmModal.userId);
             // Refresh the user list
             await fetchUsersData(pagination.page, pagination.pageSize);
             showSuccess(`User "${confirmModal.userName}" deleted successfully!`, "Success");
@@ -97,8 +97,8 @@ export default function AccountPage() {
     // Load users on component mount
     const fetchUsersData = useCallback(
         async (page = 1, pageSize = 10) => {
-            if (!token) {
-                setError("No authentication token found");
+            if (!isAuthenticated) {
+                setError("Not authenticated");
                 setLoading(false);
                 return;
             }
@@ -108,7 +108,6 @@ export default function AccountPage() {
                 setError(null);
 
                 const response: UserListResponse = await userService.getAllUsers(
-                    token,
                     page,
                     pageSize
                 );
@@ -131,15 +130,15 @@ export default function AccountPage() {
                 setLoading(false);
             }
         },
-        [token]
+        [isAuthenticated]
     );
 
     useEffect(() => {
-        // Only fetch if we have a token
-        if (token) {
+        // Only fetch if user is authenticated
+        if (isAuthenticated) {
             fetchUsersData();
         }
-    }, [token, fetchUsersData]);
+    }, [isAuthenticated, fetchUsersData]);
 
     // Modal handlers
     const openAddModal = () => {
@@ -210,14 +209,13 @@ export default function AccountPage() {
             />
 
             {/* User Modal */}
-            {token && (
+            {isAuthenticated && (
                 <UserModal
                     isOpen={modalState.isOpen}
                     onClose={closeModal}
                     mode={modalState.mode}
                     user={modalState.user}
                     onSuccess={handleModalSuccess}
-                    token={token}
                 />
             )}
 
