@@ -90,7 +90,7 @@ export default function BackupScheduleList({ onTriggerNew }: BackupScheduleListP
         setStatusSchedule(null);
     };
 
-    const handleAction = async (action: "pause" | "reactivate" | "offline", targetSchedule: components["schemas"]["BackupResponse"] | null) => {
+    const handleAction = async (action: "pause" | "reactivate", targetSchedule: components["schemas"]["BackupResponse"] | null) => {
         if (!targetSchedule) return;
         handleStatusMenuClose();
         
@@ -108,12 +108,12 @@ export default function BackupScheduleList({ onTriggerNew }: BackupScheduleListP
                 if (error) throw new Error((error as any)?.detail || "Failed to reactivate schedule");
                 showSuccess("Schedule reactivated successfully");
             } else if (action === "offline") {
-                const { error } = await fetchClient.PUT("/backups/{backup_id}", {
-                    params: { path: { backup_id: targetSchedule.id } },
-                    body: { status: "OFFLINE" } as any
-                });
-                if (error) throw new Error((error as any)?.detail || "Failed to set to offline");
-                showSuccess("Status updated to OFFLINE");
+                // const { error } = await fetchClient.PUT("/backups/{backup_id}", {
+                //     params: { path: { backup_id: targetSchedule.id } },
+                //     body: { status: "OFFLINE" } as any
+                // });
+                // if (error) throw new Error((error as any)?.detail || "Failed to set to offline");
+                // showSuccess("Status updated to OFFLINE");
             }
 
             refetch();
@@ -420,9 +420,9 @@ export default function BackupScheduleList({ onTriggerNew }: BackupScheduleListP
                 <MenuItem onClick={() => handleAction("pause", statusSchedule)}>
                     <EventRepeat sx={{ mr: 1, fontSize: 20, color: 'warning.main' }} /> PAUSED (Pause)
                 </MenuItem>
-                <MenuItem onClick={() => handleAction("offline", statusSchedule)}>
+                {/* <MenuItem onClick={() => handleAction("offline", statusSchedule)}>
                     <CloseIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} /> OFFLINE
-                </MenuItem>
+                </MenuItem> */}
             </Menu>
         </Box>
     );
