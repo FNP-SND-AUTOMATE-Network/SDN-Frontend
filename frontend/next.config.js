@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Output standalone for optimal Docker image size
+  output: 'standalone',
+  
   // Enable experimental features for better performance
   experimental: {
     optimizeCss: true,

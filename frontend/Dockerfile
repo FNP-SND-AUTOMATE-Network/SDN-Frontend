@@ -1,46 +1,54 @@
 # ใช้ Bun official image สำหรับ Alpine Linux
 FROM oven/bun:1-alpine AS base
+
+# 1. Install dependencies only when needed
+FROM base AS deps
 WORKDIR /app
-
-# Copy package files
 COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 
-# Install dependencies stage
-FROM base AS install
-RUN mkdir -p /temp/dev
-COPY package.json bun.lock /temp/dev/
-RUN cd /temp/dev && bun install --frozen-lockfile
-
-# Install with --production (exclude devDependencies)
-RUN mkdir -p /temp/prod
-COPY package.json bun.lock /temp/prod/
-RUN cd /temp/prod && bun install --frozen-lockfile --production
-
-# Prerelease stage for build
-FROM base AS prerelease
-COPY --from=install /temp/dev/node_modules node_modules
+# 2. Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# ลบ package-lock.json เพื่อไม่ให้ Next.js เข้าใจผิดว่าใช้ npm ภายใน container
+ENV NEXT_TELEMETRY_DISABLED 1
+
+# ลบ package-lock.json เพื่อป้องกันความสับสน
 RUN rm -f package-lock.json
 
-# Build the application
+# Build application (เนื่องจากตั้งค่า output: 'standalone' ใน next.config.js แล้ว)
 RUN bun run build
 
-# Production stage
-FROM base AS release
-COPY --from=install /temp/dev/node_modules node_modules
-COPY --from=prerelease /app/.next ./.next
-COPY --from=prerelease /app/public ./public
-COPY --from=prerelease /app/package.json .
-COPY --from=prerelease /app/next.config.js ./next.config.js
+# 3. Production image, copy all the files and run next
+FROM base AS runner
+WORKDIR /app
 
-# Expose port
-EXPOSE 3000/tcp
-
-# Set environment to production
-ENV NODE_ENV=production
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
 ENV BUN_SILENCE_ASYNC_HOOKS_WARNING=1
 
-# Run the application
-ENTRYPOINT ["bun", "start"]
+# สร้าง User ใหม่เพื่อไม่ให้รันด้วยสิทธิ์ root (Security Best Practice)
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+
+# Set the correct permission for prerender cache
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
+# Automatically leverage output traces to reduce image size (Next.js Standalone Mode)
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# สลับไปใช้ nextjs user
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+ENV PORT=3000
+
+# รัน server.js ที่ได้จากการ build แบบ standalone
+ENTRYPOINT ["bun", "server.js"]
