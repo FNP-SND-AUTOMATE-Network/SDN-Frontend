@@ -186,6 +186,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Me */
+        get: operations["get_me_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh Token */
+        post: operations["refresh_token_auth_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logout */
+        post: operations["logout_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit/logs": {
         parameters: {
             query?: never;
@@ -678,6 +729,40 @@ export interface paths {
         post?: never;
         /** Delete Backup */
         delete: operations["delete_backup_backups__backup_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/backups/{backup_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Pause Backup */
+        put: operations["pause_backup_backups__backup_id__pause_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/backups/{backup_id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Reactivate Backup */
+        put: operations["reactivate_backup_backups__backup_id__reactivate_put"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3031,6 +3116,11 @@ export interface components {
              */
             updated_at: string;
             /**
+             * Created By
+             * @description User ID of the creator
+             */
+            created_by?: string | null;
+            /**
              * Devices
              * @description Devices using this backup profile
              */
@@ -3057,7 +3147,7 @@ export interface components {
          * BackupStatus
          * @enum {string}
          */
-        BackupStatus: "ONLINE" | "OFFLINE" | "MAINTENANCE" | "OTHER";
+        BackupStatus: "ONLINE" | "OFFLINE" | "MAINTENANCE" | "PAUSED" | "OTHER";
         /** BackupTriggerResponse */
         BackupTriggerResponse: {
             /** Message */
@@ -5970,6 +6060,23 @@ export interface components {
          * @enum {string}
          */
         TypeTag: "tag" | "group" | "other";
+        /** UserAuthMeResponse */
+        UserAuthMeResponse: {
+            /** Id */
+            id: string;
+            /** Email */
+            email: string;
+            /** Name */
+            name: string | null;
+            /** Surname */
+            surname: string | null;
+            /** Role */
+            role: string;
+            /** Has Strong Mfa */
+            has_strong_mfa: boolean;
+            /** Totp Enabled */
+            totp_enabled: boolean;
+        };
         /** UserChangePasswordRequest */
         UserChangePasswordRequest: {
             /** Current Password */
@@ -6513,6 +6620,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_me_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserAuthMeResponse"];
+                };
+            };
+        };
+    };
+    refresh_token_auth_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    logout_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };
@@ -8185,6 +8352,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BackupDeleteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pause_backup_backups__backup_id__pause_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                backup_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupUpdateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reactivate_backup_backups__backup_id__reactivate_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                backup_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupUpdateResponse"];
                 };
             };
             /** @description Validation Error */
