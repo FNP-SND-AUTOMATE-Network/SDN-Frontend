@@ -55,7 +55,7 @@ export default function CreateTemplateModal({
     onSuccess,
     defaultMode = "write",
 }: CreateTemplateModalProps) {
-    const { token } = useAuth();
+    const { isAuthenticated } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const queryClient = useQueryClient();
     const { snackbar, showError, hideSnackbar } = useSnackbar();
@@ -85,7 +85,7 @@ export default function CreateTemplateModal({
             },
         },
         {
-            enabled: !!token && isOpen,
+            enabled: isAuthenticated && isOpen,
         }
     );
 
@@ -94,9 +94,8 @@ export default function CreateTemplateModal({
     // Template Creation Mutation
     const createMutation = useMutation({
         mutationFn: async (content: string | File) => {
-            if (!token) throw new Error("No token");
+            if (!isAuthenticated) throw new Error("No token");
             return configurationTemplateService.createTemplate(
-                token,
                 {
                     template_name: templateName.trim(),
                     description: description.trim() || null,

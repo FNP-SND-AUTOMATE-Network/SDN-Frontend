@@ -26,7 +26,7 @@ import { components } from "@/lib/apiv2/schema";
 export type TopologyDeviceItem = components["schemas"]["DeviceNetworkResponse"];
 
 export default function TopologyPage() {
-    const { token } = useAuth();
+    const { isAuthenticated } = useAuth();
     const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
     const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
     const [isTableCollapsed, setIsTableCollapsed] = useState(false);

@@ -72,7 +72,7 @@ export default function HomePage() {
                 </p>
               </div>
 
-              {/* Feature 2 */}
+              {/* Feature 2
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-primary-100">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-xl mb-6">
                   <FontAwesomeIcon
@@ -86,7 +86,7 @@ export default function HomePage() {
                 <p className="text-gray-600 font-sf-pro-text leading-relaxed">
                   ระบบรักษาความปลอดภัยขั้นสูงและการจัดการนโยบายเครือข่าย
                 </p>
-              </div>
+              </div> */}
 
               {/* Feature 3 */}
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-primary-100">

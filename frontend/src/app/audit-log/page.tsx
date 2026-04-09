@@ -27,7 +27,7 @@ import {
 } from "@/components/audit";
 
 export default function AuditLogPage() {
-  const { user, token } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { snackbar, hideSnackbar } = useSnackbar();
   const [auditLogs, setAuditLogs] = useState<AuditLogResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,8 +59,8 @@ export default function AuditLogPage() {
       currentFilters = filters,
       currentLimit = 20
     ) => {
-      if (!token || !user) {
-        setError("No authentication token found");
+      if (!isAuthenticated || !user) {
+        setError("Not authenticated");
         setLoading(false);
         return;
       }
@@ -97,7 +97,6 @@ export default function AuditLogPage() {
         };
 
         const response: AuditLogListResponse = await auditService.getAuditLogs(
-          token,
           auditFilters
         );
 
@@ -127,7 +126,7 @@ export default function AuditLogPage() {
 
         // Fetch user data for all unique IDs that aren't in cache
         const uncachedUserIds = Array.from(userIds).filter(id => !userCache[id]);
-        if (uncachedUserIds.length > 0 && token) {
+        if (uncachedUserIds.length > 0) {
           preloadUserData(uncachedUserIds);
         }
       } catch (err) {
@@ -141,7 +140,7 @@ export default function AuditLogPage() {
         setLoading(false);
       }
     },
-    [token, user]
+    [isAuthenticated, user]
   );
 
   // Debounce filters to avoid too many API calls
@@ -154,11 +153,11 @@ export default function AuditLogPage() {
   }, [filters]);
 
   useEffect(() => {
-    if (token && user) {
+    if (isAuthenticated && user) {
       fetchAuditLogs(0, true, debouncedFilters, pagination.limit);
     }
   }, [
-    token,
+    isAuthenticated,
     user,
     debouncedFilters.action,
     debouncedFilters.startDate,
@@ -200,14 +199,14 @@ export default function AuditLogPage() {
 
   // Function to preload user data
   const preloadUserData = useCallback(async (userIds: string[]) => {
-    if (!token || userIds.length === 0) return;
+    if (!isAuthenticated || userIds.length === 0) return;
 
     setIsPreloadingUsers(true);
     try {
       // Fetch all user data in parallel
       const userPromises = userIds.map(async (userId) => {
         try {
-          const userProfile = await userService.getUserById(token, userId);
+          const userProfile = await userService.getUserById(userId);
           return { userId, userProfile };
         } catch (error) {
           console.error(`Error fetching user ${userId}:`, error);
@@ -233,7 +232,7 @@ export default function AuditLogPage() {
     } finally {
       setIsPreloadingUsers(false);
     }
-  }, [token]);
+  }, [isAuthenticated]);
 
   // Memoized function to get user name from UUID
   const getUserName = useCallback(
@@ -250,12 +249,12 @@ export default function AuditLogPage() {
         );
       }
 
-      if (!token) {
+      if (!isAuthenticated) {
         return userId;
       }
 
       try {
-        const userProfile = await userService.getUserById(token, userId);
+        const userProfile = await userService.getUserById(userId);
 
         // Update cache without causing re-renders
         setUserCache((prev) => ({ ...prev, [userId]: userProfile }));
@@ -271,7 +270,7 @@ export default function AuditLogPage() {
         return userId; // Fallback to UUID if user not found
       }
     },
-    [token, userCache]
+    [isAuthenticated, userCache]
   );
 
   // Function to get cached user name

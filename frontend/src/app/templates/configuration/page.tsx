@@ -34,7 +34,7 @@ import { useSnackbar } from "@/hooks/useSnackbar";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 
 export default function TemplatesConfigurationPage() {
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const { snackbar, showSuccess, showError, hideSnackbar } = useSnackbar();
 
@@ -69,7 +69,7 @@ export default function TemplatesConfigurationPage() {
       }
     },
     {
-      enabled: !!token,
+      enabled: isAuthenticated,
     }
   );
 
@@ -79,8 +79,8 @@ export default function TemplatesConfigurationPage() {
   // Mutations
   const deleteMutation = useMutation({
     mutationFn: async (templateId: string) => {
-      if (!token) throw new Error("Not authenticated");
-      await configurationTemplateService.deleteTemplate(token, templateId);
+      if (!isAuthenticated) throw new Error("Not authenticated");
+      await configurationTemplateService.deleteTemplate(templateId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["get", "/configuration-templates/"] });
@@ -119,14 +119,14 @@ export default function TemplatesConfigurationPage() {
   };
 
   const handleTemplateClick = async (template: ConfigurationTemplate) => {
-    if (!token) return;
+    if (!isAuthenticated) return;
 
     setSelectedTemplate(template);
     setShowDetailModal(true);
     setIsFetchingDetail(true);
 
     try {
-      const fullTemplate = await configurationTemplateService.getTemplate(token, template.id);
+      const fullTemplate = await configurationTemplateService.getTemplate(template.id);
       setSelectedTemplate(fullTemplate);
     } catch (err) {
       console.error("Failed to fetch template detail:", err);

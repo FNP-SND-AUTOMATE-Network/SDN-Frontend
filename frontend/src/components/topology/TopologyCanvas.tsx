@@ -392,7 +392,7 @@ interface TopologyCanvasProps {
 export default function TopologyCanvas({
     selectedSiteId,
 }: TopologyCanvasProps) {
-    const { token } = useAuth();
+    const { isAuthenticated } = useAuth();
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const [isSyncing, setIsSyncing] = useState(false);
