@@ -8,8 +8,8 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   message: string;
-  access_token: string;
-  token_type: string;
+  access_token?: string; // Optional now
+  token_type?: string;
   user_id: string;
   email: string;
   name: string;
@@ -18,6 +18,16 @@ export interface LoginResponse {
   // MFA fields (optional)
   requires_totp?: boolean;
   temp_token?: string;
+}
+
+export interface UserAuthMeResponse {
+  id: string;
+  email: string;
+  name: string;
+  surname: string;
+  role: string;
+  has_strong_mfa: boolean;
+  totp_enabled: boolean;
 }
 
 export interface RegisterRequest {
@@ -104,10 +114,28 @@ async function apiRequest<T>(
       "Content-Type": "application/json",
       ...options.headers,
     },
+    credentials: "include", // This enables sending HttpOnly cookies
     ...options,
   };
   try {
-    const response = await fetch(url, config);
+    let response = await fetch(url, config);
+
+    // Auto-refresh token logic on 401 Unauthorized
+    if (response.status === 401 && !endpoint.includes("/auth/")) {
+      try {
+        const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: "POST",
+          credentials: "include",
+        });
+        
+        if (refreshResponse.ok) {
+          // Retry original request if refresh succeeded
+          response = await fetch(url, config);
+        }
+      } catch (err) {
+        console.error("Token refresh auto-retry failed:", err);
+      }
+    }
 
     const data = await response.json();
 
@@ -121,8 +149,10 @@ async function apiRequest<T>(
 
     return data;
   } catch (error: any) {
-    console.error("API Request Error:", error);
-
+    // ไม่ต้อง log error ถ้าเป็น 401 (expected for unauthenticated users)
+    if (error?.status !== 401) {
+      console.error("API Request Error:", error);
+    }
     // Handle network errors or JSON parsing errors
     if (error.status) {
       throw error; // Re-throw API errors
@@ -138,6 +168,20 @@ async function apiRequest<T>(
 
 // Authentication API functions
 export const authApi = {
+  // Check auth user state (me)
+  async me(): Promise<UserAuthMeResponse> {
+    return apiRequest<UserAuthMeResponse>("/auth/me", {
+      method: "GET",
+    });
+  },
+
+  // Logout (clears cookies on backend)
+  async logout(): Promise<{ message: string }> {
+    return apiRequest<{ message: string }>("/auth/logout", {
+      method: "POST",
+    });
+  },
+
   // Login
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     return apiRequest<LoginResponse>("/auth/login", {
@@ -186,30 +230,22 @@ export const authApi = {
     return apiRequest<{ status: string }>("/health");
   },
 
-  // MFA Setup (ต้องใช้ access token)
-  async setupMfa(token: string): Promise<TotpSetupResponse> {
+  // MFA Setup (ใช้ Cookie แทน Bearer token)
+  async setupMfa(): Promise<TotpSetupResponse> {
     return apiRequest<TotpSetupResponse>("/auth/mfa/setup", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
     });
   },
 
-  // Verify MFA (ตอน setup ต้องส่ง secret, ถ้า backend อนุญาตอาจใช้ตอน login ได้ด้วย)
-  async verifyMfa(token: string, code: string, secret?: string): Promise<any> {
+  // Verify MFA (ตอน setup ต้องส่ง secret)
+  async verifyMfa(code: string, secret?: string): Promise<any> {
     const payload = {
       otp_code: code,
-      ...(secret && { secret }), // Only include secret if provided
+      ...(secret && { secret }),
     };
 
     return apiRequest<any>("/auth/mfa/verify", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
       body: JSON.stringify(payload),
     });
   },
@@ -230,15 +266,10 @@ export const authApi = {
 
   // Disable MFA
   async disableMfa(
-    token: string,
     password: string
   ): Promise<{ message: string }> {
     return apiRequest<{ message: string }>("/auth/mfa/disable", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
       body: JSON.stringify({ password }),
     });
   },
