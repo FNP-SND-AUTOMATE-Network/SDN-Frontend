@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 import { AlertColor } from "@/hooks/useSnackbar";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface ZabbixAlert {
   event_id: string;
@@ -38,6 +39,12 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { isAuthenticated } = useAuth();
+  const isAuthenticatedRef = useRef(isAuthenticated);
+
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
 
   // Snackbar popup state
   const [snackbar, setSnackbar] = useState<{
@@ -72,6 +79,8 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const connectWebSocket = useCallback(() => {
+    if (!isAuthenticatedRef.current) return;
+
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "";
     
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -104,9 +113,11 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     wsRef.current.onclose = () => {
       console.log("[AlertContext] WebSocket Disconnected. Reconnecting in 5s...");
       setIsConnected(false);
-      reconnectTimeoutRef.current = setTimeout(() => {
-        connectWebSocket();
-      }, 5000);
+      if (isAuthenticatedRef.current) {
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connectWebSocket();
+        }, 5000);
+      }
     };
 
     wsRef.current.onerror = () => {
@@ -116,7 +127,16 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [popAlert]);
 
   useEffect(() => {
-    connectWebSocket();
+    if (isAuthenticated) {
+      connectWebSocket();
+    } else {
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      setIsConnected(false);
+    }
 
     return () => {
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
@@ -124,7 +144,7 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         wsRef.current.close();
       }
     };
-  }, [connectWebSocket]);
+  }, [isAuthenticated, connectWebSocket]);
 
   const markAllAsRead = () => {
     setAlerts((prev) => prev.map((a) => ({ ...a, isRead: true })));
