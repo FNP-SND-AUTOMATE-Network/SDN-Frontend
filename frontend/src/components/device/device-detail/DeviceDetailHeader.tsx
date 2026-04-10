@@ -52,7 +52,7 @@ const typeIconMap: Record<string, React.ReactNode> = {
   OTHER: <Inventory2 fontSize="small" sx={{ color: "#6B7280" }} />,
 };
 
-const statusConfig: Record<string, { color: "success" | "error" | "info" | "default"; label: string }> = {
+const statusConfig: Record<string, { color: "success" | "error" | "info" | "default" | "warning"; label: string }> = {
   ONLINE: { color: "success", label: "Online" },
   OFFLINE: { color: "error", label: "Offline" },
   MAINTENANCE: { color: "info", label: "Maintenance" },
@@ -71,7 +71,16 @@ export default function DeviceDetailHeader({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const tags = device.tags || [];
-  const status = statusConfig[device.status] || statusConfig.OTHER;
+  let status = statusConfig[device.status] || statusConfig.OTHER;
+  
+  if (device.odl_connection_status === "connecting") {
+    status = { color: "warning", label: "Connecting..." };
+  } else if (device.odl_connection_status === "connected" && device.status !== "ONLINE") {
+    status = { color: "success", label: "Online" };
+  } else if (device.odl_connection_status === "unable-to-connect") {
+    status = { color: "error", label: "Unable to Connect" };
+  }
+
   const typeIcon = typeIconMap[device.type] || typeIconMap.OTHER;
 
   return (
@@ -153,11 +162,11 @@ export default function DeviceDetailHeader({
             size="small"
             startIcon={<LinkIcon fontSize="small" />}
             onClick={onMount}
-            disabled={isMounting || isUnmounting}
+            disabled={isMounting || isUnmounting || device.odl_connection_status === "connecting" || device.odl_connection_status === "connected" || device.status === "ONLINE"}
             disableElevation
             sx={{ borderRadius: 0.5, textTransform: "none" }}
           >
-            {isMounting ? "Mounting..." : "Mount"}
+            {isMounting || device.odl_connection_status === "connecting" ? "Mounting..." : "Mount"}
           </Button>
 
           <IconButton
