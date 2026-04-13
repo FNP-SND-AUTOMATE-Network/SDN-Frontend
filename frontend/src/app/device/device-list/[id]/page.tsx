@@ -76,7 +76,7 @@ export default function DeviceDetailPage() {
       enabled: !!deviceId,
       refetchInterval: (query) => {
         const data = query.state?.data as DeviceNetwork | undefined;
-        return data?.odl_connection_status === "connecting" ? 3000 : false;
+        return data?.odl_connection_status?.toLowerCase() === "connecting" ? 3000 : false;
       },
     }
   );

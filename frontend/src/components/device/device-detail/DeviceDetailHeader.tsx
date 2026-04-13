@@ -73,11 +73,13 @@ export default function DeviceDetailHeader({
   const tags = device.tags || [];
   let status = statusConfig[device.status] || statusConfig.OTHER;
   
-  if (device.odl_connection_status === "connecting") {
+  const connStatus = device.odl_connection_status?.toLowerCase();
+  
+  if (connStatus === "connecting") {
     status = { color: "warning", label: "Connecting..." };
-  } else if (device.odl_connection_status === "connected" && device.status !== "ONLINE") {
+  } else if (connStatus === "connected" && device.status !== "ONLINE") {
     status = { color: "success", label: "Online" };
-  } else if (device.odl_connection_status === "unable-to-connect") {
+  } else if (connStatus === "unable-to-connect") {
     status = { color: "error", label: "Unable to Connect" };
   }
   console.log(device.odl_connection_status)
@@ -163,11 +165,11 @@ export default function DeviceDetailHeader({
             size="small"
             startIcon={<LinkIcon fontSize="small" />}
             onClick={onMount}
-            disabled={isMounting || isUnmounting || device.odl_connection_status === "CONNECTING" || device.odl_connection_status === "CONNECTED" || device.status === "ONLINE"}
+            disabled={isMounting || isUnmounting || connStatus === "connecting" || connStatus === "connected" || device.status === "ONLINE"}
             disableElevation
             sx={{ borderRadius: 0.5, textTransform: "none" }}
           >
-            {isMounting || device.odl_connection_status === "CONNECTING" ? "Mounting..." : "Mount"}
+            {isMounting || connStatus === "connecting" ? "Mounting..." : "Mount"}
           </Button>
 
           <IconButton
