@@ -261,7 +261,7 @@ export function ZabbixHostModal({ open, onClose, hostId, hostName }: ZabbixHostM
                                         <CircularProgress size={32} />
                                     </Box>
                                 ) : trafficData && (trafficData as any).series && (trafficData as any).series.length > 0 ? (
-                                    <Box sx={{ height: "100%", minHeight: 450, width: "100%" }}>
+                                    <Box sx={{ height: 450, width: "100%" }}>
                                         <LineChart
                                             xAxis={[{
                                                 data: (trafficData as any).timestamps ? (trafficData as any).timestamps.map((t: number) => new Date(t * 1000)) : [],
