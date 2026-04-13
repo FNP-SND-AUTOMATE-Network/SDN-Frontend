@@ -261,7 +261,7 @@ export function ZabbixHostModal({ open, onClose, hostId, hostName }: ZabbixHostM
                                         <CircularProgress size={32} />
                                     </Box>
                                 ) : trafficData && (trafficData as any).series && (trafficData as any).series.length > 0 ? (
-                                    <Box sx={{ height: 380 }}>
+                                    <Box sx={{ height: "100%", minHeight: 450, width: "100%" }}>
                                         <LineChart
                                             xAxis={[{
                                                 data: (trafficData as any).timestamps ? (trafficData as any).timestamps.map((t: number) => new Date(t * 1000)) : [],
@@ -277,7 +277,13 @@ export function ZabbixHostModal({ open, onClose, hostId, hostName }: ZabbixHostM
                                                 showMark: false,
                                                 curve: "linear",
                                             }))}
-                                            margin={{ left: 75, right: 20, top: 120, bottom: 50 }}
+                                            margin={{ left: 75, right: 20, top: 80, bottom: 50 }}
+                                            slotProps={{
+                                                legend: {
+                                                    direction: "horizontal",
+                                                    position: { vertical: "bottom", horizontal: "center" },
+                                                }
+                                            }}
                                         />
                                     </Box>
                                 ) : (
