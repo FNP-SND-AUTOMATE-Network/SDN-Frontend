@@ -80,6 +80,7 @@ export default function DeviceDetailHeader({
   } else if (device.odl_connection_status === "unable-to-connect") {
     status = { color: "error", label: "Unable to Connect" };
   }
+  console.log(device.odl_connection_status)
 
   const typeIcon = typeIconMap[device.type] || typeIconMap.OTHER;
 
@@ -162,11 +163,11 @@ export default function DeviceDetailHeader({
             size="small"
             startIcon={<LinkIcon fontSize="small" />}
             onClick={onMount}
-            disabled={isMounting || isUnmounting || device.odl_connection_status === "connecting" || device.odl_connection_status === "connected" || device.status === "ONLINE"}
+            disabled={isMounting || isUnmounting || device.odl_connection_status === "CONNECTING" || device.odl_connection_status === "CONNECTED" || device.status === "ONLINE"}
             disableElevation
             sx={{ borderRadius: 0.5, textTransform: "none" }}
           >
-            {isMounting || device.odl_connection_status === "connecting" ? "Mounting..." : "Mount"}
+            {isMounting || device.odl_connection_status === "CONNECTING" ? "Mounting..." : "Mount"}
           </Button>
 
           <IconButton
