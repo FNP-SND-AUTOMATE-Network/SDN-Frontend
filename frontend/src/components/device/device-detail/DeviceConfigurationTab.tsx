@@ -22,6 +22,7 @@ import {
 import { paths } from "@/lib/apiv2/schema";
 import { fetchClient } from "@/lib/apiv2/fetch";
 import { useSnackbar } from "@/hooks/useSnackbar";
+import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 
 type DeviceNetwork =
     paths["/device-networks/{device_id}"]["get"]["responses"]["200"]["content"]["application/json"];
@@ -122,7 +123,7 @@ function CardHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
 export default function DeviceConfigurationTab({
     device,
 }: DeviceConfigurationTabProps) {
-    const { showError, showSuccess, showWarning } = useSnackbar();
+    const { snackbar, hideSnackbar, showError, showSuccess, showWarning } = useSnackbar();
     const [liveConfig, setLiveConfig] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [fetchedAt, setFetchedAt] = useState<string | null>(null);
@@ -308,6 +309,14 @@ export default function DeviceConfigurationTab({
                     </Box>
                 </Box>
             </Paper>
+
+            <MuiSnackbar
+                open={snackbar.open}
+                message={snackbar.message}
+                severity={snackbar.severity}
+                title={snackbar.title}
+                onClose={hideSnackbar}
+            />
         </Box>
     );
 }

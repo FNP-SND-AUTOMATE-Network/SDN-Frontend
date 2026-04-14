@@ -32,6 +32,7 @@ import { paths } from "@/lib/apiv2/schema";
 import { InterfaceDiscoveryResponse } from "@/services/deviceNetworkService";
 import { DeviceInterfaceModal } from "./DeviceInterfaceModal";
 import { useSnackbar } from "@/hooks/useSnackbar";
+import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 import { LinearProgress, Button } from "@mui/material";
 
 type DeviceNetwork =
@@ -55,7 +56,7 @@ export function DeviceInterfacesTab({ device }: DeviceInterfacesTabProps) {
 
     // Sync state
     const [isSyncing, setIsSyncing] = useState(false);
-    const { showSuccess, showError } = useSnackbar();
+    const { snackbar, hideSnackbar, showSuccess, showError } = useSnackbar();
 
     const nodeId = device.node_id;
 
@@ -207,9 +208,6 @@ export function DeviceInterfacesTab({ device }: DeviceInterfacesTabProps) {
                 <Table size="small">
                     <TableHead>
                         <TableRow sx={{ bgcolor: "grey.50" }}>
-                            <TableCell align="center" sx={{ fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "text.secondary", width: 64 }}>
-                                Status
-                            </TableCell>
                             <TableCell sx={{ fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "text.secondary" }}>
                                 Interface Name
                             </TableCell>
@@ -234,11 +232,6 @@ export function DeviceInterfacesTab({ device }: DeviceInterfacesTabProps) {
                                     hover
                                     sx={{ "&:last-child td": { borderBottom: 0 } }}
                                 >
-                                    <TableCell align="center">
-                                        <FiberManualRecord
-                                            sx={{ fontSize: 10, color: isUp ? "success.main" : "error.main" }}
-                                        />
-                                    </TableCell>
                                     <TableCell>
                                         <Typography variant="body2" fontWeight={500}>
                                             {iface.name}
@@ -302,7 +295,18 @@ export function DeviceInterfacesTab({ device }: DeviceInterfacesTabProps) {
                 interfaceData={selectedInterface}
                 mode={modalMode}
                 deviceId={device.node_id || ""}
-                onSuccess={() => refetch()}
+                onSuccess={(msg) => {
+                    if (msg) showSuccess(msg);
+                    refetch();
+                }}
+            />
+
+            <MuiSnackbar
+                open={snackbar.open}
+                message={snackbar.message}
+                severity={snackbar.severity}
+                title={snackbar.title}
+                onClose={hideSnackbar}
             />
         </Stack>
     );

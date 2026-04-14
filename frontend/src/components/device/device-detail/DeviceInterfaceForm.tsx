@@ -22,6 +22,7 @@ import {
 import { InterfaceDiscoveryResponse } from "@/services/deviceNetworkService";
 import { fetchClient } from "@/lib/apiv2/fetch";
 import { useSnackbar } from "@/hooks/useSnackbar";
+import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 import { StagedIntent } from "@/components/topology/config-panels/types";
 
 type NetworkInterface = InterfaceDiscoveryResponse["interfaces"][0];
@@ -44,7 +45,7 @@ interface DeviceInterfaceFormProps {
     interfaceData: NetworkInterface;
     mode: "view" | "edit";
     deviceId: string;
-    onSuccess: () => void;
+    onSuccess: (msg?: string) => void;
     onCancel: () => void;
     hideFooter?: boolean;
     onSaveRef?: React.MutableRefObject<(() => Promise<void>) | null>;
@@ -91,7 +92,7 @@ export function DeviceInterfaceForm({
     draft,
     onDraftChange,
 }: DeviceInterfaceFormProps) {
-    const { showSuccess, showError } = useSnackbar();
+    const { snackbar, hideSnackbar, showSuccess, showError } = useSnackbar();
 
     // Local state for edits
     const [adminStatus, setAdminStatus] = useState(true);
@@ -309,8 +310,8 @@ export function DeviceInterfaceForm({
                 console.error("Failed to run sync:", syncErr);
             }
 
-            showSuccess(`Interface ${interfaceData.name} updated successfully`);
-            onSuccess();
+            // Instead of showing local snackbar and unmounting, pass the message to the parent
+            onSuccess(`Interface ${interfaceData.name} updated successfully`);
         } catch (error: any) {
             console.error("❌ [handleSave] ERROR:", error);
             showError(`Failed to save config: ${error?.message || "Unknown error"}`);
@@ -630,6 +631,15 @@ export function DeviceInterfaceForm({
                     </Box>
                 </>
             )}
+
+            {/* MuiSnackbar for success/error alerts */}
+            <MuiSnackbar
+                open={snackbar.open}
+                message={snackbar.message}
+                severity={snackbar.severity}
+                title={snackbar.title}
+                onClose={hideSnackbar}
+            />
         </Box>
     );
 }

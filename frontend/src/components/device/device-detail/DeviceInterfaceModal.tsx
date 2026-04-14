@@ -21,7 +21,7 @@ interface DeviceInterfaceModalProps {
     interfaceData: NetworkInterface | null;
     mode: "view" | "edit";
     deviceId: string;
-    onSuccess: () => void;
+    onSuccess: (msg?: string) => void;
 }
 
 export function DeviceInterfaceModal({
@@ -81,8 +81,8 @@ export function DeviceInterfaceModal({
                     interfaceData={interfaceData}
                     mode={mode}
                     deviceId={deviceId}
-                    onSuccess={() => {
-                        onSuccess();
+                    onSuccess={(msg) => {
+                        onSuccess(msg);
                         onClose();
                     }}
                     onCancel={onClose}
