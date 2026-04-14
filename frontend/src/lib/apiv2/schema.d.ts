@@ -1410,6 +1410,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/nbi/devices/{device_id}/live-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Device Live Config
+         * @description Get live running configuration directly from the device via CLI.
+         *     Includes an In-Memory TTL cache (default 60s) to prevent device overload.
+         */
+        get: operations["get_device_live_config_api_v1_nbi_devices__device_id__live_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/nbi/devices/{node_id}/mount": {
         parameters: {
             query?: never;
@@ -4535,6 +4556,27 @@ export interface components {
              * @default 0
              */
             table_id: number;
+        };
+        /**
+         * LiveConfigResponse
+         * @description Response สำหรับ Live Config Preview
+         */
+        LiveConfigResponse: {
+            /** Success */
+            success: boolean;
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /** Config */
+            config?: string | null;
+            /**
+             * Cached
+             * @default false
+             */
+            cached: boolean;
+            /** Fetched At */
+            fetched_at?: string | null;
         };
         /** LocalSiteCreate */
         LocalSiteCreate: {
@@ -9965,6 +10007,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_device_live_config_api_v1_nbi_devices__device_id__live_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveConfigResponse"];
                 };
             };
             /** @description Validation Error */
