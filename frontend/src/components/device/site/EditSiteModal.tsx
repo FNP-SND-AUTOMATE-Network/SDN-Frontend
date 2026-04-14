@@ -30,11 +30,14 @@ interface EditSiteModalProps {
 
 interface FormErrors {
     site_name?: string;
+    site_type?: string;
     floor_number?: string;
     rack_number?: string;
     address?: string;
     address_detail?: string;
+    city?: string;
     zip_code?: string;
+    country?: string;
 }
 
 const SectionHeader = ({ step, title, description, icon }: { step: number; title: string; description: string; icon: any }) => (
@@ -113,8 +116,14 @@ export default function EditSiteModal({
     const validateForm = (): boolean => {
         const newErrors: FormErrors = {};
 
-        if (formData.site_name && formData.site_name.length > 200) {
+        if (!formData.site_name?.trim()) {
+            newErrors.site_name = "Please enter site name";
+        } else if (formData.site_name.length > 200) {
             newErrors.site_name = "Site name must not exceed 200 characters";
+        }
+
+        if (!formData.site_type?.trim()) {
+            newErrors.site_type = "Please select site type";
         }
 
         if (
@@ -133,7 +142,9 @@ export default function EditSiteModal({
             newErrors.rack_number = "Rack number must not be less than 0";
         }
 
-        if (formData.address && formData.address.length > 500) {
+        if (!formData.address?.trim()) {
+            newErrors.address = "Please enter address";
+        } else if (formData.address.length > 500) {
             newErrors.address = "Address must not exceed 500 characters";
         }
 
@@ -141,8 +152,18 @@ export default function EditSiteModal({
             newErrors.address_detail = "Address detail must not exceed 500 characters";
         }
 
-        if (formData.zip_code && formData.zip_code.length > 10) {
+        if (!formData.city?.trim()) {
+            newErrors.city = "Please enter Province / State";
+        }
+
+        if (!formData.zip_code?.trim()) {
+            newErrors.zip_code = "Please enter zip code";
+        } else if (formData.zip_code.length > 10) {
             newErrors.zip_code = "Zip code must not exceed 10 characters";
+        }
+
+        if (!formData.country?.trim()) {
+            newErrors.country = "Please select country";
         }
 
         setErrors(newErrors);
@@ -194,7 +215,7 @@ export default function EditSiteModal({
             </DialogTitle>
 
             <DialogContent dividers sx={{ p: 4, bgcolor: "#f8fafc" }}>
-                <Box component="form" id="edit-site-form" onSubmit={handleSubmit} noValidate sx={{ bgcolor: "white", p: 4, borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                <Box component="form" id="edit-site-form" onSubmit={handleSubmit} noValidate sx={{ bgcolor: "white", p: 4, borderRadius: 2, border: "1px solid", borderColor: "grey.200", "& .MuiFormLabel-asterisk": { color: "error.main" } }}>
                     {/* STEP 1: Base Information */}
                     <SectionHeader
                         step={1}
@@ -235,6 +256,8 @@ export default function EditSiteModal({
                                 name="site_type"
                                 value={formData.site_type || "DataCenter"}
                                 onChange={handleChange}
+                                error={!!errors.site_type}
+                                helperText={errors.site_type}
                                 required
                                 fullWidth
                                 disabled={isLoading}
@@ -324,7 +347,7 @@ export default function EditSiteModal({
                         </Grid>
                         <Grid size={{ xs: 12 }}>
                             <TextField
-                                label="Address Detail"
+                                label="Address Detail (Optional)"
                                 name="address_detail"
                                 value={formData.address_detail || ""}
                                 onChange={handleChange}
@@ -338,7 +361,7 @@ export default function EditSiteModal({
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
-                                label="Sub District"
+                                label="Sub District / Locality"
                                 name="sub_district"
                                 value={formData.sub_district || ""}
                                 onChange={handleChange}
@@ -350,7 +373,7 @@ export default function EditSiteModal({
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
-                                label="District"
+                                label="District / City"
                                 name="district"
                                 value={formData.district || ""}
                                 onChange={handleChange}
@@ -362,10 +385,12 @@ export default function EditSiteModal({
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
-                                label="City"
+                                label="Province / State"
                                 name="city"
                                 value={formData.city || ""}
                                 onChange={handleChange}
+                                error={!!errors.city}
+                                helperText={errors.city}
                                 required
                                 fullWidth
                                 disabled={isLoading}
@@ -375,7 +400,7 @@ export default function EditSiteModal({
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
-                                label="Zip Code"
+                                label="Zip / Postal Code"
                                 name="zip_code"
                                 value={formData.zip_code || ""}
                                 onChange={handleChange}
@@ -395,13 +420,15 @@ export default function EditSiteModal({
                                 name="country"
                                 value={formData.country || ""}
                                 onChange={handleChange}
+                                error={!!errors.country}
+                                helperText={errors.country}
                                 required
                                 fullWidth
                                 disabled={isLoading}
-                                placeholder="Select country"
                                 slotProps={{ inputLabel: { shrink: true } }}
+                                SelectProps={{ displayEmpty: true }}
                             >
-                                <MenuItem value="">Select country</MenuItem>
+                                <MenuItem value="" disabled>Select country</MenuItem>
                                 <MenuItem value="Thailand">Thailand</MenuItem>
                                 <MenuItem value="Singapore">Singapore</MenuItem>
                                 <MenuItem value="Malaysia">Malaysia</MenuItem>

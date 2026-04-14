@@ -17,7 +17,9 @@ import {
   Skeleton,
   CircularProgress,
 } from "@mui/material";
-import { Close, Download, CloudUpload } from "@mui/icons-material";
+import { Close, Download } from "@mui/icons-material";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTimes, faDesktop, faTags, faFileArchive, faCloudUploadAlt } from "@fortawesome/free-solid-svg-icons";
 import { components } from "@/lib/apiv2/schema";
 
 type OperatingSystem = components["schemas"]["OperatingSystemResponse"];
@@ -52,6 +54,29 @@ interface FormErrors {
   file?: string;
   version?: string;
 }
+
+const SectionHeader = ({ step, title, description, icon }: { step: number; title: string; description: string; icon: any }) => (
+    <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 3, mt: step === 1 ? 0 : 4 }}>
+        <Box sx={{
+            width: 36, height: 36, borderRadius: 2,
+            bgcolor: "#eff6ff", color: "primary.main",
+            display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 2
+        }}>
+            <FontAwesomeIcon icon={icon} style={{ fontSize: 16 }} />
+        </Box>
+        <Box>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", letterSpacing: 0.5, textTransform: "uppercase" }}>
+                STEP {step}
+            </Typography>
+            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 0.25, fontSize: "0.95rem" }}>
+                {title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
+                {description}
+            </Typography>
+        </Box>
+    </Box>
+);
 
 export default function OperationModal({
   isOpen,
@@ -188,28 +213,46 @@ export default function OperationModal({
   return (
     <Dialog
       open={isOpen}
-      onClose={onClose}
+      onClose={!isLoading ? onClose : undefined}
       maxWidth="md"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 1 } }}
+      PaperProps={{ sx: { borderRadius: 2 } }}
     >
-      <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Typography variant="h6" component="span" fontWeight={600}>
-          {mode === "add" ? "Add Operating System" : "Edit Operating System"}
-        </Typography>
-        <IconButton onClick={onClose} disabled={isLoading} size="small">
-          <Close fontSize="small" />
+      <DialogTitle sx={{ m: 0, p: 3, pb: 2, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+            <Box sx={{ width: 44, height: 44, borderRadius: 2, bgcolor: "primary.main", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <FontAwesomeIcon icon={faDesktop} style={{ fontSize: 20 }} />
+            </Box>
+            <Box>
+                <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+                    {mode === "add" ? "Add Operating System" : "Edit Operating System"}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    {mode === "add" ? "Register a new OS image to the system." : "Update information and files for this OS image."}
+                </Typography>
+            </Box>
+        </Box>
+        <IconButton
+            aria-label="close"
+            onClick={onClose}
+            disabled={isLoading}
+            sx={{ color: "text.secondary", position: "absolute", right: 16, top: 16 }}
+        >
+            <FontAwesomeIcon icon={faTimes} style={{ width: 16 }} />
         </IconButton>
       </DialogTitle>
 
-      <form onSubmit={handleSubmit}>
-        <DialogContent dividers sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          {/* Basic Information */}
-          <Box>
-            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-              Basic Information
-            </Typography>
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}>
+      <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <DialogContent dividers sx={{ p: 4, bgcolor: "#f8fafc" }}>
+          <Box sx={{ bgcolor: "white", p: 4, borderRadius: 2, border: "1px solid", borderColor: "grey.200", "& .MuiFormLabel-asterisk": { color: "error.main" } }}>
+            {/* STEP 1: Basic Information */}
+            <SectionHeader
+              step={1}
+              title="Basic Details"
+              description="Identify the operating system type and description."
+              icon={faDesktop}
+            />
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 3, mb: 1 }}>
               <TextField
                 select
                 label="OS Type"
@@ -217,44 +260,45 @@ export default function OperationModal({
                 value={formData.os_type || "OTHER"}
                 onChange={handleChange}
                 disabled={isLoading}
-                size="small"
+                required
                 fullWidth
+                slotProps={{ inputLabel: { shrink: true } }}
               >
                 <MenuItem value="CISCO_IOS_XE">Cisco IOS-XE</MenuItem>
                 <MenuItem value="HUAWEI_VRP">Huawei VRP</MenuItem>
                 <MenuItem value="OTHER">Other</MenuItem>
               </TextField>
-            </Box>
-          </Box>
 
-          {/* Description & Tags */}
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}>
-            <Box>
               <TextField
                 label="Description"
                 name="description"
                 value={formData.description || ""}
                 onChange={handleChange}
                 disabled={isLoading}
-                size="small"
                 fullWidth
                 multiline
-                minRows={3}
-                placeholder="Short description about this OS"
+                minRows={1}
+                maxRows={3}
+                placeholder="Short description"
                 error={!!errors.description}
                 helperText={errors.description}
+                slotProps={{ inputLabel: { shrink: true } }}
               />
             </Box>
-            <Box>
-              <Typography variant="body2" fontWeight={500} color="text.secondary" sx={{ mb: 1 }}>
-                Tags (optional)
-              </Typography>
+            {/* STEP 2: Tags Validation */}
+            <SectionHeader
+              step={2}
+              title="Tags Grouping"
+              description="Optionally attach tags to categorize this OS."
+              icon={faTags}
+            />
+            <Box sx={{ mb: 1, p: 2, bgcolor: "grey.50", borderRadius: 1, border: "1px dashed", borderColor: "grey.300" }}>
               {allTags.length === 0 ? (
-                <Typography variant="caption" color="text.disabled">
+                <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 2 }}>
                   No tags available. You can create tags in Tag/Group page.
                 </Typography>
               ) : (
-                <Stack spacing={1.5}>
+                <Stack spacing={2}>
                   {(["tag", "group", "other"] as const).map((typeKey) => {
                     const tagsOfType = allTags.filter((t) => t.type === typeKey);
                     if (tagsOfType.length === 0) return null;
@@ -262,10 +306,10 @@ export default function OperationModal({
 
                     return (
                       <Box key={typeKey}>
-                        <Typography variant="caption" fontWeight={500} color="text.secondary" sx={{ mb: 0.5, display: "block" }}>
+                        <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ mb: 1, display: "block", textTransform: "uppercase" }}>
                           {typeLabel}
                         </Typography>
-                        <Stack direction="row" flexWrap="wrap" useFlexGap spacing={0.75}>
+                        <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1}>
                           {tagsOfType.map((tag) => {
                             const isSelected = selectedTagIds.includes(tag.tag_id);
                             return (
@@ -276,21 +320,22 @@ export default function OperationModal({
                                 onClick={() => toggleTagSelection(tag.tag_id)}
                                 variant={isSelected ? "filled" : "outlined"}
                                 sx={{
-                                  fontSize: 11,
+                                  fontSize: 12,
+                                  px: 0.5,
                                   fontWeight: 500,
                                   ...(isSelected
                                     ? { bgcolor: "primary.100", color: "primary.dark", borderColor: "primary.main" }
-                                    : { borderColor: "grey.300", "&:hover": { borderColor: "primary.light", bgcolor: "primary.50" } }),
+                                    : { borderColor: "grey.400", bgcolor: "white", "&:hover": { borderColor: "primary.light", bgcolor: "primary.50" } }),
                                 }}
                                 avatar={
                                   <Box
                                     component="span"
                                     sx={{
-                                      width: 8,
-                                      height: 8,
+                                      width: 10,
+                                      height: 10,
                                       borderRadius: "50%",
                                       bgcolor: tag.color,
-                                      ml: "4px !important",
+                                      ml: "6px !important",
                                     }}
                                   />
                                 }
@@ -304,18 +349,16 @@ export default function OperationModal({
                 </Stack>
               )}
             </Box>
-          </Box>
 
-          {/* File Upload */}
-          <Box>
-            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-              OS File (optional)
-            </Typography>
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" }, gap: 2, alignItems: "start" }}>
+            {/* STEP 3: File Upload */}
+            <SectionHeader
+              step={3}
+              title="OS File Images"
+              description="Upload the firmware or OS image file (optional)."
+              icon={faFileArchive}
+            />
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "7fr 3fr" }, gap: 3, alignItems: "start" }}>
               <Box>
-                <Typography variant="body2" fontWeight={500} color="text.secondary" sx={{ mb: 0.5 }}>
-                  OS File
-                </Typography>
                 <Box
                   onDrop={handleDrop}
                   onDragOver={handleDragOver}
@@ -327,10 +370,10 @@ export default function OperationModal({
                     alignItems: "center",
                     justifyContent: "center",
                     px: 2,
-                    py: 4,
+                    py: 5,
                     border: 2,
                     borderStyle: "dashed",
-                    borderRadius: 1,
+                    borderRadius: 2,
                     cursor: isLoading ? "not-allowed" : "pointer",
                     opacity: isLoading ? 0.6 : 1,
                     borderColor: isDragging ? "primary.main" : "grey.300",
@@ -342,33 +385,33 @@ export default function OperationModal({
                     },
                   }}
                 >
-                  <CloudUpload sx={{ fontSize: 28, color: "action.active", mb: 1 }} />
-                  <Typography variant="body2" fontWeight={500}>
+                  <FontAwesomeIcon icon={faCloudUploadAlt} style={{ fontSize: 32, color: "#9ca3af", marginBottom: 8 }} />
+                  <Typography variant="body2" fontWeight={600} color="text.primary">
                     Drag and drop OS file here
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 2 }}>
                     Or click to browse (single file)
                   </Typography>
                   {file && (
                     <Box
                       sx={{
-                        mt: 1.5,
-                        px: 1.5,
-                        py: 1,
-                        borderRadius: 0.5,
-                        bgcolor: "background.paper",
+                        px: 2,
+                        py: 1.5,
+                        borderRadius: 1,
+                        bgcolor: "white",
                         border: 1,
-                        borderColor: "divider",
+                        borderColor: "primary.main",
                         width: "100%",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
                       }}
                     >
-                      <Typography variant="caption" noWrap sx={{ maxWidth: 220 }}>
+                      <Typography variant="body2" fontWeight={500} color="primary.main" noWrap sx={{ maxWidth: "70%" }}>
                         {file.name}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap", ml: 1 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "nowrap", ml: 1 }}>
                         {(file.size / (1024 * 1024)).toFixed(2)} MB
                       </Typography>
                     </Box>
@@ -383,7 +426,7 @@ export default function OperationModal({
                   style={{ display: "none" }}
                 />
                 {errors.file && (
-                  <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                  <Typography variant="caption" color="error" sx={{ mt: 1, display: "block" }}>
                     {errors.file}
                   </Typography>
                 )}
@@ -398,21 +441,20 @@ export default function OperationModal({
                     if (errors.version) setErrors((prev) => ({ ...prev, version: "" }));
                   }}
                   error={!!errors.version}
-                  helperText={errors.version || "File will be uploaded after saving OS information."}
+                  helperText={errors.version || "Ex: 17.3.1. Extracted internally."}
                   disabled={isLoading}
-                  size="small"
                   fullWidth
                   placeholder="e.g. 17.3.1"
+                  slotProps={{ inputLabel: { shrink: true } }}
                 />
               </Box>
             </Box>
-          </Box>
 
           {/* Existing Files (Edit mode) */}
           {mode === "edit" && (
-            <Box>
-              <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-                Uploaded Files
+            <Box sx={{ mt: 4 }}>
+              <Typography variant="subtitle2" fontWeight={700} color="text.primary" sx={{ mb: 1.5, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Previously Uploaded Files
               </Typography>
               {isFilesLoading ? (
                 <Stack spacing={1}>
@@ -524,17 +566,19 @@ export default function OperationModal({
               )}
             </Box>
           )}
+          </Box>
         </DialogContent>
 
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button variant="outlined" onClick={onClose} disabled={isLoading}>
+        <DialogActions sx={{ p: 3, bgcolor: "#f8fafc", borderTop: "1px solid", borderColor: "grey.200" }}>
+          <Button variant="outlined" onClick={onClose} disabled={isLoading} color="inherit" sx={{ bgcolor: "white" }}>
             Cancel
           </Button>
           <Button
             type="submit"
             variant="contained"
             disabled={isLoading}
-            startIcon={isLoading ? <CircularProgress size={16} /> : undefined}
+            startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{ boxShadow: "none", bgcolor: "primary.main" }}
           >
             {isLoading
               ? "Saving..."
@@ -543,7 +587,7 @@ export default function OperationModal({
                 : "Save Changes"}
           </Button>
         </DialogActions>
-      </form>
+      </Box>
     </Dialog>
   );
 }
