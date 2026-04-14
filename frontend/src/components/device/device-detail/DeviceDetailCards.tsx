@@ -9,6 +9,7 @@ import {
     IconButton,
     Tooltip,
     Chip,
+    Divider,
 } from "@mui/material";
 import {
     Info,
@@ -164,13 +165,15 @@ export default function DeviceDetailCards({ device }: DeviceDetailCardsProps) {
             <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 0.5 }}>
                 <CardHeader
                     icon={<Lan fontSize="small" color="action" />}
-                    title="Network Information"
+                    title="Network & ODL Information"
                 />
                 <Box sx={{ fontSize: 14 }}>
-                    <InfoRow label="IP Address" value={device.ip_address} copyable />
+                    <InfoRow label="IP Management" value={device.ip_address} copyable />
                     <InfoRow label="MAC Address" value={device.mac_address} copyable />
+                    <Divider />
                     <InfoRow label="Node ID" value={device.node_id} copyable />
-                    <InfoRow label="Datapath ID" value={device.datapath_id} copyable />
+                    <InfoRow label="Netconf Host" value={device.netconf_host} copyable />
+                    <InfoRow label="Netconf Port" value={device.netconf_port.toString()} copyable />
                     <Box
                         sx={{
                             display: "flex",

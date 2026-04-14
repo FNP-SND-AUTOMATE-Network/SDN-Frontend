@@ -239,9 +239,6 @@ export default function DeviceDetailPage() {
             ) : activeTab === "configuration" ? (
               <DeviceConfigurationTab
                 device={device}
-                onPreviewTemplate={(templateId) => {
-                  console.log("Preview template:", templateId);
-                }}
               />
             ) : activeTab === "backup" ? (
               <DeviceBackupTab device={device} />
