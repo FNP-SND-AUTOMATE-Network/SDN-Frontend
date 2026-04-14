@@ -23,6 +23,7 @@ import { paths } from "@/lib/apiv2/schema";
 import { fetchClient } from "@/lib/apiv2/fetch";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
+import { formatDate } from "./helpers";
 
 type DeviceNetwork =
     paths["/device-networks/{device_id}"]["get"]["responses"]["200"]["content"]["application/json"];
@@ -264,7 +265,7 @@ export default function DeviceConfigurationTab({
                     {fetchedAt && (
                         <InfoRow 
                             label={isOfflineConfig ? "Backup Date" : "Last Fetched At"} 
-                            value={new Date(fetchedAt).toLocaleString()} 
+                            value={formatDate(fetchedAt)} 
                         />
                     )}
                 </Box>

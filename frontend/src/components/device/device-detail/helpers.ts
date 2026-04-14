@@ -42,7 +42,7 @@ export const getTypeColor = (type: string): string => {
 export const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return "-";
   const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleDateString("th-TH", {
     year: "numeric",
     month: "short",
     day: "numeric",
