@@ -12,6 +12,10 @@ COPY package.json bun.lock ./
 # Install all dependencies (including devDependencies)
 RUN bun install
 
+# Bun doesn't auto-install Next.js optional SWC binaries for Alpine ARM64
+# Install them explicitly to prevent "Failed to load SWC binary" error
+RUN bun add @next/swc-linux-arm64-musl @next/swc-linux-arm64-gnu 2>/dev/null || true
+
 # Copy source code (แต่ไม่ใช้ package-lock.json ภายใน container)
 COPY . .
 # ลบ package-lock.json เพื่อไม่ให้ Next.js เข้าใจผิดว่าใช้ npm

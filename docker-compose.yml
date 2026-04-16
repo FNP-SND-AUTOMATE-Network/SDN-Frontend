@@ -18,7 +18,6 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-      - /app/.next
       - nextjs_cache:/app/.next/cache
     container_name: sdn-frontend
     restart: unless-stopped
