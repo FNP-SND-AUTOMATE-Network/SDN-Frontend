@@ -1027,6 +1027,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ipam/subnets/picker": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Subnets For Picker
+         * @description Return subnet list with usage info for dropdown picker.
+         *     ใช้ใน Device/Interface form เพื่อให้ user เลือก subnet จาก dropdown
+         */
+        get: operations["get_subnets_for_picker_ipam_subnets_picker_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ipam/subnets/{subnet_id}/addresses": {
         parameters: {
             query?: never;
@@ -1295,6 +1316,48 @@ export interface paths {
         };
         /** Get Subnet Children */
         get: operations["get_subnet_children_ipam_subnets__subnet_id__children_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ipam/subnets/{subnet_id}/available": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Available Ips
+         * @description Return list of available (free) IPs in a subnet.
+         *     ใช้ใน dropdown ตัวที่สอง หลังจาก user เลือก subnet แล้ว
+         */
+        get: operations["get_available_ips_ipam_subnets__subnet_id__available_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ipam/subnets/{subnet_id}/space-map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Subnet Space Map
+         * @description Return visual space map of a subnet.
+         *     แสดง IP ทั้งหมดใน subnet พร้อมสถานะ (used/free/gateway/reserved)
+         */
+        get: operations["get_subnet_space_map_ipam_subnets__subnet_id__space_map_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2996,6 +3059,17 @@ export interface components {
              */
             created_at: string;
         };
+        /** AvailableIpListResponse */
+        AvailableIpListResponse: {
+            /** Subnet Id */
+            subnet_id: string;
+            /** Subnet */
+            subnet: string;
+            /** Available Ips */
+            available_ips: string[];
+            /** Total Available */
+            total_available: number;
+        };
         /** BackupCreate */
         BackupCreate: {
             /**
@@ -3694,6 +3768,11 @@ export interface components {
              */
             phpipam_address_id?: string | null;
             /**
+             * Ipam Subnet Id
+             * @description Subnet ID จาก phpIPAM (Picker mode)
+             */
+            ipam_subnet_id?: string | null;
+            /**
              * Policy Id
              * @description Policy ID
              */
@@ -3755,11 +3834,21 @@ export interface components {
             /** Message */
             message: string;
             device: components["schemas"]["DeviceNetworkResponse"];
+            /**
+             * Ipam Notifications
+             * @description แจ้งเตือนสถานะการ book IP ใน phpIPAM
+             */
+            ipam_notifications?: unknown[];
         };
         /** DeviceNetworkDeleteResponse */
         DeviceNetworkDeleteResponse: {
             /** Message */
             message: string;
+            /**
+             * Ipam Notifications
+             * @description แจ้งเตือนสถานะการปล่อย IP จาก phpIPAM
+             */
+            ipam_notifications?: unknown[];
         };
         /** DeviceNetworkListResponse */
         DeviceNetworkListResponse: {
@@ -3998,6 +4087,11 @@ export interface components {
             /** Message */
             message: string;
             device: components["schemas"]["DeviceNetworkResponse"];
+            /**
+             * Ipam Notifications
+             * @description แจ้งเตือนสถานะการ book/release IP ใน phpIPAM
+             */
+            ipam_notifications?: unknown[];
         };
         /** DeviceTagAssignment */
         DeviceTagAssignment: {
@@ -4414,6 +4508,41 @@ export interface components {
             port_number: number | null;
             /** Mac Address */
             mac_address: string | null;
+            /**
+             * Ip Address
+             * @description IP Address ที่ assign ให้ interface
+             */
+            ip_address?: string | null;
+            /**
+             * Subnet Mask
+             * @description Subnet mask (e.g. 255.255.255.0 or /24)
+             */
+            subnet_mask?: string | null;
+            /**
+             * Gateway
+             * @description Default gateway
+             */
+            gateway?: string | null;
+            /**
+             * Phpipam Address Id
+             * @description phpIPAM address record ID
+             */
+            phpipam_address_id?: string | null;
+            /**
+             * Speed
+             * @description Interface speed in Mbps
+             */
+            speed?: number | null;
+            /**
+             * Duplex
+             * @description Duplex mode
+             */
+            duplex?: string | null;
+            /**
+             * Mtu
+             * @description MTU in bytes
+             */
+            mtu?: number | null;
             /**
              * Created At
              * Format: date-time
@@ -5605,6 +5734,34 @@ export interface components {
          * @enum {string}
          */
         SiteType: "DataCenter" | "BRANCH" | "OTHER";
+        /** SpaceMapEntry */
+        SpaceMapEntry: {
+            /** Ip */
+            ip: string;
+            /** Status */
+            status: string;
+            /** Hostname */
+            hostname?: string | null;
+            /** Description */
+            description?: string | null;
+        };
+        /** SpaceMapResponse */
+        SpaceMapResponse: {
+            /** Subnet Id */
+            subnet_id: string;
+            /** Subnet */
+            subnet: string;
+            /** Mask */
+            mask: string;
+            /** Total Hosts */
+            total_hosts: number;
+            /** Used */
+            used: number;
+            /** Free */
+            free: number;
+            /** Addresses */
+            addresses: components["schemas"]["SpaceMapEntry"][];
+        };
         /**
          * StatusDevice
          * @enum {string}
@@ -5662,6 +5819,35 @@ export interface components {
         SubnetListResponse: {
             /** Subnets */
             subnets: components["schemas"]["SubnetResponse"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * SubnetPickerItem
+         * @description แต่ละ item ใน dropdown เลือก subnet
+         */
+        SubnetPickerItem: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Subnet */
+            subnet: string;
+            /** Mask */
+            mask: string;
+            /** Description */
+            description?: string | null;
+            /** Usage Percent */
+            usage_percent?: number | null;
+            /** Free Hosts */
+            free_hosts?: number | null;
+            /** Total Hosts */
+            total_hosts?: number | null;
+        };
+        /** SubnetPickerResponse */
+        SubnetPickerResponse: {
+            /** Subnets */
+            subnets: components["schemas"]["SubnetPickerItem"][];
             /** Total */
             total: number;
         };
@@ -9237,6 +9423,26 @@ export interface operations {
             };
         };
     };
+    get_subnets_for_picker_ipam_subnets_picker_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubnetPickerResponse"];
+                };
+            };
+        };
+    };
     get_subnet_addresses_ipam_subnets__subnet_id__addresses_get: {
         parameters: {
             query?: never;
@@ -9891,6 +10097,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SubnetListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_available_ips_ipam_subnets__subnet_id__available_get: {
+        parameters: {
+            query?: {
+                /** @description จำนวน IP ที่ต้องการดึงมาแสดง */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                subnet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailableIpListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_subnet_space_map_ipam_subnets__subnet_id__space_map_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subnet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpaceMapResponse"];
                 };
             };
             /** @description Validation Error */
