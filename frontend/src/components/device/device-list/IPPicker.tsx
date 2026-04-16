@@ -12,14 +12,15 @@ import {
     MenuItem,
     Typography,
     CircularProgress,
-    Alert
+    Alert,
+    Tooltip,
 } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faNetworkWired, faMagic } from '@fortawesome/free-solid-svg-icons';
 import { $api } from '@/lib/apiv2/fetch';
 
 interface IPPickerProps {
-    onIpSelect: (ip: string) => void;
+    onIpSelect: (ip: string, subnetId?: string) => void;
     disabled?: boolean;
 }
 
@@ -47,12 +48,21 @@ export default function IPPicker({ onIpSelect, disabled }: IPPickerProps) {
     );
     const subnets = (subnetsData as any)?.items || (subnetsData as any)?.subnets || [];
 
-    // 3. Auto Allocate First Free IP
+    // 3. Fetch Space Map based on Subnet
+    const { data: spaceMapData, isLoading: isSpaceMapLoading } = $api.useQuery(
+        "get",
+        "/ipam/subnets/{subnet_id}/space-map",
+        { params: { path: { subnet_id: selectedSubnet } } },
+        { enabled: open && !!selectedSubnet }
+    );
+    const spaceMapAddresses = spaceMapData?.addresses || [];
+
+    // 4. Auto Allocate First Free IP (Manual trigger)
     const { refetch: fetchFirstFree, isFetching: isFetchingFreeIp, error: freeIpError } = $api.useQuery(
         "get",
         "/ipam/subnets/{subnet_id}/first_free" as any,
         { params: { path: { subnet_id: selectedSubnet } } },
-        { enabled: false } // Only fetch manually on button click
+        { enabled: false }
     );
 
     const handleAllocate = async () => {
@@ -60,7 +70,6 @@ export default function IPPicker({ onIpSelect, disabled }: IPPickerProps) {
         setAllocatedIp(null);
         const res = (await fetchFirstFree()) as any;
         if (res.data) {
-            // Check based on API response structure. Schema describes it might return direct string or an object with ip_address
             const ip = typeof res.data === 'string' ? res.data : (res.data as any).ip_address || (res.data as any).ip;
             setAllocatedIp(ip);
         }
@@ -68,7 +77,7 @@ export default function IPPicker({ onIpSelect, disabled }: IPPickerProps) {
 
     const handleConfirm = () => {
         if (allocatedIp) {
-            onIpSelect(allocatedIp);
+            onIpSelect(allocatedIp, selectedSubnet || undefined);
             handleClose();
         }
     };
@@ -78,6 +87,59 @@ export default function IPPicker({ onIpSelect, disabled }: IPPickerProps) {
         setSelectedSection('');
         setSelectedSubnet('');
         setAllocatedIp(null);
+    };
+
+    const handleSelectIp = (ip: string, status: string) => {
+        if (status.toLowerCase().includes('free') || status.toLowerCase().includes('available') || status.toLowerCase().includes('reserved')) {
+            setAllocatedIp(ip);
+        }
+    };
+
+    // Helper functions for Box styles
+    const getStatusStyles = (status: string, isSelected: boolean) => {
+        const lower = status.toLowerCase();
+        let baseBg = "grey.200";
+        let baseColor = "grey.700";
+        let baseBorder = "grey.300";
+        let cursor = "default";
+        let hover = {};
+
+        if (lower.includes('free') || lower.includes('available')) {
+            baseBg = "success.50";
+            baseColor = "success.dark";
+            baseBorder = "success.300";
+            cursor = "pointer";
+            hover = { bgcolor: "success.100", borderColor: "success.main" };
+        } else if (lower.includes('used') || lower.includes('allocated') || lower.includes('active')) {
+            baseBg = "info.50";
+            baseColor = "info.dark";
+            baseBorder = "info.300";
+        } else if (lower.includes('offline') || lower.includes('retired')) {
+            baseBg = "error.50";
+            baseColor = "error.dark";
+            baseBorder = "error.300";
+        } else if (lower.includes('reserved')) {
+            baseBg = "warning.50";
+            baseColor = "warning.dark";
+            baseBorder = "warning.300";
+            cursor = "pointer";
+            hover = { bgcolor: "warning.100", borderColor: "warning.main" };
+        }
+
+        if (isSelected) {
+            baseBg = "primary.main";
+            baseColor = "white";
+            baseBorder = "primary.dark";
+            hover = { bgcolor: "primary.dark" };
+        }
+
+        return {
+            bgcolor: baseBg,
+            color: baseColor,
+            borderColor: baseBorder,
+            cursor,
+            "&:hover": hover
+        };
     };
 
     return (
@@ -106,65 +168,160 @@ export default function IPPicker({ onIpSelect, disabled }: IPPickerProps) {
                 IPAM Select
             </Button>
 
-            <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+            <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
                 <DialogTitle sx={{ fontWeight: 600, borderBottom: 1, borderColor: "divider", pb: 1.5 }}>
-                    Allocate IP from IPAM
+                    Allocate IP from IPAM Space Map
                 </DialogTitle>
-                <DialogContent sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <Typography variant="body2" color="text.secondary">
-                        Select a section and subnet to automatically find the next available IP address.
-                    </Typography>
+                <DialogContent sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 3, p: 3 }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}>
+                        <FormControl fullWidth size="small">
+                            <InputLabel id="section-select-label">Section</InputLabel>
+                            <Select
+                                labelId="section-select-label"
+                                label="Section"
+                                value={selectedSection}
+                                onChange={(e) => {
+                                    setSelectedSection(e.target.value);
+                                    setSelectedSubnet('');
+                                    setAllocatedIp(null);
+                                }}
+                                disabled={isLoadingSections}
+                            >
+                                <MenuItem value="" disabled>-- Select Section --</MenuItem>
+                                {Array.isArray(sections) && sections.length === 0 && !isLoadingSections && (
+                                    <MenuItem disabled>No Sections Found</MenuItem>
+                                )}
+                                {Array.isArray(sections) && sections.map((sec: any) => (
+                                    <MenuItem key={sec.id} value={sec.id}>
+                                        {sec.name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
 
-                    <FormControl fullWidth size="small">
-                        <InputLabel id="section-select-label">Section</InputLabel>
-                        <Select
-                            labelId="section-select-label"
-                            label="Section"
-                            value={selectedSection}
-                            onChange={(e) => {
-                                setSelectedSection(e.target.value);
-                                setSelectedSubnet('');
-                                setAllocatedIp(null);
-                            }}
-                            disabled={isLoadingSections}
-                        >
-                            <MenuItem value="" disabled>-- Select Section --</MenuItem>
-                            {Array.isArray(sections) && sections.length === 0 && !isLoadingSections && (
-                                <MenuItem disabled>No Sections Found</MenuItem>
-                            )}
-                            {Array.isArray(sections) && sections.map((sec: any) => (
-                                <MenuItem key={sec.id} value={sec.id}>
-                                    {sec.name}
+                        <FormControl fullWidth size="small">
+                            <InputLabel id="subnet-select-label">Subnet</InputLabel>
+                            <Select
+                                labelId="subnet-select-label"
+                                label="Subnet"
+                                value={selectedSubnet}
+                                onChange={(e) => {
+                                    setSelectedSubnet(e.target.value);
+                                    setAllocatedIp(null);
+                                }}
+                                disabled={!selectedSection || isLoadingSubnets}
+                            >
+                                <MenuItem value="" disabled>
+                                    {!selectedSection ? "Please select a Section first" : "-- Select Subnet --"}
                                 </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
+                                {Array.isArray(subnets) && subnets.length === 0 && !!selectedSection && !isLoadingSubnets && (
+                                    <MenuItem disabled>No Subnets Found in this Section</MenuItem>
+                                )}
+                                {Array.isArray(subnets) && subnets.map((sub: any) => (
+                                    <MenuItem key={sub.id} value={sub.id}>
+                                        {sub.subnet} {sub.name ? `(${sub.name})` : ''}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
 
-                    <FormControl fullWidth size="small">
-                        <InputLabel id="subnet-select-label">Subnet</InputLabel>
-                        <Select
-                            labelId="subnet-select-label"
-                            label="Subnet"
-                            value={selectedSubnet}
-                            onChange={(e) => {
-                                setSelectedSubnet(e.target.value);
-                                setAllocatedIp(null);
-                            }}
-                            disabled={!selectedSection || isLoadingSubnets}
-                        >
-                            <MenuItem value="" disabled>
-                                {!selectedSection ? "Please select a Section first" : "-- Select Subnet --"}
-                            </MenuItem>
-                            {Array.isArray(subnets) && subnets.length === 0 && !!selectedSection && !isLoadingSubnets && (
-                                <MenuItem disabled>No Subnets Found in this Section</MenuItem>
+                    {selectedSubnet && (
+                        <Box sx={{ 
+                            p: 2, 
+                            border: 1, 
+                            borderColor: 'grey.200', 
+                            borderRadius: 2, 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            gap: 2,
+                            minHeight: 200,
+                            position: 'relative'
+                        }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography variant="subtitle2" fontWeight={600}>Space Map</Typography>
+                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'success.main' }} />
+                                        <Typography variant="caption" color="text.secondary">Free</Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'info.main' }} />
+                                        <Typography variant="caption" color="text.secondary">Used</Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'warning.main' }} />
+                                        <Typography variant="caption" color="text.secondary">Reserved</Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'error.main' }} />
+                                        <Typography variant="caption" color="text.secondary">Offline</Typography>
+                                    </Box>
+                                </Box>
+                            </Box>
+                            
+                            {isSpaceMapLoading ? (
+                                <Box sx={{ display: 'flex', flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                                    <CircularProgress size={24} />
+                                </Box>
+                            ) : spaceMapAddresses.length > 0 ? (
+                                <Box sx={{ 
+                                    display: 'flex', 
+                                    flexWrap: 'wrap', 
+                                    gap: 1,
+                                    maxHeight: 300,
+                                    overflowY: 'auto',
+                                    p: 1
+                                }}>
+                                    {spaceMapAddresses.map((entry, idx) => {
+                                        const ipString = entry.ip;
+                                        const lastOctet = ipString.split('.').pop() || ipString;
+                                        const isSelected = allocatedIp === entry.ip;
+                                        
+                                        return (
+                                            <Tooltip 
+                                                key={idx} 
+                                                title={
+                                                    <Box sx={{ p: 0.5 }}>
+                                                        <Typography variant="body2" fontWeight={600} display="block">{entry.ip}</Typography>
+                                                        <Typography variant="caption" display="block">Status: {entry.status}</Typography>
+                                                        {entry.hostname && <Typography variant="caption" display="block">Host: {entry.hostname}</Typography>}
+                                                        {entry.description && <Typography variant="caption" display="block">Desc: {entry.description}</Typography>}
+                                                    </Box>
+                                                } 
+                                                arrow
+                                                placement="top"
+                                            >
+                                                <Box
+                                                    onClick={() => handleSelectIp(entry.ip, entry.status)}
+                                                    sx={{
+                                                        minWidth: '40px',
+                                                        height: '40px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        borderRadius: 1,
+                                                        border: 1,
+                                                        fontSize: '0.8rem',
+                                                        fontWeight: 600,
+                                                        fontFamily: 'SFMono-Regular, monospace',
+                                                        transition: 'all 0.2s ease',
+                                                        ...getStatusStyles(entry.status, isSelected)
+                                                    }}
+                                                >
+                                                    .{lastOctet}
+                                                </Box>
+                                            </Tooltip>
+                                        );
+                                    })}
+                                </Box>
+                            ) : (
+                                <Box sx={{ display: 'flex', flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                                    <Typography variant="body2" color="text.secondary">No space map data available.</Typography>
+                                </Box>
                             )}
-                            {Array.isArray(subnets) && subnets.map((sub: any) => (
-                                <MenuItem key={sub.id} value={sub.id}>
-                                    {sub.subnet} {sub.name ? `(${sub.name})` : ''}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
+                        </Box>
+                    )}
 
                     {freeIpError && (
                         <Alert severity="error">
@@ -200,7 +357,7 @@ export default function IPPicker({ onIpSelect, disabled }: IPPickerProps) {
                                 gap: 1 
                             }}>
                                 <Typography variant="body2" fontWeight={600}>
-                                    Suggested IP:
+                                    Selected IP:
                                 </Typography>
                                 <Typography variant="body1" fontFamily="SFMono-Regular, monospace" fontWeight={700}>
                                     {allocatedIp}

@@ -24,6 +24,7 @@ import { fetchClient } from "@/lib/apiv2/fetch";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 import { StagedIntent } from "@/components/topology/config-panels/types";
+import IPPicker from "@/components/device/device-list/IPPicker";
 
 type NetworkInterface = InterfaceDiscoveryResponse["interfaces"][0];
 
@@ -466,13 +467,19 @@ export function DeviceInterfaceForm({
                             }}
                         >
                             {isEdit ? (
-                                <TextField
-                                    label="IPv4 Address"
-                                    size="small"
-                                    value={ipv4Address}
-                                    onChange={(e) => setIpv4Address(e.target.value)}
-                                    fullWidth
-                                />
+                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                    <TextField
+                                        label="IPv4 Address"
+                                        size="small"
+                                        value={ipv4Address}
+                                        onChange={(e) => setIpv4Address(e.target.value)}
+                                        fullWidth
+                                    />
+                                    <IPPicker 
+                                        onIpSelect={(ip) => setIpv4Address(ip)} 
+                                        disabled={isSaving} 
+                                    />
+                                </Box>
                             ) : (
                                 <Box>
                                     <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>

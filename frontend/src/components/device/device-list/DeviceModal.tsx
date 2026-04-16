@@ -120,6 +120,8 @@ export default function DeviceModal({
           datapath_id: device.datapath_id || "",
           netconf_host: device.netconf_host || "",
           netconf_port: device.netconf_port || 830,
+          phpipam_address_id: device.phpipam_address_id || null,
+          ipam_subnet_id: (device as any).ipam_subnet_id || null,
         } as DeviceBody);
         setSelectedTagIds(device.tags ? device.tags.map((t: any) => t.tag_id) : []);
       } else {
@@ -141,6 +143,8 @@ export default function DeviceModal({
           datapath_id: "",
           netconf_host: "",
           netconf_port: 830,
+          phpipam_address_id: null,
+          ipam_subnet_id: null,
         } as DeviceBody);
         setSelectedTagIds([]);
       }
@@ -185,6 +189,11 @@ export default function DeviceModal({
 
     if (!data.mac_address?.trim()) {
       newErrors.mac_address = "Please enter MAC address";
+    } else {
+      const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+      if (!macRegex.test(data.mac_address.trim())) {
+        newErrors.mac_address = "Invalid MAC address format (e.g., AA:BB:CC:DD:EE:FF)";
+      }
     }
 
     if (data.ip_address && data.ip_address.length > 50) {
@@ -418,15 +427,31 @@ export default function DeviceModal({
                     placeholder="e.g. CSR1000vT"
                   />
                   <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                    <Box sx={{ flex: 1 }}>
-                      <Input
-                        label="Host / IP Address"
-                        name="netconf_host"
-                        value={data.netconf_host || ""}
-                        onChange={handleChange}
-                        disabled={isLoading}
-                        placeholder="e.g. 192.168.1.50"
-                      />
+                    <Box sx={{ flex: 1, display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                      <Box sx={{ flex: 1 }}>
+                        <Input
+                          label="Host / IP Address"
+                          name="netconf_host"
+                          value={data.netconf_host || ""}
+                          onChange={handleChange}
+                          disabled={isLoading}
+                          placeholder="e.g. 192.168.1.50"
+                        />
+                      </Box>
+                      <Box sx={{ pt: 3.5 }}>
+                        <IPPicker 
+                            onIpSelect={(ip, subnetId) => {
+                                setData(prev => ({ 
+                                    ...prev, 
+                                    netconf_host: ip, 
+                                    // Removed auto-syncing ip_address here
+                                    ipam_subnet_id: subnetId ? String(subnetId) : null,
+                                    phpipam_address_id: null
+                                }));
+                            }}
+                            disabled={isLoading} 
+                        />
+                      </Box>
                     </Box>
                     <Box sx={{ flex: 1 }}>
                       <Input
@@ -503,8 +528,14 @@ export default function DeviceModal({
                         </Box>
                         <Box sx={{ pt: 3.5 }}>
                           <IPPicker 
-                              onIpSelect={(ip) => {
-                                  setData(prev => ({ ...prev, ip_address: ip }));
+                              onIpSelect={(ip, subnetId) => {
+                                  setData(prev => ({ 
+                                      ...prev, 
+                                      ip_address: ip, 
+                                      // Removed auto-syncing netconf_host here
+                                      ipam_subnet_id: subnetId ? String(subnetId) : null,
+                                      phpipam_address_id: null 
+                                  }));
                                   if (errors.ip_address) setErrors(prev => ({ ...prev, ip_address: "" }));
                               }}
                               disabled={isLoading} 
