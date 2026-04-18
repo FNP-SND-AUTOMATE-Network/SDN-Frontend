@@ -1,15 +1,36 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-    Box, Typography, CircularProgress, Alert,
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Stack, Tooltip, Skeleton, alpha
+    Box, Typography, Alert,
+    Chip, Stack, Tooltip, Skeleton, alpha,
+    FormControl, Select, MenuItem, Pagination
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { fetchClient } from "@/lib/apiv2/fetch";
 import { paths } from "@/lib/apiv2/schema";
 
 type ProblemsData = paths["/api/v1/zabbix/dashboard/problems"]["get"]["responses"]["200"]["content"]["application/json"];
+
+type TimeRangeOption = {
+    value: string;
+    label: string;
+    seconds: number | null;
+};
+
+type TimeRangeOptionsResponse = {
+    default?: string;
+    options?: TimeRangeOption[];
+};
+
+const fallbackTimeRangeOptions: TimeRangeOption[] = [
+    { value: "1h", label: "Last 1 hour", seconds: 3600 },
+    { value: "1d", label: "Last 1 day", seconds: 86400 },
+    { value: "1w", label: "Last 1 week", seconds: 604800 },
+    { value: "1mo", label: "Last 1 month", seconds: 2592000 },
+    { value: "1y", label: "Last 1 year", seconds: 31536000 },
+    { value: "all", label: "All time", seconds: null },
+];
 
 const severityConfig: Record<string, { label: string; color: string; bg: string; chipColor: "default" | "info" | "success" | "warning" | "error" }> = {
     "0": { label: "N/A", color: "#9e9e9e", bg: "#f5f5f5", chipColor: "default" },
@@ -32,16 +53,95 @@ function formatTimeAgo(clock: string | number): string {
     return `${days}d ago`;
 }
 
-export function ZabbixActiveProblems() {
-    const { data, isLoading, isError, error } = useQuery<ProblemsData>({
-        queryKey: ["zabbix-problems"],
+type ZabbixActiveProblemsProps = {
+    timeRange: string;
+    onTimeRangeChange: (value: string) => void;
+};
+
+export function ZabbixActiveProblems({
+    timeRange,
+    onTimeRangeChange,
+}: ZabbixActiveProblemsProps) {
+    const PAGE_SIZE = 15;
+    const [page, setPage] = useState(1);
+
+    const timeRangeQuery = useQuery<TimeRangeOptionsResponse>({
+        queryKey: ["zabbix-problems-time-ranges"],
         queryFn: async () => {
-            const { data, error } = await fetchClient.GET("/api/v1/zabbix/dashboard/problems");
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+            const response = await fetch(`${baseUrl}/api/v1/zabbix/dashboard/problems/time-ranges`, {
+                credentials: "include",
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch problem time ranges");
+            }
+
+            return (await response.json()) as TimeRangeOptionsResponse;
+        },
+        staleTime: 5 * 60 * 1000,
+        retry: 1,
+    });
+
+    const timeRangeOptions = useMemo(() => {
+        return timeRangeQuery.data?.options?.length
+            ? timeRangeQuery.data.options
+            : fallbackTimeRangeOptions;
+    }, [timeRangeQuery.data]);
+
+    const currentTimeRange = useMemo(() => {
+        const exists = timeRangeOptions.some((opt) => opt.value === timeRange);
+        if (exists) return timeRange;
+        return timeRangeQuery.data?.default || "1w";
+    }, [timeRange, timeRangeOptions, timeRangeQuery.data]);
+
+    useEffect(() => {
+        if (timeRange !== currentTimeRange) {
+            onTimeRangeChange(currentTimeRange);
+        }
+    }, [timeRange, currentTimeRange, onTimeRangeChange]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [currentTimeRange]);
+
+    const { data, isLoading, isError, error } = useQuery<ProblemsData>({
+        queryKey: ["zabbix-problems", currentTimeRange, page, PAGE_SIZE],
+        queryFn: async () => {
+            const { data, error } = await fetchClient.GET(
+                "/api/v1/zabbix/dashboard/problems",
+                {
+                    params: {
+                        query: {
+                            time_range: currentTimeRange,
+                            page,
+                            page_size: PAGE_SIZE,
+                        },
+                    },
+                } as any,
+            );
             if (error) throw new Error((error as any).detail || "Failed to fetch problems");
             return data as ProblemsData;
         },
         refetchInterval: 30000,
     });
+
+    const rawData = data as any;
+    const problemList: any[] = Array.isArray(rawData?.problems) ? rawData.problems : [];
+    const severityCounts: Record<string, number> = rawData?.severity_counts || {};
+    const totalProblems = Number(rawData?.total ?? problemList.length) || 0;
+    const pageSize = Number(rawData?.page_size ?? PAGE_SIZE) || PAGE_SIZE;
+    const totalPages = Math.max(1, Number(rawData?.total_pages ?? Math.ceil(totalProblems / pageSize)) || 1);
+    const currentPage = Math.max(1, Math.min(Number(rawData?.page ?? page) || page, totalPages));
+    const startItem = totalProblems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+    const endItem = totalProblems === 0 ? 0 : Math.min(startItem + problemList.length - 1, totalProblems);
+
+    useEffect(() => {
+        if (!data) return;
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [data, page, totalPages]);
 
     if (isLoading) {
         return (
@@ -68,10 +168,6 @@ export function ZabbixActiveProblems() {
             </Alert>
         );
     }
-
-    const rawData = data as any;
-    const problemList: any[] = Array.isArray(rawData?.problems) ? rawData.problems : [];
-    const severityCounts: Record<string, number> = rawData?.severity_counts || {};
 
     return (
         <Box
@@ -105,6 +201,33 @@ export function ZabbixActiveProblems() {
                     Active Problems
                 </Typography>
                 <Stack direction="row" spacing={0.5} alignItems="center">
+                    <FormControl size="small" sx={{ minWidth: 128, mr: 0.5 }}>
+                        <Select
+                            value={currentTimeRange}
+                            onChange={(event) => onTimeRangeChange(event.target.value)}
+                            sx={{
+                                height: 28,
+                                fontSize: "0.75rem",
+                                borderRadius: 1.5,
+                                bgcolor: "background.paper",
+                                ".MuiSelect-select": { py: 0.25, px: 1.25 },
+                            }}
+                            MenuProps={{
+                                PaperProps: {
+                                    sx: {
+                                        borderRadius: 2,
+                                        mt: 0.5,
+                                    },
+                                },
+                            }}
+                        >
+                            {timeRangeOptions.map((opt) => (
+                                <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "0.8rem" }}>
+                                    {opt.label}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
                     {(["5", "4", "3", "2"] as const).map((sKey) => {
                         const count = severityCounts[sKey] || 0;
                         if (count === 0) return null;
@@ -126,9 +249,9 @@ export function ZabbixActiveProblems() {
                         );
                     })}
                     <Chip
-                        label={problemList.length}
+                        label={totalProblems}
                         size="small"
-                        color={problemList.length > 0 ? "error" : "default"}
+                        color={totalProblems > 0 ? "error" : "default"}
                         sx={{ fontWeight: 700, minWidth: 32 }}
                     />
                 </Stack>
@@ -148,7 +271,7 @@ export function ZabbixActiveProblems() {
                     </Box>
                 ) : (
                     <Stack spacing={0}>
-                        {problemList.slice(0, 15).map((p: any, idx: number) => {
+                        {problemList.map((p: any, idx: number) => {
                             const sev = severityConfig[String(p.severity)] || severityConfig["0"];
                             const timeAgo = p.clock ? formatTimeAgo(p.clock) : "Unknown";
                             const fullTime = p.clock ? new Date(Number(p.clock) * 1000).toLocaleString() : "";
@@ -199,7 +322,7 @@ export function ZabbixActiveProblems() {
                                         </Typography>
                                         <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
                                             <Typography variant="caption" color="text.secondary">
-                                                {p.host || p.name?.match(/^[^:]+:\s*(.+?):/)?.[0]?.replace(/:$/, '') || "Unknown"}
+                                                {p.host || "Unknown Host"}
                                             </Typography>
                                             <Typography variant="caption" color="text.disabled">•</Typography>
                                             <Tooltip title={fullTime} arrow placement="top">
@@ -227,6 +350,35 @@ export function ZabbixActiveProblems() {
                     </Stack>
                 )}
             </Box>
+
+            {totalProblems > pageSize && (
+                <Box
+                    sx={{
+                        px: 2,
+                        py: 1.25,
+                        borderTop: "1px solid",
+                        borderColor: "divider",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 1,
+                        flexWrap: "wrap",
+                    }}
+                >
+                    <Typography variant="caption" color="text.secondary">
+                        Showing {startItem}-{endItem} of {totalProblems}
+                    </Typography>
+                    <Pagination
+                        size="small"
+                        color="primary"
+                        page={currentPage}
+                        count={totalPages}
+                        onChange={(_, nextPage) => setPage(nextPage)}
+                        siblingCount={1}
+                        boundaryCount={1}
+                    />
+                </Box>
+            )}
         </Box>
     );
 }

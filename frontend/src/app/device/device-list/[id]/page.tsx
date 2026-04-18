@@ -118,15 +118,25 @@ export default function DeviceDetailPage() {
       
       const status = response?.status;
       if (status === 200) {
-        if ((res as any)?.code === "DEVICE_ALREADY_MOUNTED") {
-            showSuccess(`Device ${device.node_id} is already connected`);
+        const code = (res as any)?.code;
+        const readyForIntent = Boolean((res as any)?.ready_for_intent);
+
+        if (code === "DEVICE_ALREADY_MOUNTED") {
+          showSuccess(`Device ${device.node_id} is already connected`);
+          fetchClient.GET("/interfaces/odl/{node_id}/sync", {
+            params: { path: { node_id: device.node_id } }
+          }).catch(console.error);
+        } else if (readyForIntent) {
+          showSuccess(res?.message || `Device ${device.node_id} is connected successfully`);
+          fetchClient.GET("/interfaces/odl/{node_id}/sync", {
+            params: { path: { node_id: device.node_id } }
+          }).catch(console.error);
         } else {
-            showSuccess(res?.message || `Device ${device.node_id} is connected successfully`);
+          showInfo(
+            res?.message ||
+            `Device ${device.node_id} is mounting. Please wait until status is CONNECTED before syncing interfaces.`
+          );
         }
-        // Trigger auto-sync for interfaces
-        fetchClient.GET("/interfaces/odl/{node_id}/sync", {
-          params: { path: { node_id: device.node_id } }
-        }).catch(console.error);
       } else if (status === 400) {
         const detail = (error as any)?.detail || "";
         showError(typeof detail === "string" ? detail : JSON.stringify(detail));

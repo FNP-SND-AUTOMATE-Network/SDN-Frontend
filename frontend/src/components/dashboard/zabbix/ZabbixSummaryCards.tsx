@@ -13,6 +13,10 @@ import { paths } from "@/lib/apiv2/schema";
 
 type OverviewData = paths["/api/v1/zabbix/dashboard/overview"]["get"]["responses"]["200"]["content"]["application/json"];
 
+type ZabbixSummaryCardsProps = {
+    timeRange: string;
+};
+
 // Severity card config — severity numbers match Zabbix API: 5=Disaster, 4=High, 3=Average, 2=Warning
 const severityCards = [
     { severity: 5, label: "Disaster", icon: ErrorIcon, gradient: "linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%)", lightBg: "#fde8e8" },
@@ -21,11 +25,20 @@ const severityCards = [
     { severity: 2, label: "Warning", icon: CheckCircle, gradient: "linear-gradient(135deg, #0288d1 0%, #01579b 100%)", lightBg: "#e1f5fe" },
 ] as const;
 
-export function ZabbixSummaryCards() {
+export function ZabbixSummaryCards({ timeRange }: ZabbixSummaryCardsProps) {
     const { data, isLoading, isError, error } = useQuery<OverviewData>({
-        queryKey: ["zabbix-overview"],
+        queryKey: ["zabbix-overview", timeRange],
         queryFn: async () => {
-            const { data, error } = await fetchClient.GET("/api/v1/zabbix/dashboard/overview");
+            const { data, error } = await fetchClient.GET(
+                "/api/v1/zabbix/dashboard/overview",
+                {
+                    params: {
+                        query: {
+                            time_range: timeRange,
+                        },
+                    },
+                } as any,
+            );
             if (error) throw error;
             return data as OverviewData;
         },

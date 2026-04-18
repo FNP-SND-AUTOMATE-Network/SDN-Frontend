@@ -33,9 +33,11 @@ const normalizeBandwidth = (val: number, unit: string) => {
 
 export function ZabbixTopMetrics() {
     const { data, isLoading, isError, error } = useQuery<TopMetricsData>({
-        queryKey: ["zabbix-top-metrics"],
+        queryKey: ["zabbix-top-metrics", "peak", 1],
         queryFn: async () => {
-            const { data, error } = await fetchClient.GET("/api/v1/zabbix/dashboard/top-metrics");
+            const { data, error } = await fetchClient.GET("/api/v1/zabbix/dashboard/top-metrics", {
+                params: { query: { mode: "peak", window: 1 } as any }
+            });
             if (error) throw new Error((error as any).detail || "Failed to fetch top metrics");
             return data as TopMetricsData;
         },
@@ -63,6 +65,8 @@ export function ZabbixTopMetrics() {
     }
 
     const metrics: any = data;
+    const bandwidthMode = String(metrics?._meta?.top_bandwidth_mode || "peak").toLowerCase();
+    const isBandwidthPeakMode = bandwidthMode === "peak";
 
     return (
         <Grid container spacing={2.5}>
@@ -131,8 +135,7 @@ export function ZabbixTopMetrics() {
                                             // Format name
                                             let displayName = "Unknown";
                                             if (key === "top_bandwidth") {
-                                                const dir = item.direction ? `(${item.direction})` : "";
-                                                displayName = `${item.host || ""} ${item.interface || ""} ${dir}`.trim();
+                                                displayName = `${item.host || ""} ${item.interface || ""}`.trim();
                                             } else {
                                                 const nameSection = item.name ? `- ${item.name.replace('Processor: ', '')}` : ''; // Simplify memory processor string if needed
                                                 displayName = item.host ? `${item.host} ${nameSection}` : (item.name || "Unknown");
@@ -194,6 +197,11 @@ export function ZabbixTopMetrics() {
                                                             },
                                                         }}
                                                     />
+                                                    {key === "top_bandwidth" ? (
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                                                            {isBandwidthPeakMode ? "Peak" : "Current"} total: {displayValue} {itemUnit} | {isBandwidthPeakMode ? "Peak" : "Current"} in: {item.in_value ?? 0} {item.in_unit ?? "bps"} | {isBandwidthPeakMode ? "Peak" : "Current"} out: {item.out_value ?? 0} {item.out_unit ?? "bps"}
+                                                        </Typography>
+                                                    ) : null}
                                                 </Box>
                                             );
                                         })}

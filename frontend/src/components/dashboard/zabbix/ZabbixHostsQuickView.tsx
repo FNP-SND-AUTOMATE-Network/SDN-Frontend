@@ -115,7 +115,15 @@ export function ZabbixHostsQuickView({ onSelectHost }: ZabbixHostsQuickViewProps
                     </Box>
                 ) : (
                     <Stack spacing={0}>
-                        {hostList.slice(0, 15).map((h: any, idx: number) => {
+                        {[...hostList].sort((a: any, b: any) => {
+                            // Online (available) first, then unknown, then offline
+                            const order: Record<string, number> = { available: 0, unknown: 1, unavailable: 2 };
+                            const aOrder = order[a.availability] ?? 1;
+                            const bOrder = order[b.availability] ?? 1;
+                            if (aOrder !== bOrder) return aOrder - bOrder;
+                            // Within same status, sort alphabetically
+                            return (a.name || a.host || "").localeCompare(b.name || b.host || "");
+                        }).slice(0, 15).map((h: any, idx: number) => {
                             const ip = h.interfaces?.find((i: any) => i.main === true || i.main === "1")?.ip || h.interfaces?.[0]?.ip || "-";
                             const isAvailable = h.availability === "available";
                             const isUnknown = h.availability === "unknown";
