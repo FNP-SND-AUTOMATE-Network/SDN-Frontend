@@ -877,23 +877,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/device-networks/sync-openflow": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Sync Openflow Devices */
-        post: operations["sync_openflow_devices_device_networks_sync_openflow_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/interfaces/": {
         parameters: {
             query?: never;
@@ -1726,12 +1709,10 @@ export interface paths {
         put?: never;
         /**
          * Sync All Devices
-         * @description Sync ข้อมูล Device ทั้ง NETCONF และ OpenFlow จาก ODL ในครั้งเดียว
-         *     รัน parallel เพื่อลด latency
+         * @description Sync ข้อมูล Device จาก NETCONF topology ใน ODL
          *
          *     **Response:**
          *     - `netconf`: ผลลัพธ์จากการ sync NETCONF devices
-         *     - `openflow`: ผลลัพธ์จากการ sync OpenFlow devices
          *     - `summary`: สรุปรวม (total_synced, total_not_found, total_errors)
          */
         post: operations["sync_all_devices_api_v1_nbi_odl_sync_all_post"];
@@ -1754,15 +1735,13 @@ export interface paths {
          * Sync Single Device Status
          * @description Sync connection status ของ device ตัวเดียวจาก ODL → DB
          *
-         *     รองรับทั้ง NETCONF และ OpenFlow:
-         *     - **NETCONF**: ดึง connection-status จาก topology-netconf
-         *     - **OpenFlow**: ตรวจสอบว่ามีอยู่ใน opendaylight-inventory หรือไม่
+         *     ดึง connection-status จาก NETCONF topology
          *
          *     **Response:**
          *     - `previous_status`: สถานะก่อน sync
          *     - `current_status`: สถานะหลัง sync
          *     - `connection_status`: raw status จาก ODL (เช่น "connected", "not-mounted")
-         *     - `protocol`: NETCONF หรือ OPENFLOW
+         *     - `protocol`: NETCONF
          *
          *     **Error Codes:**
          *     - `404`: Device ไม่พบใน database
@@ -1871,6 +1850,41 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nbi/topology/lldp-bindings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Lldp Bindings */
+        get: operations["get_lldp_bindings_api_v1_nbi_topology_lldp_bindings_get"];
+        put?: never;
+        /** Create Or Update Lldp Binding */
+        post: operations["create_or_update_lldp_binding_api_v1_nbi_topology_lldp_bindings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nbi/topology/lldp-bindings/{chassis_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Lldp Binding */
+        delete: operations["remove_lldp_binding_api_v1_nbi_topology_lldp_bindings__chassis_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2693,6 +2707,10 @@ export interface paths {
          *     - top_bandwidth (Interface traffic In/Out — tag: component=network)
          *     - top_cpu (Device CPU utilization — tag: component=cpu)
          *     - top_memory (Device RAM utilization — tag: component=memory)
+         *
+         *     mode:
+         *     - current = จัดอันดับจากค่าปัจจุบันล่าสุดของแต่ละ interface (real-time)
+         *     - peak    = จัดอันดับจากค่าสูงสุดของ Total (In+Out) ย้อนหลังตาม window ชั่วโมง
          */
         get: operations["get_dashboard_top_metrics_api_v1_zabbix_dashboard_top_metrics_get"];
         put?: never;
@@ -2804,6 +2822,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/zabbix/dashboard/problems/time-ranges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Problem Time Ranges
+         * @description รายการช่วงเวลาที่ frontend ใช้แสดง filter บน dashboard
+         */
+        get: operations["get_problem_time_ranges_api_v1_zabbix_dashboard_problems_time_ranges_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/zabbix/dashboard/problems": {
         parameters: {
             query?: never;
@@ -2824,6 +2862,14 @@ export interface paths {
          *     - 5 = Disaster
          *
          *     Returns problems list + severity breakdown counts
+         *
+         *     time_range:
+         *     - all = ไม่กรองเวลา
+         *     - 1h = 1 ชั่วโมงล่าสุด
+         *     - 1d = 1 วันล่าสุด
+         *     - 1w = 1 สัปดาห์ล่าสุด
+         *     - 1mo = 1 เดือนล่าสุด (30 วัน)
+         *     - 1y = 1 ปีล่าสุด (365 วัน)
          */
         get: operations["get_problems_api_v1_zabbix_dashboard_problems_get"];
         put?: never;
@@ -2994,7 +3040,7 @@ export interface components {
          * AuditAction
          * @enum {string}
          */
-        AuditAction: "USER_REGISTER" | "USER_LOGIN" | "USER_LOGOUT" | "USER_CREATE" | "USER_UPDATE" | "USER_DELETE" | "ENABLE_TOTP" | "DISABLE_TOTP" | "REGISTER_PASSKEY" | "REMOVE_PASSKEY" | "PROMOTE_ROLE" | "DEMOTE_ROLE" | "PASSWORD_CHANGE" | "PASSWORD_RESET";
+        AuditAction: "USER_REGISTER" | "USER_LOGIN" | "USER_LOGOUT" | "USER_CREATE" | "USER_UPDATE" | "USER_DELETE" | "ENABLE_TOTP" | "DISABLE_TOTP" | "REGISTER_PASSKEY" | "REMOVE_PASSKEY" | "PROMOTE_ROLE" | "DEMOTE_ROLE" | "PASSWORD_CHANGE" | "PASSWORD_RESET" | "DEVICE_CREATE" | "DEVICE_UPDATE" | "DEVICE_DELETE" | "DEVICE_MOUNT" | "DEVICE_UNMOUNT" | "BACKUP_PROFILE_CREATE" | "BACKUP_PROFILE_UPDATE" | "BACKUP_PROFILE_DELETE" | "BACKUP_PROFILE_PAUSE" | "BACKUP_PROFILE_RESUME" | "BACKUP_TRIGGER_MANUAL" | "TEMPLATE_CREATE" | "TEMPLATE_UPDATE" | "TEMPLATE_DELETE" | "DEPLOYMENT_START" | "OS_FILE_UPLOAD" | "OS_FILE_DELETE" | "INTERFACE_UPDATE" | "SITE_CREATE" | "SITE_UPDATE" | "SITE_DELETE" | "POLICY_CREATE" | "POLICY_UPDATE" | "POLICY_DELETE" | "TAG_CREATE" | "TAG_UPDATE" | "TAG_DELETE";
         /** AuditLogCreate */
         AuditLogCreate: {
             /**
@@ -4707,6 +4753,26 @@ export interface components {
             /** Fetched At */
             fetched_at?: string | null;
         };
+        /** LldpBindingRequest */
+        LldpBindingRequest: {
+            /** Chassis Id */
+            chassis_id: string;
+            /** Node Id */
+            node_id: string;
+        };
+        /** LldpBindingResponse */
+        LldpBindingResponse: {
+            /** Id */
+            id: string;
+            /** Chassis Id Norm */
+            chassis_id_norm: string;
+            /** Node Id */
+            node_id: string;
+            /** Created At */
+            created_at: unknown;
+            /** Updated At */
+            updated_at: unknown;
+        };
         /** LocalSiteCreate */
         LocalSiteCreate: {
             /**
@@ -6206,7 +6272,7 @@ export interface components {
             message: string;
             /** Stats */
             stats: {
-                [key: string]: number;
+                [key: string]: unknown;
             };
         };
         /** TotpDisableRequest */
@@ -9114,28 +9180,6 @@ export interface operations {
             };
         };
     };
-    sync_openflow_devices_device_networks_sync_openflow_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
     get_interfaces_interfaces__get: {
         parameters: {
             query?: {
@@ -10770,6 +10814,90 @@ export interface operations {
             };
         };
     };
+    get_lldp_bindings_api_v1_nbi_topology_lldp_bindings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LldpBindingResponse"][];
+                };
+            };
+        };
+    };
+    create_or_update_lldp_binding_api_v1_nbi_topology_lldp_bindings_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LldpBindingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LldpBindingResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_lldp_binding_api_v1_nbi_topology_lldp_bindings__chassis_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chassis_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LldpBindingResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     add_arp_flood_flow_api_v1_nbi_devices__node_id__flows_connectivity_arp_flood_post: {
         parameters: {
             query?: never;
@@ -11912,7 +12040,10 @@ export interface operations {
     };
     get_dashboard_overview_api_v1_zabbix_dashboard_overview_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Time range filter: all, 1h, 1d, 1w, 1mo, 1y */
+                time_range?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -11928,6 +12059,15 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     get_dashboard_top_metrics_api_v1_zabbix_dashboard_top_metrics_get: {
@@ -11935,6 +12075,10 @@ export interface operations {
             query?: {
                 /** @description Number of top items to return */
                 limit?: number;
+                /** @description Bandwidth basis: current or peak */
+                mode?: string;
+                /** @description Lookback window (hours) for peak mode */
+                window?: number;
             };
             header?: never;
             path?: never;
@@ -12094,6 +12238,26 @@ export interface operations {
             };
         };
     };
+    get_problem_time_ranges_api_v1_zabbix_dashboard_problems_time_ranges_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     get_problems_api_v1_zabbix_dashboard_problems_get: {
         parameters: {
             query?: {
@@ -12101,8 +12265,14 @@ export interface operations {
                 severity_min?: number;
                 /** @description Filter by host ID */
                 host_id?: string | null;
-                /** @description Max problems to return */
+                /** @description Legacy max problems to return (used when page_size is not provided) */
                 limit?: number;
+                /** @description Page number (1-based) */
+                page?: number;
+                /** @description Items per page */
+                page_size?: number | null;
+                /** @description Time range filter: all, 1h, 1d, 1w, 1mo, 1y */
+                time_range?: string | null;
             };
             header?: never;
             path?: never;
