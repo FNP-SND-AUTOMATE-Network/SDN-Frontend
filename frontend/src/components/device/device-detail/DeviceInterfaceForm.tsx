@@ -67,7 +67,7 @@ const IPV4_ADDRESS_PATTERN = /^(\d{1,3}\.){3}\d{1,3}$/;
 function ipv4ToInt(ip: string): number {
     const octets = ip.split(".").map((part) => Number(part));
     if (octets.length !== 4 || octets.some((octet) => Number.isNaN(octet) || octet < 0 || octet > 255)) {
-        throw new Error(`IPv4 address ไม่ถูกต้อง: ${ip}`);
+        throw new Error(`IPv4 address is invalid: ${ip}`);
     }
     return (((octets[0] << 24) >>> 0) | (octets[1] << 16) | (octets[2] << 8) | octets[3]) >>> 0;
 }
@@ -300,7 +300,7 @@ export function DeviceInterfaceForm({
 
     // ==================== Build Intent List (shared between staging & direct modes) ====================
     const applyInlineValidationError = (message: string): boolean => {
-        if (message.includes("IPv4 Address") || message.includes("IPv4 is incomplete") || message.includes("IPv4 ไม่ครบ") || message.includes("IPv4 ไม่ถูกต้อง")) {
+        if (message.includes("IPv4 Address") || message.includes("IPv4 is incomplete") || message.includes("IPv4 is incomplete or invalid")) {
             setIpv4AddressError("IPv4 is incomplete or invalid (must be in x.x.x.x format)");
             return true;
         }
@@ -704,7 +704,7 @@ export function DeviceInterfaceForm({
                                             setSubnetMask(normalizeIpv4Mask(subnetMask));
                                             setSubnetMaskError("");
                                         } catch (error: any) {
-                                            setSubnetMaskError(error?.message || "Subnet Mask ไม่ถูกต้อง");
+                                            setSubnetMaskError(error?.message || "Subnet Mask is invalid");
                                         }
                                     }}
                                     fullWidth
