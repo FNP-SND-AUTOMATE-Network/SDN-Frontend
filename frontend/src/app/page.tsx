@@ -36,7 +36,7 @@ const FEATURES = [
   {
     icon: faShieldAlt,
     title: "Security & RBAC",
-    desc: "Role-based access control with Owner, Admin, Engineer, and Viewer roles — keeping every action safe and auditable.",
+    desc: "Role-based access control with Admin, Engineer, and Viewer roles — keeping every action safe and auditable.",
     gradient: "from-emerald-500 to-teal-500",
     iconBg: "bg-emerald-50",
     iconColor: "text-emerald-600",
@@ -44,7 +44,7 @@ const FEATURES = [
   },
   {
     icon: faChartLine,
-    title: "Analytics & Monitoring",
+    title: "Monitoring",
     desc: "Track live metrics and health data via Zabbix integration. Get instant alerts and trend graphs for your infrastructure.",
     gradient: "from-orange-500 to-amber-500",
     iconBg: "bg-orange-50",
@@ -62,7 +62,7 @@ const FEATURES = [
   },
   {
     icon: faDownload,
-    title: "Backup & Recovery",
+    title: "Backup",
     desc: "Schedule automatic config backups, compare diffs between versions, and restore devices with a single click.",
     gradient: "from-indigo-500 to-blue-600",
     iconBg: "bg-indigo-50",
@@ -90,10 +90,10 @@ const FEATURES = [
 ];
 
 const STATS = [
-  { value: "24/7", label: "Monitoring" },
+  { value: "24/7", label: "Service " },
   { value: "RBAC", label: "Access Control" },
-  { value: "Netconf", label: "Automation" },
-  { value: "Live", label: "Analytics" },
+  { value: "NetconF", label: "Configuration" },
+  { value: "Live", label: "Monitoring" },
 ];
 
 export default function HomePage() {
@@ -123,7 +123,9 @@ export default function HomePage() {
             </h1>
 
             <p className="text-lg md:text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
-              system for network management and automation on SDN Architecture
+              A Centralised Network Control and Management
+              System Base on SDN
+
             </p>
 
             {/* ── Stats Bar ─────────────────────────────── */}
@@ -193,7 +195,9 @@ export default function HomePage() {
 
           {/* ── Footer note ───────────────────────────────── */}
           <div className="text-center pb-10 text-gray-300 text-sm">
-            © {new Date().getFullYear()} CMNS‑SDN · FNP Network Management
+            © {new Date().getFullYear()} CMNS‑SDN · A Centralised Network Control and Management
+            System Base on SDN
+
           </div>
         </main>
       </div>
