@@ -161,7 +161,7 @@ async function apiRequest<T>(
 
     throw {
       status: 0,
-      message: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้",
+      message: "Unable to connect to server",
       data: error,
     };
   }
@@ -344,5 +344,5 @@ export function getErrorMessage(error: any): string {
     }
   }
 
-  return "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ";
+  return "Unknown error";
 }

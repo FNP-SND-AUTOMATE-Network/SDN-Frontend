@@ -1337,8 +1337,8 @@ export interface paths {
         };
         /**
          * Get Subnet Space Map
-         * @description Return visual space map of a subnet.
-         *     แสดง IP ทั้งหมดใน subnet พร้อมสถานะ (used/free/gateway/reserved)
+         * @description Return paginated visual space map of a subnet.
+         *     แสดง IP ใน subnet ทีละ page เพื่อรองรับ subnet ขนาดใหญ่ เช่น /18 (16k hosts)
          */
         get: operations["get_subnet_space_map_ipam_subnets__subnet_id__space_map_get"];
         put?: never;
@@ -5827,6 +5827,21 @@ export interface components {
             free: number;
             /** Addresses */
             addresses: components["schemas"]["SpaceMapEntry"][];
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 256
+             */
+            limit: number;
+            /**
+             * Has More
+             * @default false
+             */
+            has_more: boolean;
         };
         /**
          * StatusDevice
@@ -10190,7 +10205,12 @@ export interface operations {
     };
     get_subnet_space_map_ipam_subnets__subnet_id__space_map_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Offset (0-indexed) into the host list */
+                offset?: number;
+                /** @description Max addresses to return per page */
+                limit?: number;
+            };
             header?: never;
             path: {
                 subnet_id: string;
