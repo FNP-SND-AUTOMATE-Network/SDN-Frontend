@@ -34,30 +34,66 @@ export default function ConfigPreviewModal({
     onClose,
     device,
 }: ConfigPreviewModalProps) {
-    // Fetch live configuration from the device
-    const { data: liveData, isLoading, error: fetchError } = $api.useQuery(
+    const isOnline = device?.status === "ONLINE";
+
+    // 1. Fetch live configuration from the device (if ONLINE)
+    const { data: liveData, isLoading: isLoadingLive, error: fetchError } = $api.useQuery(
         "get",
         "/api/v1/nbi/devices/{device_id}/live-config",
         {
             params: { path: { device_id: device?.id || "" } },
         },
-        { enabled: isOpen && !!device?.id }
+        { enabled: isOpen && !!device?.id && isOnline }
+    );
+
+    // 2. Fetch backup history if OFFLINE
+    const { data: historyData, isLoading: isLoadingHistory } = $api.useQuery(
+        "get",
+        "/api/v1/devices/backups/device/{device_id}",
+        {
+            params: { path: { device_id: device?.id || "" } },
+        },
+        { enabled: isOpen && !!device?.id && !isOnline }
+    );
+
+    const latestRecordId = historyData && historyData.length > 0
+        ? historyData.find(record => record.status === "SUCCESS")?.id
+        : null;
+
+    // 3. Fetch the backup detail if OFFLINE
+    const { data: detailData, isLoading: isLoadingDetail } = $api.useQuery(
+        "get",
+        "/api/v1/devices/backups/{record_id}",
+        {
+            params: { path: { record_id: latestRecordId || "" } },
+        },
+        { enabled: isOpen && !!latestRecordId && !isOnline }
     );
 
     if (!isOpen || !device) return null;
 
-    const noConfigFound = !isLoading && (!liveData || !liveData.success || !liveData.config);
+    const isLoading = isOnline ? isLoadingLive : (isLoadingHistory || (!!latestRecordId && isLoadingDetail));
+    const noConfigFound = isOnline 
+        ? (!isLoading && (!liveData || !liveData.success || !liveData.config))
+        : (!isLoadingHistory && (!historyData || historyData.length === 0 || !latestRecordId));
 
     // Determine content text format
     const configContent = (() => {
-        if (!liveData?.config) return "";
-        return typeof liveData.config === 'string'
-            ? liveData.config
-            : JSON.stringify(liveData.config, null, 2);
+        if (isOnline) {
+            if (!liveData?.config) return "";
+            return typeof liveData.config === 'string'
+                ? liveData.config
+                : JSON.stringify(liveData.config, null, 2);
+        } else {
+            const detail = detailData as any;
+            if (!detail?.config_content) return "";
+            return typeof detail.config_content === 'string'
+                ? detail.config_content
+                : JSON.stringify(detail.config_content, null, 2);
+        }
     })();
 
     const getStatusChip = () => {
-        const isOnline = device.status === "ONLINE";
         return (
             <Chip
                 icon={<FontAwesomeIcon icon={faCircle} className="w-2 h-2 ml-1" />}
@@ -136,12 +172,20 @@ export default function ConfigPreviewModal({
                         alignItems: "center"
                     }}>
                         <Typography variant="subtitle2" color="primary.main" fontWeight={600}>
-                            Live Configuration Preview
+                            {isOnline ? "Live Configuration Preview" : "Backup Configuration (Offline)"}
                         </Typography>
-                        {liveData?.fetched_at && (
-                            <Typography variant="caption" color="text.secondary">
-                                {liveData.cached ? "Cached at" : "Fetched live at"}: {new Date(liveData.fetched_at).toLocaleString()}
-                            </Typography>
+                        {isOnline ? (
+                            liveData?.fetched_at && (
+                                <Typography variant="caption" color="text.secondary">
+                                    {liveData.cached ? "Cached at" : "Fetched live at"}: {new Date(liveData.fetched_at).toLocaleString()}
+                                </Typography>
+                            )
+                        ) : (
+                            (detailData as any)?.updated_at && (
+                                <Typography variant="caption" color="text.secondary">
+                                    Backup from: {new Date((detailData as any).updated_at).toLocaleString()}
+                                </Typography>
+                            )
                         )}
                     </Box>
 
@@ -164,7 +208,9 @@ export default function ConfigPreviewModal({
                             </Box>
                         ) : noConfigFound ? (
                             <Typography color="text.secondary" sx={{ fontStyle: "italic", textAlign: "center", mt: 4 }}>
-                                {fetchError ? (fetchError as any)?.message || "Error fetching live configuration." : liveData?.message || "No configuration content available from the device."}
+                                {isOnline 
+                                    ? (fetchError ? (fetchError as any)?.message || "Error fetching live configuration." : liveData?.message || "No configuration content available from the device.")
+                                    : "No configuration backup found for this offline device."}
                             </Typography>
                         ) : (
                             <Box
