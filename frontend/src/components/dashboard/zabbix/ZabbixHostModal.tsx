@@ -415,7 +415,6 @@ export function ZabbixHostModal({ open, onClose, hostId, hostName }: ZabbixHostM
                                                             <Typography
                                                                 variant="caption"
                                                                 fontWeight={600}
-                                                                fontFamily="monospace"
                                                                 sx={{
                                                                     wordBreak: "break-word",
                                                                     textAlign: isLongValue ? "left" : "right",
