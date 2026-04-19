@@ -20,6 +20,7 @@ import {
     Divider
 } from "@mui/material";
 import { Close } from "@mui/icons-material";
+import { formatDate } from "../device/device-detail/helpers";
 
 type DeviceNetwork = components["schemas"]["DeviceNetworkResponse"];
 
@@ -177,13 +178,13 @@ export default function ConfigPreviewModal({
                         {isOnline ? (
                             liveData?.fetched_at && (
                                 <Typography variant="caption" color="text.secondary">
-                                    {liveData.cached ? "Cached at" : "Fetched live at"}: {new Date(liveData.fetched_at).toLocaleString()}
+                                    {liveData.cached ? "Cached at" : "Fetched live at"}: {formatDate(liveData.fetched_at)}
                                 </Typography>
                             )
                         ) : (
                             (detailData as any)?.updated_at && (
                                 <Typography variant="caption" color="text.secondary">
-                                    Backup from: {new Date((detailData as any).updated_at).toLocaleString()}
+                                    Backup from: {formatDate((detailData as any).updated_at)}
                                 </Typography>
                             )
                         )}

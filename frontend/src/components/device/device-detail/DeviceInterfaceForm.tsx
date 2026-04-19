@@ -170,7 +170,7 @@ function normalizeIpv4Mask(value: string): string {
         return trimmed;
     }
 
-    throw new Error("Subnet Mask ไม่ถูกต้อง (รองรับ Prefix 16-30 เช่น 24 หรือ Subnet Mask เช่น 255.255.255.0)");
+    throw new Error("Subnet Mask incorrect (must be valid mask like 255.255.255.0 or /24)");
 }
 
 function normalizeMaskForCompare(value: string): string {
