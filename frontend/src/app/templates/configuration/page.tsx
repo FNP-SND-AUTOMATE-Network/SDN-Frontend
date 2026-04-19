@@ -34,7 +34,7 @@ import { useSnackbar } from "@/hooks/useSnackbar";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 
 export default function TemplatesConfigurationPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
   const { snackbar, showSuccess, showError, hideSnackbar } = useSnackbar();
 
@@ -209,15 +209,17 @@ export default function TemplatesConfigurationPage() {
 
           <Box flex={1} />
 
-          <Button
-            variant="contained"
-            color="success"
-            startIcon={<FontAwesomeIcon icon={faPlus} />}
-            onClick={handleOpenNewTemplate}
-            sx={{ textTransform: "none", boxShadow: "none", whiteSpace: "nowrap", borderRadius: 2 }}
-          >
-            New Template
-          </Button>
+          {user?.role !== "viewer" && (
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={<FontAwesomeIcon icon={faPlus} />}
+              onClick={handleOpenNewTemplate}
+              sx={{ textTransform: "none", boxShadow: "none", whiteSpace: "nowrap", borderRadius: 2 }}
+            >
+              New Template
+            </Button>
+          )}
         </Stack>
 
         {/* Content */}
@@ -232,14 +234,16 @@ export default function TemplatesConfigurationPage() {
             <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
               No templates found
             </Typography>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleOpenNewTemplate}
-              sx={{ textTransform: "none" }}
-            >
-              Create your first template
-            </Button>
+            {user?.role !== "viewer" && (
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleOpenNewTemplate}
+                sx={{ textTransform: "none" }}
+              >
+                Create your first template
+              </Button>
+            )}
           </Box>
         ) : (
           <>

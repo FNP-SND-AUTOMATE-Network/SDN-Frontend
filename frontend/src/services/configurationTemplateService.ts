@@ -151,6 +151,7 @@ class ConfigurationTemplateService {
 
     const response = await fetch(`${API_BASE_URL}/configuration-templates/`, {
       method: "POST",
+      credentials: "include",
       headers: {
         
         // Don't set Content-Type - let browser set it with boundary for FormData
@@ -234,6 +235,7 @@ class ConfigurationTemplateService {
       `${API_BASE_URL}/configuration-templates/${templateId}/upload`,
       {
         method: "POST",
+        credentials: "include",
         headers: {
           
           // Don't set Content-Type - let browser set it with boundary for FormData

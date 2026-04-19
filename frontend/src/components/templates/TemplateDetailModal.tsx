@@ -29,6 +29,7 @@ import {
     Stack,
     Divider,
 } from "@mui/material";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TemplateDetailModalProps {
     isOpen: boolean;
@@ -49,6 +50,7 @@ export default function TemplateDetailModal({
     isDeleting = false,
     isLoadingContent = false,
 }: TemplateDetailModalProps) {
+    const { user } = useAuth();
     const [copied, setCopied] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -230,46 +232,48 @@ export default function TemplateDetailModal({
 
             {/* Footer Actions */}
             <DialogActions sx={{ px: 3, py: 2, bgcolor: "grey.50", borderTop: 1, borderColor: "divider", justifyContent: "space-between" }}>
-                {showDeleteConfirm ? (
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                        <Typography variant="body2" color="error.main" fontWeight="medium">
-                            Are you sure you want to delete?
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                            <Button
-                                variant="contained"
-                                color="error"
-                                size="small"
-                                onClick={handleConfirmDelete}
-                                disabled={isDeleting}
-                                startIcon={isDeleting ? <FontAwesomeIcon icon={faSpinner} spin /> : null}
-                                sx={{ textTransform: "none", boxShadow: "none" }}
-                            >
-                                Yes, Delete
-                            </Button>
-                            <Button
-                                variant="outlined"
-                                color="inherit"
-                                size="small"
-                                onClick={() => setShowDeleteConfirm(false)}
-                                disabled={isDeleting}
-                                sx={{ textTransform: "none" }}
-                            >
-                                Cancel
-                            </Button>
-                        </Stack>
-                    </Box>
-                ) : (
-                    <Button
-                        variant="text"
-                        color="error"
-                        onClick={handleDeleteClick}
-                        startIcon={<FontAwesomeIcon icon={faTrash} />}
-                        sx={{ textTransform: "none" }}
-                    >
-                        Delete
-                    </Button>
-                )}
+                {user?.role !== "viewer" ? (
+                    showDeleteConfirm ? (
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                            <Typography variant="body2" color="error.main" fontWeight="medium">
+                                Are you sure you want to delete?
+                            </Typography>
+                            <Stack direction="row" spacing={1}>
+                                <Button
+                                    variant="contained"
+                                    color="error"
+                                    size="small"
+                                    onClick={handleConfirmDelete}
+                                    disabled={isDeleting}
+                                    startIcon={isDeleting ? <FontAwesomeIcon icon={faSpinner} spin /> : null}
+                                    sx={{ textTransform: "none", boxShadow: "none" }}
+                                >
+                                    Yes, Delete
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    color="inherit"
+                                    size="small"
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    disabled={isDeleting}
+                                    sx={{ textTransform: "none" }}
+                                >
+                                    Cancel
+                                </Button>
+                            </Stack>
+                        </Box>
+                    ) : (
+                        <Button
+                            variant="text"
+                            color="error"
+                            onClick={handleDeleteClick}
+                            startIcon={<FontAwesomeIcon icon={faTrash} />}
+                            sx={{ textTransform: "none" }}
+                        >
+                            Delete
+                        </Button>
+                    )
+                ) : <Box />}
 
                 <Stack direction="row" spacing={1.5}>
                     <Button
@@ -280,15 +284,17 @@ export default function TemplateDetailModal({
                     >
                         Close
                     </Button>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => onEdit(template)}
-                        startIcon={<FontAwesomeIcon icon={faEdit} />}
-                        sx={{ textTransform: "none", boxShadow: "none" }}
-                    >
-                        Edit Template
-                    </Button>
+                    {user?.role !== "viewer" && (
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() => onEdit(template)}
+                            startIcon={<FontAwesomeIcon icon={faEdit} />}
+                            sx={{ textTransform: "none", boxShadow: "none" }}
+                        >
+                            Edit Template
+                        </Button>
+                    )}
                 </Stack>
             </DialogActions>
         </Dialog>
