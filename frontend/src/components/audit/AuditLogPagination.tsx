@@ -25,14 +25,14 @@ export default function AuditLogPagination({
             disabled={loading}
             className="bg-primary-600 text-white px-6 py-2 rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sf-pro-text"
           >
-            {loading ? "กำลังโหลด..." : "โหลดเพิ่มเติม"}
+            {loading ? "Loading..." : "Load More"}
           </button>
         </div>
       )}
 
       {/* Pagination Info */}
       <div className="text-center text-sm text-gray-600 font-sf-pro-text">
-        แสดง {auditLogsLength} จาก {total} รายการ
+        {auditLogsLength} / {total} items
       </div>
     </>
   );

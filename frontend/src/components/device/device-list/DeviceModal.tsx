@@ -674,13 +674,14 @@ export default function DeviceModal({
                         </Select>
                       </Box>
                       <Box sx={{ flex: 1 }}>
-                        <Typography variant="body2" fontWeight={500} color="text.primary" mb={0.5}>OS Type</Typography>
+                        <Typography variant="body2" fontWeight={500} color="text.primary" mb={0.5}>OS Type <span style={{ color: "red" }}>*</span></Typography>
                         <Select
                           name="os_id"
                           value={data.os_id || ""}
                           onChange={handleChange}
                           disabled={isLoading}
                           sx={{ width: "100%" }}
+                          required
                           displayEmpty
                         >
                           <MenuItem value="" disabled hidden>Select OS</MenuItem>

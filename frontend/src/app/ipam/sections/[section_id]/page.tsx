@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchClient, $api } from "@/lib/apiv2/fetch";
@@ -8,6 +8,7 @@ import { components } from "@/lib/apiv2/schema";
 import IPAMTreeSidebar from "@/components/ipam/IPAMTreeSidebar";
 import SubnetsTable from "@/components/ipam/SubnetsTable";
 import IPAddressesTable from "@/components/ipam/IPAddressesTable";
+import IPSpaceMap from "@/components/ipam/IPSpaceMap";
 import SectionFormModal from "@/components/ipam/SectionFormModal";
 import SubnetFormModal from "@/components/ipam/SubnetFormModal";
 import DeleteConfirmModal from "@/components/ipam/DeleteConfirmModal";
@@ -31,6 +32,8 @@ import {
     ListItemButton,
     ListItemIcon,
     ListItemText,
+    Menu,
+    MenuItem,
 } from "@mui/material";
 import {
     ArrowBack as ArrowBackIcon,
@@ -39,6 +42,7 @@ import {
     Delete as DeleteIcon,
     Folder as FolderIcon,
     AccountTree as AccountTreeIcon,
+    MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
 
 type ViewType = "section" | "subnet";
@@ -64,6 +68,7 @@ export default function SectionDetailPage() {
     const [deleteType, setDeleteType] = useState<"section" | "subnet">("section");
     const [deletingItem, setDeletingItem] = useState<SectionResponse | SubnetResponse | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
 
     // --- React Query Data Fetching ---
 
@@ -92,6 +97,7 @@ export default function SectionDetailPage() {
     const currentSection = allSections.find((s) => s.id === currentViewId);
     const subSections = allSections.filter((s) => s.master_section === currentViewId);
     const parentSubnets = subnets.filter((s: any) => !s.master_subnet_id || s.master_subnet_id === "");
+    const isChildSection = !!currentSection?.master_section;
 
     // For subnet view
     const {
@@ -127,13 +133,51 @@ export default function SectionDetailPage() {
         { enabled: isAuthenticated && viewType === "subnet" }
     );
 
+    // Fetch space-map to get proper status for each IP
+    const { data: spaceMapData } = $api.useQuery(
+        "get",
+        "/ipam/subnets/{subnet_id}/space-map",
+        { params: { path: { subnet_id: currentViewId } } },
+        { enabled: isAuthenticated && viewType === "subnet" }
+    );
+
     const subnetDetail = subnetDetailData as any;
-    const subnetAddresses = subnetAddressesData?.addresses || [];
+    const rawSubnetAddresses = subnetAddressesData?.addresses || [];
     const childSubnets = childSubnetsData?.subnets || [];
     const subnetUsage = subnetUsageData as any;
+
+    // Build a status map from space-map data (IP -> status string)
+    const statusMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        if (spaceMapData?.addresses) {
+            for (const entry of spaceMapData.addresses) {
+                map[entry.ip] = entry.status;
+            }
+        }
+        return map;
+    }, [spaceMapData]);
+
+    // Enrich addresses with status from space-map
+    const subnetAddresses = useMemo(() => {
+        return rawSubnetAddresses.map((addr: any) => ({
+            ...addr,
+            _status: statusMap[addr.ip] || null,
+        }));
+    }, [rawSubnetAddresses, statusMap]);
     
-    const usagePercent = parseFloat(subnetUsage?.Used_percent ?? subnetUsage?.used_percent ?? 0) || 0;
+    const usedPercent = parseFloat(subnetUsage?.Used_percent ?? subnetUsage?.used_percent ?? 0) || 0;
     const freePercent = parseFloat(subnetUsage?.freehosts_percent ?? 0) || 0;
+    const offlinePercent = parseFloat(subnetUsage?.Offline_percent ?? subnetUsage?.offline_percent ?? 0) || 0;
+    const reservedPercent = parseFloat(subnetUsage?.Reserved_percent ?? subnetUsage?.reserved_percent ?? 0) || 0;
+
+    const circumference = 2 * Math.PI * 40;
+    const usageSegments = [
+        { label: "Used",     pct: usedPercent,     color: "#f59e0b" },
+        { label: "Reserved", pct: reservedPercent,  color: "#6366f1" },
+        { label: "Offline",  pct: offlinePercent,   color: "#94a3b8" },
+        { label: "Free",     pct: freePercent,      color: "#22c55e" },
+    ].filter(s => s.pct > 0);
+    if (usageSegments.length === 0) usageSegments.push({ label: "Free", pct: 100, color: "#22c55e" });
 
     const isLoading = viewType === "section" ? isLoadingSection : isLoadingSubnetDetail;
     const error = viewType === "section" ? sectionError : subnetDetailError;
@@ -291,19 +335,36 @@ export default function SectionDetailPage() {
                                             </Box>
                                         </Box>
                                     </Box>
-                                    <Box sx={{ display: "flex", gap: 1 }}>
-                                        <Button variant="outlined" startIcon={<EditIcon />} onClick={handleEditSection}>
-                                            Edit
-                                        </Button>
-                                        <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDeleteSectionClick}>
-                                            Delete
-                                        </Button>
-                                        <Button variant="outlined" startIcon={<AddIcon />} onClick={handleAddSection}>
-                                            Add Section
-                                        </Button>
-                                        <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddSubnet}>
+                                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                                        <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddSubnet} sx={{ textTransform: "none" }}>
                                             Add Subnet
                                         </Button>
+                                        <IconButton onClick={(e) => setMenuAnchorEl(e.currentTarget)} sx={{ border: "1px solid", borderColor: "divider" }}>
+                                            <MoreVertIcon />
+                                        </IconButton>
+                                        <Menu
+                                            anchorEl={menuAnchorEl}
+                                            open={Boolean(menuAnchorEl)}
+                                            onClose={() => setMenuAnchorEl(null)}
+                                            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                                            transformOrigin={{ vertical: "top", horizontal: "right" }}
+                                        >
+                                            <MenuItem onClick={() => { setMenuAnchorEl(null); handleEditSection(); }}>
+                                                <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+                                                Edit Section
+                                            </MenuItem>
+                                            {!isChildSection && (
+                                                <MenuItem onClick={() => { setMenuAnchorEl(null); handleAddSection(); }}>
+                                                    <ListItemIcon><AddIcon fontSize="small" /></ListItemIcon>
+                                                    Add Sub-section
+                                                </MenuItem>
+                                            )}
+                                            <Divider />
+                                            <MenuItem onClick={() => { setMenuAnchorEl(null); handleDeleteSectionClick(); }} sx={{ color: "error.main" }}>
+                                                <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+                                                Delete Section
+                                            </MenuItem>
+                                        </Menu>
                                     </Box>
                                 </Box>
 
@@ -384,12 +445,6 @@ export default function SectionDetailPage() {
                                                     </Box>
                                                 ) : null;
                                             })()}
-                                            {subnetDetail?.vlan_id && (
-                                                <Box>
-                                                    <Typography variant="body2" color="grey.500" gutterBottom>VLAN</Typography>
-                                                    <Typography variant="body2">{subnetDetail.vlan_id}</Typography>
-                                                </Box>
-                                            )}
                                         </Box>
                                     </Card>
 
@@ -400,22 +455,36 @@ export default function SectionDetailPage() {
                                             <Box sx={{ position: "relative", width: 200, height: 200 }}>
                                                 <svg viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)", width: "100%", height: "100%" }}>
                                                     <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="20" />
-                                                    <circle
-                                                        cx="50"
-                                                        cy="50"
-                                                        r="40"
-                                                        fill="none"
-                                                        stroke="#10b981"
-                                                        strokeWidth="20"
-                                                        strokeDasharray={`${usagePercent * 2.51} 251`}
-                                                        style={{ transition: "stroke-dasharray 0.5s ease" }}
-                                                    />
+                                                    {(() => {
+                                                        let offset = 0;
+                                                        return usageSegments.map((seg) => {
+                                                            const dashLen = (seg.pct / 100) * circumference;
+                                                            const el = (
+                                                                <circle key={seg.label} cx="50" cy="50" r="40" fill="none" stroke={seg.color} strokeWidth="20" strokeDasharray={`${dashLen} ${circumference - dashLen}`} strokeDashoffset={-offset} style={{ transition: "stroke-dasharray 0.5s ease, stroke-dashoffset 0.5s ease" }} />
+                                                            );
+                                                            offset += dashLen;
+                                                            return el;
+                                                        });
+                                                    })()}
                                                 </svg>
                                                 <Box sx={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                                                    <Typography variant="h4" fontWeight="bold">{usagePercent.toFixed(1)}%</Typography>
+                                                    <Typography variant="h4" fontWeight="bold">{usedPercent.toFixed(1)}%</Typography>
                                                     <Typography variant="body2" color="text.secondary">Used</Typography>
                                                 </Box>
                                             </Box>
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 2, flexWrap: "wrap" }}>
+                                            {[
+                                                { label: "Used", color: "#f59e0b" },
+                                                { label: "Reserved", color: "#6366f1" },
+                                                { label: "Offline", color: "#94a3b8" },
+                                                { label: "Free", color: "#22c55e" },
+                                            ].map((item) => (
+                                                <Box key={item.label} sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                                    <Box sx={{ width: 12, height: 12, bgcolor: item.color, borderRadius: 0.5 }} />
+                                                    <Typography variant="caption">{item.label}</Typography>
+                                                </Box>
+                                            ))}
                                         </Box>
                                     </Card>
                                 </Box>
@@ -451,6 +520,11 @@ export default function SectionDetailPage() {
                                         </Paper>
                                     </Box>
                                 )}
+
+                                {/* Space Map Visuals */}
+                                <Box>
+                                    <IPSpaceMap subnetId={currentViewId} />
+                                </Box>
 
                                 {/* IP Addresses */}
                                 <Box>

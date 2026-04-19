@@ -51,7 +51,6 @@ export default function SubnetFormModal({
     const [mask, setMask] = useState("");
     const [description, setDescription] = useState("");
     const [selectedSectionId, setSelectedSectionId] = useState(sectionId);
-    const [vlanId, setVlanId] = useState("");
 
     const isEditMode = !!subnet;
 
@@ -62,13 +61,11 @@ export default function SubnetFormModal({
                 setMask(subnet.mask || "");
                 setDescription(subnet.description || "");
                 setSelectedSectionId((subnet as any).section_id || sectionId);
-                setVlanId(subnet.vlan_id || "");
             } else {
                 setSubnetAddress("");
                 setMask("");
                 setDescription("");
                 setSelectedSectionId(sectionId);
-                setVlanId("");
             }
             setError(null);
         }
@@ -90,9 +87,6 @@ export default function SubnetFormModal({
 
             if (description.trim()) {
                 subnetData.description = description.trim();
-            }
-            if (vlanId.trim()) {
-                subnetData.vlan_id = vlanId.trim();
             }
             if (parentSubnetId) {
                 subnetData.master_subnet_id = parentSubnetId;
@@ -141,7 +135,6 @@ export default function SubnetFormModal({
                     {error && (
                         <Alert severity="error">{error}</Alert>
                     )}
-
                     <Box sx={{ display: "flex", gap: 2 }}>
                         <TextField
                             label="Subnet"
@@ -151,15 +144,17 @@ export default function SubnetFormModal({
                             fullWidth
                             placeholder="e.g. 10.0.0.0"
                             disabled={isLoading}
+                            InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: 'error.main' } } }}
                         />
                         <TextField
-                            label="Mask"
+                            label="Prefix"
                             value={mask}
                             onChange={(e) => setMask(e.target.value)}
                             required
                             fullWidth
                             placeholder="e.g. 24"
                             disabled={isLoading}
+                            InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: 'error.main' } } }}
                         />
                     </Box>
 
@@ -182,6 +177,7 @@ export default function SubnetFormModal({
                         required
                         fullWidth
                         disabled={isLoading}
+                        InputLabelProps={{ sx: { '& .MuiFormLabel-asterisk': { color: 'error.main' } } }}
                     >
                         {allSections.length === 0 ? (
                             <MenuItem value={sectionId}>Current Section</MenuItem>
@@ -193,15 +189,6 @@ export default function SubnetFormModal({
                             ))
                         )}
                     </TextField>
-
-                    <TextField
-                        label="VLAN ID"
-                        value={vlanId}
-                        onChange={(e) => setVlanId(e.target.value)}
-                        fullWidth
-                        placeholder="Enter VLAN ID (optional)"
-                        disabled={isLoading}
-                    />
 
                     {parentSubnetId && (
                         <Alert severity="info">

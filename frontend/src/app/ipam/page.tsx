@@ -11,6 +11,10 @@ import {
     IconButton,
     Alert,
     Collapse,
+    Menu,
+    MenuItem,
+    ListItemIcon,
+    Divider,
 } from "@mui/material";
 import {
     Folder as FolderIcon,
@@ -21,6 +25,7 @@ import {
     Add as AddIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
+    MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
 
 import { PageLayout } from "@/components/layout/PageLayout";
@@ -44,6 +49,8 @@ export default function IPAMPage() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deletingSection, setDeletingSection] = useState<SectionResponse | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+    const [menuSection, setMenuSection] = useState<SectionResponse | null>(null);
 
     // React Query for sections
     const { 
@@ -188,23 +195,18 @@ export default function IPAMPage() {
                         </Typography>
                     )}
                     
-                    {/* Action buttons */}
-                    <Box className="action-buttons" sx={{ display: "flex", gap: 0.5, opacity: 0, transition: "opacity 0.2s" }}>
+                    {/* Action buttons - MoreVert */}
+                    <Box className="action-buttons" sx={{ opacity: 0, transition: "opacity 0.2s" }}>
                         <IconButton
                             size="small"
-                            onClick={(e) => handleEditSection(section, e)}
-                            title="Edit Section"
-                            color="info"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                setMenuAnchorEl(e.currentTarget);
+                                setMenuSection(section);
+                            }}
                         >
-                            <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                            size="small"
-                            onClick={(e) => handleDeleteClick(section, e)}
-                            title="Delete Section"
-                            color="error"
-                        >
-                            <DeleteIcon fontSize="small" />
+                            <MoreVertIcon fontSize="small" />
                         </IconButton>
                     </Box>
                 </Box>
@@ -330,6 +332,32 @@ export default function IPAMPage() {
                         </Paper>
                     </Box>
                 )}
+                {/* Context Menu for Sections */}
+                <Menu
+                    anchorEl={menuAnchorEl}
+                    open={Boolean(menuAnchorEl)}
+                    onClose={() => { setMenuAnchorEl(null); setMenuSection(null); }}
+                    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                    transformOrigin={{ vertical: "top", horizontal: "right" }}
+                >
+                    <MenuItem onClick={() => {
+                        if (menuSection) handleEditSection(menuSection, {} as any);
+                        setMenuAnchorEl(null);
+                        setMenuSection(null);
+                    }}>
+                        <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+                        Edit Section
+                    </MenuItem>
+                    <Divider />
+                    <MenuItem onClick={() => {
+                        if (menuSection) handleDeleteClick(menuSection, {} as any);
+                        setMenuAnchorEl(null);
+                        setMenuSection(null);
+                    }} sx={{ color: "error.main" }}>
+                        <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+                        Delete Section
+                    </MenuItem>
+                </Menu>
 
                 {/* Section Form Modal */}
                 <SectionFormModal

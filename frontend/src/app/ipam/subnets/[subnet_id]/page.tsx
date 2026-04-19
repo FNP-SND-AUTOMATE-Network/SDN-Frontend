@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchClient, $api } from "@/lib/apiv2/fetch";
 import { components } from "@/lib/apiv2/schema";
 import IPAddressesTable from "@/components/ipam/IPAddressesTable";
+import IPSpaceMap from "@/components/ipam/IPSpaceMap";
 import SubnetFormModal from "@/components/ipam/SubnetFormModal";
 import IPAddressFormModal from "@/components/ipam/IPAddressFormModal";
 import DeleteConfirmModal from "@/components/ipam/DeleteConfirmModal";
@@ -105,10 +106,37 @@ export default function SubnetDetailPage() {
         { enabled: isAuthenticated }
     );
 
+    // Fetch space-map to get proper status for each IP
+    const { data: spaceMapData } = $api.useQuery(
+        "get",
+        "/ipam/subnets/{subnet_id}/space-map",
+        { params: { path: { subnet_id: subnetId } } },
+        { enabled: isAuthenticated }
+    );
+
     const subnetDetail = subnetDetailData as any;
-    const addresses = subnetAddressesData?.addresses || [];
+    const rawAddresses = subnetAddressesData?.addresses || [];
     const childSubnets = childSubnetsData?.subnets || [];
     const usage = subnetUsageData as any;
+
+    // Build a status map from space-map data (IP -> status string)
+    const statusMap = React.useMemo(() => {
+        const map: Record<string, string> = {};
+        if (spaceMapData?.addresses) {
+            for (const entry of spaceMapData.addresses) {
+                map[entry.ip] = entry.status;
+            }
+        }
+        return map;
+    }, [spaceMapData]);
+
+    // Enrich addresses with status from space-map
+    const addresses = React.useMemo(() => {
+        return rawAddresses.map((addr: any) => ({
+            ...addr,
+            _status: statusMap[addr.ip] || null,
+        }));
+    }, [rawAddresses, statusMap]);
     
     // Handlers
     const handleAddChildSubnet = () => {
@@ -189,8 +217,22 @@ export default function SubnetDetailPage() {
         }
     };
 
-    const usagePercent = parseFloat(usage?.Used_percent ?? usage?.used_percent ?? 0) || 0;
+    const usedPercent = parseFloat(usage?.Used_percent ?? usage?.used_percent ?? 0) || 0;
     const freePercent = parseFloat(usage?.freehosts_percent ?? 0) || 0;
+    const offlinePercent = parseFloat(usage?.Offline_percent ?? usage?.offline_percent ?? 0) || 0;
+    const reservedPercent = parseFloat(usage?.Reserved_percent ?? usage?.reserved_percent ?? 0) || 0;
+
+    // Build donut segments for the SVG
+    const circumference = 2 * Math.PI * 40; // r=40
+    const segments = [
+        { label: "Used",     pct: usedPercent,     color: "#f59e0b" },
+        { label: "Reserved", pct: reservedPercent,  color: "#6366f1" },
+        { label: "Offline",  pct: offlinePercent,   color: "#94a3b8" },
+        { label: "Free",     pct: freePercent,      color: "#22c55e" },
+    ].filter(s => s.pct > 0);
+
+    // If no segments at all, show full free
+    if (segments.length === 0) segments.push({ label: "Free", pct: 100, color: "#22c55e" });
 
     return (
         <ProtectedRoute>
@@ -294,13 +336,6 @@ export default function SubnetDetailPage() {
                                             </Box>
                                         ) : null;
                                     })()}
-
-                                    {subnetDetail?.vlan_id && (
-                                        <Box>
-                                            <Typography variant="body2" color="grey.500" gutterBottom>VLAN</Typography>
-                                            <Typography variant="body2">{subnetDetail.vlan_id}</Typography>
-                                        </Box>
-                                    )}
                                 </Box>
                             </Card>
 
@@ -313,33 +348,57 @@ export default function SubnetDetailPage() {
                                         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: 250 }}>
                                             <Box sx={{ position: "relative", width: 220, height: 220 }}>
                                                 <svg viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)", width: "100%", height: "100%" }}>
+                                                    {/* Background circle */}
                                                     <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="20" />
-                                                    <circle
-                                                        cx="50"
-                                                        cy="50"
-                                                        r="40"
-                                                        fill="none"
-                                                        stroke="#10b981"
-                                                        strokeWidth="20"
-                                                        strokeDasharray={`${usagePercent * 2.51} 251`}
-                                                        style={{ transition: "stroke-dasharray 0.5s ease" }}
-                                                    />
+                                                    {/* Render each segment */}
+                                                    {(() => {
+                                                        let offset = 0;
+                                                        return segments.map((seg, i) => {
+                                                            const dashLen = (seg.pct / 100) * circumference;
+                                                            const el = (
+                                                                <circle
+                                                                    key={seg.label}
+                                                                    cx="50" cy="50" r="40"
+                                                                    fill="none"
+                                                                    stroke={seg.color}
+                                                                    strokeWidth="20"
+                                                                    strokeDasharray={`${dashLen} ${circumference - dashLen}`}
+                                                                    strokeDashoffset={-offset}
+                                                                    style={{ transition: "stroke-dasharray 0.5s ease, stroke-dashoffset 0.5s ease" }}
+                                                                />
+                                                            );
+                                                            offset += dashLen;
+                                                            return el;
+                                                        });
+                                                    })()}
                                                 </svg>
                                                 <Box sx={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                                                    <Typography variant="h3" fontWeight="bold">{usagePercent.toFixed(1)}%</Typography>
-                                                    <Typography variant="body1" color="text.secondary">Used</Typography>
+                                                    <Typography variant="h3" fontWeight="bold">{usedPercent.toFixed(1)}%</Typography>
+                                                    <Typography variant="body2" color="text.secondary">Used</Typography>
                                                 </Box>
                                             </Box>
                                         </Box>
+                                        {/* Legend */}
+                                        <Box sx={{ display: "flex", justifyContent: "center", gap: 3, mt: 2, flexWrap: "wrap" }}>
+                                            {[
+                                                { label: "Used",     color: "#f59e0b", value: parseFloat(usage?.used ?? 0) || 0 },
+                                                { label: "Reserved", color: "#6366f1", value: reservedPercent > 0 ? reservedPercent : 0 },
+                                                { label: "Offline",  color: "#94a3b8", value: offlinePercent > 0 ? offlinePercent : 0 },
+                                                { label: "Free",     color: "#22c55e", value: parseFloat(usage?.freehosts ?? 0) || 0 },
+                                            ].map((item) => (
+                                                <Box key={item.label} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                    <Box sx={{ width: 14, height: 14, bgcolor: item.color, borderRadius: 0.5 }} />
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {item.label} {item.value > 0 ? `(${typeof item.value === 'number' && item.value % 1 !== 0 ? item.value.toFixed(1) + '%' : item.value})` : ''}
+                                                    </Typography>
+                                                </Box>
+                                            ))}
+                                        </Box>
+                                        {/* Stats row */}
                                         <Box sx={{ display: "flex", justifyContent: "center", gap: 3, mt: 2 }}>
-                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                                <Box sx={{ width: 16, height: 16, bgcolor: "#10b981", borderRadius: 1 }} />
-                                                <Typography variant="body2" color="text.secondary">Used</Typography>
-                                            </Box>
-                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                                <Box sx={{ width: 16, height: 16, bgcolor: "#e5e7eb", borderRadius: 1 }} />
-                                                <Typography variant="body2" color="text.secondary">Free</Typography>
-                                            </Box>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Total hosts: {parseFloat(usage?.maxhosts ?? 0) || 0}
+                                            </Typography>
                                         </Box>
                                     </Card>
 
@@ -422,9 +481,9 @@ export default function SubnetDetailPage() {
                                     </Box>
                                 </Box>
                             ) : (
-                                <Paper elevation={0} sx={{ p: 6, textAlign: "center", border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
-                                    <Typography color="text.secondary">Space map view coming soon...</Typography>
-                                </Paper>
+                                <Box>
+                                    <IPSpaceMap subnetId={subnetId} />
+                                </Box>
                             )}
                         </Box>
                     )}
