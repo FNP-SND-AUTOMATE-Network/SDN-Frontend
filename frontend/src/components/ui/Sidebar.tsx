@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHome,
@@ -115,6 +116,8 @@ const menuItems: MenuItem[] = [
 ];
 
 export const Sidebar: React.FC = () => {
+  const { user } = useAuth();
+
   // Lazy initialization - loads from localStorage synchronously before first render
   const [expandedItems, setExpandedItems] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
@@ -294,7 +297,9 @@ export const Sidebar: React.FC = () => {
     <aside className="fixed top-16 left-0 w-64 bg-white shadow-sm border-r border-primary-100 h-[calc(100vh-4rem)] z-40 overflow-y-auto hidden lg:block">
       <div className="p-4">
         <nav className="space-y-1">
-          {menuItems.map((item) => renderMenuItem(item))}
+          {menuItems
+            .filter(item => !(item.label === "Audit Log" && user?.role === "viewer"))
+            .map((item) => renderMenuItem(item))}
         </nav>
       </div>
     </aside>
