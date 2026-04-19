@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { fetchClient } from "@/lib/apiv2/fetch";
 import { components } from "@/lib/apiv2/schema";
 import {
@@ -8,7 +8,6 @@ import {
     Typography,
     IconButton,
     CircularProgress,
-    Divider
 } from "@mui/material";
 import {
     Folder as FolderIcon,
@@ -16,6 +15,7 @@ import {
     AccountTree as AccountTreeIcon,
     KeyboardArrowRight as KeyboardArrowRightIcon,
     KeyboardArrowDown as KeyboardArrowDownIcon,
+    Lan as LanIcon,
 } from "@mui/icons-material";
 
 type SectionResponse = components["schemas"]["SectionResponse"];
@@ -52,9 +52,10 @@ export default function IPAMTreeSidebar({
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
     const [subnetChildren, setSubnetChildren] = useState<Record<string, SubnetResponse[]>>({});
     const [loadingSubnets, setLoadingSubnets] = useState<Set<string>>(new Set());
+    const hasInitialized = useRef(false);
 
-    // Find all ancestor section IDs for expanding path to current section
-    const getAncestorPath = (sectionId: string): string[] => {
+    // Find all ancestor section IDs for a given id
+    const getAncestorSectionPath = useCallback((sectionId: string): string[] => {
         const path: string[] = [sectionId];
         let current = sections.find((s) => s.id === sectionId);
         while (current?.master_section) {
@@ -62,30 +63,44 @@ export default function IPAMTreeSidebar({
             current = sections.find((s) => s.id === current?.master_section);
         }
         return path;
-    };
+    }, [sections]);
 
-    // Auto-expand path to current section on mount
-    useEffect(() => {
-        if (currentSectionId && sections.length > 0) {
-            const pathToExpand = getAncestorPath(currentSectionId);
-            setExpandedNodes(new Set(pathToExpand));
+    // Find the section that owns a subnet
+    const findSectionForSubnet = useCallback((subnetId: string): string | null => {
+        const subnet = subnets.find(s => s.id === subnetId);
+        if (subnet) return (subnet as any).section_id || null;
+        // Also check in fetched children
+        for (const [parentId, children] of Object.entries(subnetChildren)) {
+            if (children.find(c => c.id === subnetId)) {
+                const parentSubnet = subnets.find(s => s.id === parentId);
+                if (parentSubnet) return (parentSubnet as any).section_id || null;
+            }
         }
-    }, [currentSectionId, sections]);
+        return null;
+    }, [subnets, subnetChildren]);
+
+    // Auto-expand on initial mount only
+    useEffect(() => {
+        if (!hasInitialized.current && sections.length > 0 && currentSectionId) {
+            hasInitialized.current = true;
+            const pathToExpand = getAncestorSectionPath(currentSectionId);
+            if (pathToExpand.length > 0) {
+                setExpandedNodes(new Set(pathToExpand));
+            }
+        }
+    }, [sections, currentSectionId, getAncestorSectionPath]);
 
     // Build full hierarchical tree from root
-    const buildTree = (parentId: string | null = null): TreeNode[] => {
+    const buildTree = useCallback((parentId: string | null = null): TreeNode[] => {
         const tree: TreeNode[] = [];
 
-        // Get sections at this level
         const childSections = sections.filter(
             (s) => (s.master_section || null) === parentId
         );
 
         childSections.forEach((section) => {
-            // Recursively build children
             const children = buildTree(section.id);
 
-            // Add subnets that belong to this section (only parent subnets)
             const sectionSubnets = subnets.filter(
                 (subnet) =>
                     (subnet as any).section_id === section.id &&
@@ -93,7 +108,6 @@ export default function IPAMTreeSidebar({
             );
 
             sectionSubnets.forEach((subnet) => {
-                // Check if this subnet has fetched children
                 const fetchedChildren = subnetChildren[subnet.id] || [];
                 const subnetChildNodes: TreeNode[] = fetchedChildren.map((childSubnet) => ({
                     id: childSubnet.id,
@@ -125,51 +139,75 @@ export default function IPAMTreeSidebar({
         });
 
         return tree;
-    };
+    }, [sections, subnets, subnetChildren]);
 
     const toggleNode = async (nodeId: string, nodeType: "section" | "subnet", e: React.MouseEvent) => {
         e.stopPropagation();
-        const newExpanded = new Set(expandedNodes);
+        setExpandedNodes(prev => {
+            const next = new Set(prev);
+            if (next.has(nodeId)) {
+                next.delete(nodeId);
+            } else {
+                next.add(nodeId);
+            }
+            return next;
+        });
 
-        if (newExpanded.has(nodeId)) {
-            newExpanded.delete(nodeId);
-            setExpandedNodes(newExpanded);
-        } else {
-            newExpanded.add(nodeId);
-            setExpandedNodes(newExpanded);
-
-            // If it's a subnet and we haven't fetched its children yet, fetch them
-            if (nodeType === "subnet" && !subnetChildren[nodeId]) {
-                setLoadingSubnets(new Set(loadingSubnets).add(nodeId));
-                try {
-                    const response = await fetchClient.GET("/ipam/subnets/{subnet_id}/children", {
-                        params: { path: { subnet_id: nodeId } }
-                    });
-                    if (response.error) throw response.error;
-                    
-                    setSubnetChildren({
-                        ...subnetChildren,
-                        [nodeId]: response.data?.subnets || [],
-                    });
-                } catch (error) {
-                    console.error("Error fetching subnet children:", error);
-                    setSubnetChildren({
-                        ...subnetChildren,
-                        [nodeId]: [],
-                    });
-                } finally {
-                    const newLoading = new Set(loadingSubnets);
-                    newLoading.delete(nodeId);
-                    setLoadingSubnets(newLoading);
-                }
+        // If it's a subnet and we haven't fetched its children yet, fetch them
+        if (nodeType === "subnet" && !subnetChildren[nodeId] && !expandedNodes.has(nodeId)) {
+            setLoadingSubnets(prev => new Set(prev).add(nodeId));
+            try {
+                const response = await fetchClient.GET("/ipam/subnets/{subnet_id}/children", {
+                    params: { path: { subnet_id: nodeId } }
+                });
+                if (response.error) throw response.error;
+                
+                setSubnetChildren(prev => ({
+                    ...prev,
+                    [nodeId]: response.data?.subnets || [],
+                }));
+            } catch (error) {
+                console.error("Error fetching subnet children:", error);
+                setSubnetChildren(prev => ({
+                    ...prev,
+                    [nodeId]: [],
+                }));
+            } finally {
+                setLoadingSubnets(prev => {
+                    const next = new Set(prev);
+                    next.delete(nodeId);
+                    return next;
+                });
             }
         }
     };
 
-    const handleSelect = (node: TreeNode) => {
+    const handleSelect = (node: TreeNode, e: React.MouseEvent) => {
+        e.stopPropagation();
+
         if (node.type === "section") {
+            // Auto-expand section when selecting it + expand parent path
+            setExpandedNodes(prev => {
+                const next = new Set(prev);
+                next.add(node.id);
+                // Also ensure all parents are expanded
+                const ancestors = getAncestorSectionPath(node.id);
+                ancestors.forEach(id => next.add(id));
+                return next;
+            });
             onSelectSection(node.id);
         } else {
+            // For subnet: ensure parent section stays expanded
+            const sectionId = findSectionForSubnet(node.id);
+            if (sectionId) {
+                setExpandedNodes(prev => {
+                    const next = new Set(prev);
+                    // Keep all currently expanded nodes + expand the path to this subnet's section
+                    const ancestors = getAncestorSectionPath(sectionId);
+                    ancestors.forEach(id => next.add(id));
+                    return next;
+                });
+            }
             onSelectSubnet(node.id);
         }
     };
@@ -179,7 +217,7 @@ export default function IPAMTreeSidebar({
         const hasChildren = node.children.length > 0;
         const isLoading = loadingSubnets.has(node.id);
         const isSelected = selectedId === node.id && selectedType === node.type;
-        const paddingLeft = level * 16 + 12;
+        const indent = level * 20 + 8;
         const uniqueKey = `${node.type}-${node.id}`;
 
         const hasBeenFetched = node.type === "subnet" ? subnetChildren.hasOwnProperty(node.id) : true;
@@ -188,64 +226,86 @@ export default function IPAMTreeSidebar({
         return (
             <Box key={uniqueKey}>
                 <Box
-                    onClick={() => handleSelect(node)}
+                    onClick={(e) => handleSelect(node, e)}
                     sx={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 1,
-                        py: 1,
-                        pr: 2,
-                        pl: `${paddingLeft}px`,
+                        gap: 0.75,
+                        py: 0.75,
+                        pr: 1.5,
+                        pl: `${indent}px`,
                         cursor: "pointer",
-                        transition: "background-color 0.2s",
+                        borderRadius: 0,
+                        transition: "all 0.15s ease",
+                        minHeight: 36,
                         ...(isSelected
                             ? {
-                                  bgcolor: node.type === "section" ? "primary.lighter" : "success.lighter",
-                                  color: node.type === "section" ? "primary.dark" : "success.dark",
+                                  bgcolor: node.type === "section"
+                                      ? "rgba(99, 102, 241, 0.08)"
+                                      : "rgba(16, 185, 129, 0.08)",
                                   borderRight: "3px solid",
-                                  borderColor: node.type === "section" ? "primary.main" : "success.main",
+                                  borderColor: node.type === "section"
+                                      ? "#6366f1"
+                                      : "#10b981",
                               }
                             : {
-                                  color: "text.primary",
                                   "&:hover": {
                                       bgcolor: "action.hover",
                                   },
                               }),
                     }}
                 >
+                    {/* Expand/collapse arrow */}
                     {showArrow ? (
                         <IconButton
                             size="small"
                             onClick={(e) => toggleNode(node.id, node.type, e)}
-                            sx={{ p: 0.5, color: "text.secondary" }}
+                            sx={{ p: 0.25, color: "text.secondary", "&:hover": { color: "text.primary" } }}
                         >
                             {isLoading ? (
                                 <CircularProgress size={14} />
                             ) : isExpanded ? (
-                                <KeyboardArrowDownIcon fontSize="small" />
+                                <KeyboardArrowDownIcon sx={{ fontSize: 18 }} />
                             ) : (
-                                <KeyboardArrowRightIcon fontSize="small" />
+                                <KeyboardArrowRightIcon sx={{ fontSize: 18 }} />
                             )}
                         </IconButton>
                     ) : (
-                        <Box sx={{ width: 24 }} />
+                        <Box sx={{ width: 22 }} />
                     )}
-                    
+
+                    {/* Icon */}
                     {node.type === "section" ? (
                         isExpanded ? (
-                            <FolderOpenIcon sx={{ fontSize: 18, color: isSelected ? "primary.main" : "primary.light" }} />
+                            <FolderOpenIcon sx={{ fontSize: 18, color: isSelected ? "#6366f1" : "#818cf8", flexShrink: 0 }} />
                         ) : (
-                            <FolderIcon sx={{ fontSize: 18, color: isSelected ? "primary.main" : "primary.light" }} />
+                            <FolderIcon sx={{ fontSize: 18, color: isSelected ? "#6366f1" : "#818cf8", flexShrink: 0 }} />
                         )
                     ) : (
-                        <AccountTreeIcon sx={{ fontSize: 18, color: isSelected ? "success.main" : "success.light" }} />
+                        <LanIcon sx={{ fontSize: 16, color: isSelected ? "#10b981" : "#34d399", flexShrink: 0 }} />
                     )}
-                    
-                    <Typography variant="body2" sx={{ fontWeight: isSelected ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+
+                    {/* Label */}
+                    <Typography
+                        variant="body2"
+                        sx={{
+                            fontWeight: isSelected ? 600 : 400,
+                            fontSize: "0.8125rem",
+                            color: isSelected
+                                ? (node.type === "section" ? "#4f46e5" : "#059669")
+                                : "text.primary",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            lineHeight: 1.4,
+                        }}
+                    >
                         {node.name}
                     </Typography>
                 </Box>
-                {hasChildren && isExpanded && (
+
+                {/* Children */}
+                {isExpanded && hasChildren && (
                     <Box>
                         {node.children.map((child) => renderNode(child, level + 1))}
                     </Box>
@@ -257,15 +317,38 @@ export default function IPAMTreeSidebar({
     const tree = buildTree(null);
 
     return (
-        <Box sx={{ height: "100%", bgcolor: "background.paper", borderRight: "1px solid", borderColor: "divider", overflowY: "auto" }}>
-            <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider" }}>
-                <Typography variant="subtitle2" fontWeight="semibold" color="text.secondary">
-                    IPAM Tree
+        <Box
+            sx={{
+                height: "100%",
+                bgcolor: "background.paper",
+                borderRight: "1px solid",
+                borderColor: "divider",
+                overflowY: "auto",
+                display: "flex",
+                flexDirection: "column",
+            }}
+        >
+            {/* Header */}
+            <Box sx={{
+                px: 2,
+                py: 1.5,
+                borderBottom: "1px solid",
+                borderColor: "divider",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                flexShrink: 0,
+            }}>
+                <AccountTreeIcon sx={{ fontSize: 18, color: "#6366f1" }} />
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "text.secondary", letterSpacing: "0.05em", fontSize: "0.75rem", textTransform: "uppercase" }}>
+                    IPAM Navigator
                 </Typography>
             </Box>
-            <Box sx={{ py: 1 }}>
+
+            {/* Tree */}
+            <Box sx={{ flex: 1, overflowY: "auto", py: 0.5 }}>
                 {tree.length === 0 ? (
-                    <Typography variant="body2" color="text.disabled" align="center" sx={{ p: 2 }}>
+                    <Typography variant="body2" color="text.disabled" align="center" sx={{ p: 3 }}>
                         No sections found
                     </Typography>
                 ) : (

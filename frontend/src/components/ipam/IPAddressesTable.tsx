@@ -25,6 +25,54 @@ import {
 
 type IpAddressResponse = components["schemas"]["IpAddressResponse"];
 
+// phpIPAM address tag statuses
+// tag_id: 1 = Offline, 2 = Used, 3 = Reserved, 4 = DHCP, is_gateway = Gateway
+const STATUS_CHIP_CONFIG: Record<string, { color: "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning"; label: string; bgAlpha: string }> = {
+    offline:     { color: "default",   label: "Offline",     bgAlpha: "grey.100" },
+    used:        { color: "warning",   label: "Used",        bgAlpha: "warning.50" },
+    active:      { color: "warning",   label: "Active",      bgAlpha: "warning.50" },
+    reserved:    { color: "info",      label: "Reserved",    bgAlpha: "info.50" },
+    dhcp:        { color: "primary",   label: "DHCP",        bgAlpha: "primary.50" },
+    gateway:     { color: "secondary", label: "Gateway",     bgAlpha: "secondary.50" },
+    free:        { color: "success",   label: "Free",        bgAlpha: "success.50" },
+    available:   { color: "success",   label: "Available",   bgAlpha: "success.50" },
+    unreachable: { color: "error",     label: "Unreachable", bgAlpha: "error.50" },
+};
+
+function getAddressStatus(address: any): { statusKey: string; isGateway: boolean } {
+    // 1. Prefer _status injected from space-map endpoint (most accurate)
+    if (address._status) {
+        const key = address._status.toLowerCase().trim();
+        const isGw = key === "gateway" || address.is_gateway === "1" || address.is_gateway === 1;
+        // Map common phpIPAM status strings
+        if (STATUS_CHIP_CONFIG[key]) {
+            return { statusKey: key, isGateway: isGw };
+        }
+        // Fallback for unknown status strings
+        return { statusKey: key, isGateway: isGw };
+    }
+
+    // 2. Check is_gateway flag
+    const isGateway = address.is_gateway === "1" || address.is_gateway === 1;
+    if (isGateway) return { statusKey: "gateway", isGateway: true };
+
+    // 3. phpIPAM tag_id based status
+    const tagId = String(address.tag_id || address.tag || "");
+    switch (tagId) {
+        case "1": return { statusKey: "offline", isGateway: false };
+        case "2": return { statusKey: "used", isGateway: false };
+        case "3": return { statusKey: "reserved", isGateway: false };
+        case "4": return { statusKey: "dhcp", isGateway: false };
+    }
+
+    // 4. Fallback: if there's a hostname/description, consider it "used"
+    if (address.hostname || address.description) {
+        return { statusKey: "used", isGateway: false };
+    }
+
+    return { statusKey: "free", isGateway: false };
+}
+
 interface IPAddressesTableProps {
     addresses: IpAddressResponse[];
     onRefresh: () => void;
@@ -38,45 +86,19 @@ export default function IPAddressesTable({
     onEdit,
     onDelete,
 }: IPAddressesTableProps) {
-    const getStatusChip = (address: IpAddressResponse) => {
-        // Check if is_gateway
-        const isGateway = (address as any).is_gateway === "1" || (address as any).is_gateway === 1;
-        if (isGateway) {
-            return (
-                <Chip
-                    icon={<CircleIcon sx={{ fontSize: 10 }} />}
-                    label="Gateway"
-                    size="small"
-                    color="secondary"
-                    variant="outlined"
-                    sx={{ bgcolor: "secondary.50", fontWeight: "medium" }}
-                />
-            );
-        }
 
-        const isUsed = address.hostname || address.description;
-
-        if (isUsed) {
-            return (
-                <Chip
-                    icon={<CircleIcon sx={{ fontSize: 10 }} />}
-                    label="Used"
-                    size="small"
-                    color="warning"
-                    variant="outlined"
-                    sx={{ bgcolor: "warning.50", fontWeight: "medium" }}
-                />
-            );
-        }
+    const renderStatusChip = (address: IpAddressResponse) => {
+        const { statusKey, isGateway } = getAddressStatus(address);
+        const cfg = STATUS_CHIP_CONFIG[statusKey] || STATUS_CHIP_CONFIG["free"];
 
         return (
             <Chip
                 icon={<CircleIcon sx={{ fontSize: 10 }} />}
-                label="Free"
+                label={cfg.label}
                 size="small"
-                color="success"
+                color={cfg.color}
                 variant="outlined"
-                sx={{ bgcolor: "success.50", fontWeight: "medium" }}
+                sx={{ bgcolor: cfg.bgAlpha, fontWeight: "medium" }}
             />
         );
     };
@@ -105,7 +127,7 @@ export default function IPAddressesTable({
                             </TableRow>
                         ) : (
                             addresses.map((address) => {
-                                const isGateway = (address as any).is_gateway === "1" || (address as any).is_gateway === 1;
+                                const { statusKey, isGateway } = getAddressStatus(address);
                                 return (
                                     <TableRow
                                         key={address.id}
@@ -160,7 +182,7 @@ export default function IPAddressesTable({
                                             </Typography>
                                         </TableCell>
                                         <TableCell>
-                                            {getStatusChip(address)}
+                                            {renderStatusChip(address)}
                                         </TableCell>
                                         <TableCell align="center">
                                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
@@ -202,4 +224,3 @@ export default function IPAddressesTable({
         </Paper>
     );
 }
-
