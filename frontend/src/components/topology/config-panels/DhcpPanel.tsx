@@ -13,6 +13,55 @@ import {
 import { Delete, Add } from "@mui/icons-material";
 import { ConfigPanelProps } from "./types";
 
+const IPV4_MASK_PATTERN = /^(\d{1,3}\.){3}\d{1,3}$/;
+
+function prefixToIpv4Mask(prefix: number): string {
+    if (prefix < 0 || prefix > 32) {
+        throw new Error("Subnet mask prefix must be between /0 and /32");
+    }
+
+    const mask = prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
+    return [
+        (mask >>> 24) & 255,
+        (mask >>> 16) & 255,
+        (mask >>> 8) & 255,
+        mask & 255,
+    ].join(".");
+}
+
+function isValidIpv4SubnetMask(mask: string): boolean {
+    if (!IPV4_MASK_PATTERN.test(mask)) return false;
+
+    const octets = mask.split(".").map((part) => Number(part));
+    if (octets.some((octet) => Number.isNaN(octet) || octet < 0 || octet > 255)) {
+        return false;
+    }
+
+    const bits = octets
+        .map((octet) => octet.toString(2).padStart(8, "0"))
+        .join("");
+
+    return /^1*0*$/.test(bits);
+}
+
+function normalizeIpv4Mask(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        throw new Error("Subnet Mask is required");
+    }
+
+    const prefixCandidate = trimmed.startsWith("/") ? trimmed.slice(1) : trimmed;
+    if (/^\d{1,2}$/.test(prefixCandidate)) {
+        return prefixToIpv4Mask(Number(prefixCandidate));
+    }
+
+    if (isValidIpv4SubnetMask(trimmed)) {
+        return trimmed;
+    }
+
+    throw new Error("Subnet Mask must be like 255.255.255.0 or /24");
+}
+
 export function DhcpPanel({ nodeId, showData, onStageIntent }: ConfigPanelProps) {
     const [dhcpPools, setDhcpPools] = useState<
         {
@@ -29,6 +78,7 @@ export function DhcpPanel({ nodeId, showData, onStageIntent }: ConfigPanelProps)
     const [excludedAddresses, setExcludedAddresses] = useState<
         { low_address: string; high_address: string }[]
     >([{ low_address: "", high_address: "" }]);
+    const [maskErrors, setMaskErrors] = useState<string[]>([""]);
 
     const handleStage = (intent: string, params: Record<string, any>, label: string) => {
         if (onStageIntent) {
@@ -48,7 +98,10 @@ export function DhcpPanel({ nodeId, showData, onStageIntent }: ConfigPanelProps)
                             <IconButton
                                 size="small"
                                 color="error"
-                                onClick={() => setDhcpPools((prev) => prev.filter((_, i) => i !== idx))}
+                                onClick={() => {
+                                    setDhcpPools((prev) => prev.filter((_, i) => i !== idx));
+                                    setMaskErrors((prev) => prev.filter((_, i) => i !== idx));
+                                }}
                             >
                                 <Delete fontSize="small" />
                             </IconButton>
@@ -96,8 +149,28 @@ export function DhcpPanel({ nodeId, showData, onStageIntent }: ConfigPanelProps)
                                 const updated = [...dhcpPools];
                                 updated[idx].mask = e.target.value;
                                 setDhcpPools(updated);
+
+                                setMaskErrors((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = "";
+                                    return next;
+                                });
                             }}
-                            placeholder="e.g. 255.255.255.0"
+                            onBlur={() => {
+                                const nextErrors = [...maskErrors];
+                                const updated = [...dhcpPools];
+                                try {
+                                    updated[idx].mask = normalizeIpv4Mask(updated[idx].mask);
+                                    nextErrors[idx] = "";
+                                    setDhcpPools(updated);
+                                } catch (err) {
+                                    nextErrors[idx] = err instanceof Error ? err.message : "Invalid subnet mask";
+                                }
+                                setMaskErrors(nextErrors);
+                            }}
+                            placeholder="e.g. 255.255.255.0 or /24"
+                            error={Boolean(maskErrors[idx])}
+                            helperText={maskErrors[idx] || "Supports dotted mask and /prefix"}
                         />
                         <TextField
                             label="DNS Servers (comma separated)"
@@ -118,10 +191,27 @@ export function DhcpPanel({ nodeId, showData, onStageIntent }: ConfigPanelProps)
                             variant="outlined"
                             size="small"
                             onClick={() => {
+                                const nextErrors = [...maskErrors];
+                                let normalizedMask = "";
+                                try {
+                                    normalizedMask = normalizeIpv4Mask(pool.mask);
+                                    nextErrors[idx] = "";
+                                } catch (err) {
+                                    nextErrors[idx] = err instanceof Error ? err.message : "Invalid subnet mask";
+                                    setMaskErrors(nextErrors);
+                                    return;
+                                }
+
+                                setMaskErrors(nextErrors);
+
+                                const updated = [...dhcpPools];
+                                updated[idx].mask = normalizedMask;
+                                setDhcpPools(updated);
+
                                 const params: any = {
                                     pool_name: pool.pool_name,
                                     gateway: pool.gateway,
-                                    mask: pool.mask,
+                                    mask: normalizedMask,
                                 };
                                 if (pool.network) params["network"] = pool.network;
                                 if (pool.dns_servers) {
@@ -144,10 +234,13 @@ export function DhcpPanel({ nodeId, showData, onStageIntent }: ConfigPanelProps)
                 fullWidth
                 startIcon={<Add />}
                 onClick={() =>
-                    setDhcpPools((prev) => [
-                        ...prev,
-                        { pool_name: "", gateway: "", mask: "", network: "", dns_servers: "" },
-                    ])
+                    {
+                        setDhcpPools((prev) => [
+                            ...prev,
+                            { pool_name: "", gateway: "", mask: "", network: "", dns_servers: "" },
+                        ]);
+                        setMaskErrors((prev) => [...prev, ""]);
+                    }
                 }
                 sx={{ textTransform: "none", borderStyle: "dashed", py: 1 }}
             >
