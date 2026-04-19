@@ -23,6 +23,7 @@ const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
     offline:     { color: "#94a3b8", label: "Offline" },
     used:        { color: "#f59e0b", label: "Used" },
     active:      { color: "#f59e0b", label: "Active" },
+    used_child:  { color: "#fb923c", label: "Child Subnet" },
     reserved:    { color: "#6366f1", label: "Reserved" },
     dhcp:        { color: "#06b6d4", label: "DHCP" },
     gateway:     { color: "#a855f7", label: "Gateway" },

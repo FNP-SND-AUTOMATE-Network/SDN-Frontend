@@ -128,7 +128,10 @@ export default function IPPicker({ onIpSelect, disabled }: IPPickerProps) {
     };
 
     const handleSelectIp = (ip: string, status: string) => {
-        if (status.toLowerCase().includes('free') || status.toLowerCase().includes('available') || status.toLowerCase().includes('reserved')) {
+        const lower = status.toLowerCase();
+        // used_child = IP booked in a child subnet — shown for context, not selectable
+        if (lower === 'used_child') return;
+        if (lower.includes('free') || lower.includes('available') || lower.includes('reserved')) {
             setAllocatedIp(ip);
         }
     };
@@ -185,6 +188,11 @@ export default function IPPicker({ onIpSelect, disabled }: IPPickerProps) {
             baseBorder = "success.300";
             cursor = "pointer";
             hover = { bgcolor: "success.100", borderColor: "success.main" };
+        } else if (lower === 'used_child') {
+            // IP booked inside a child subnet — shown but not selectable
+            baseBg = "#fff7ed";        // orange-50
+            baseColor = "#c2410c";     // orange-700
+            baseBorder = "#fed7aa";    // orange-200
         } else if (lower.includes('used') || lower.includes('allocated') || lower.includes('active')) {
             baseBg = "info.50";
             baseColor = "info.dark";
