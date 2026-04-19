@@ -45,6 +45,7 @@ import DeployTemplateModal from "./DeployTemplateModal";
 import { components } from "@/lib/apiv2/schema";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
+import { useAuth } from "@/contexts/AuthContext";
 
 type DeviceNetwork = components["schemas"]["DeviceNetworkResponse"];
 type StatusDevice = components["schemas"]["StatusDevice"];
@@ -103,6 +104,7 @@ export default function TopologyDeviceTable({
     const [configModalDevice, setConfigModalDevice] = useState<any | null>(null);
     const [configEditorDevice, setConfigEditorDevice] = useState<any | null>(null);
     const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
+    const { user } = useAuth();
 
     // Snackbar notifications
     const { snackbar, showSuccess, showError, showWarning, hideSnackbar } = useSnackbar();
@@ -121,7 +123,7 @@ export default function TopologyDeviceTable({
         return [...devices].sort((a, b) => {
             let valueA = "";
             let valueB = "";
-            
+
             if (orderBy === "device_name") {
                 valueA = String(a.device_name || "").toLowerCase();
                 valueB = String(b.device_name || "").toLowerCase();
@@ -245,26 +247,28 @@ export default function TopologyDeviceTable({
                     <Typography color="primary" variant="subtitle1" fontWeight={600}>
                         {selectedDeviceIds.length} device{selectedDeviceIds.length > 1 ? "s" : ""} selected
                     </Typography>
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                        <Button 
-                            variant="contained" 
-                            color="primary" 
-                            size="small" 
-                            startIcon={<FontAwesomeIcon icon={faCog} />}
-                            onClick={() => setIsDeployModalOpen(true)}
-                        >
-                            Template Config
-                        </Button>
-                        <Button 
-                            variant="outlined" 
-                            color="primary" 
-                            size="small"
-                            startIcon={<FontAwesomeIcon icon={faDatabase} />}
-                            onClick={() => handleBackupDevices(devices.filter(d => selectedDeviceIds.includes(d.id)))}
-                        >
-                            Backup Devices
-                        </Button>
-                    </Box>
+                    {user?.role !== "viewer" && (
+                        <>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                size="small"
+                                startIcon={<FontAwesomeIcon icon={faCog} />}
+                                onClick={() => setIsDeployModalOpen(true)}
+                            >
+                                Template Config
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                color="primary"
+                                size="small"
+                                startIcon={<FontAwesomeIcon icon={faDatabase} />}
+                                onClick={() => handleBackupDevices(devices.filter(d => selectedDeviceIds.includes(d.id)))}
+                            >
+                                Backup Devices
+                            </Button>
+                        </>
+                    )}
                 </Box>
             )}
             <TableContainer sx={{ overflowX: "auto", flexGrow: 1 }}>
@@ -321,7 +325,7 @@ export default function TopologyDeviceTable({
                                     Status
                                 </TableSortLabel>
                             </TableCell>
-                            <TableCell align="right" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}></TableCell>
+                            {user?.role !== "viewer" && <TableCell align="right" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}></TableCell>}
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -334,96 +338,98 @@ export default function TopologyDeviceTable({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                        sortedDevices.map((device) => {
-                            const isSelected = selectedDeviceIds?.includes(device.id) || false;
-                            const deviceType = (device.type as string) || "OTHER";
-                            const typeProps = typeConfig[deviceType] || typeConfig.OTHER;
-                            const statusProps = getStatusChipProps(device.status as StatusDevice);
+                            sortedDevices.map((device) => {
+                                const isSelected = selectedDeviceIds?.includes(device.id) || false;
+                                const deviceType = (device.type as string) || "OTHER";
+                                const typeProps = typeConfig[deviceType] || typeConfig.OTHER;
+                                const statusProps = getStatusChipProps(device.status as StatusDevice);
 
-                            return (
-                                <TableRow
-                                    key={device.id}
-                                    hover
-                                    selected={isSelected}
-                                    onClick={() => {
-                                        const newSelected = isSelected 
-                                            ? (selectedDeviceIds || []).filter(id => id !== device.id)
-                                            : [...(selectedDeviceIds || []), device.id];
-                                        onSelectionChange?.(newSelected);
-                                    }}
-                                    sx={{
-                                        cursor: "pointer",
-                                        "&.Mui-selected": { bgcolor: "primary.50", "&:hover": { bgcolor: "primary.100" } },
-                                    }}
-                                >
-                                    <TableCell padding="checkbox">
-                                        <Checkbox
-                                            color="primary"
-                                            checked={isSelected}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                            }}
-                                            onChange={(e) => {
-                                                const checked = e.target.checked;
-                                                const newSelected = checked 
-                                                    ? [...(selectedDeviceIds || []), device.id]
-                                                    : (selectedDeviceIds || []).filter(id => id !== device.id);
-                                                onSelectionChange?.(newSelected);
-                                            }}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" fontWeight={500} color="text.primary">
-                                            {device.device_name}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {device.device_model}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Box
-                                            sx={{
-                                                display: "inline-flex",
-                                                alignItems: "center",
-                                                gap: 0.5,
-                                                color: typeProps.color,
-                                                fontSize: 13,
-                                                fontWeight: 500,
-                                            }}
-                                        >
-                                            {typeProps.icon}
-                                            {deviceType.replace("_", " ")}
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" color="text.primary">
-                                            {device.ip_address || "-"}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={statusProps.label}
-                                            size="small"
-                                            sx={{
-                                                bgcolor: statusProps.bgcolor,
-                                                color: statusProps.color,
-                                                fontWeight: 500,
-                                                "& .MuiChip-icon": { color: statusProps.color, width: 8, height: 8 }
-                                            }}
-                                        />
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <IconButton
-                                            size="small"
-                                            onClick={(e) => handleMenuOpen(e, device.id)}
-                                            sx={{ color: "text.secondary" }}
-                                        >
-                                            <FontAwesomeIcon icon={faEllipsisVertical} className="w-4 h-4" />
-                                        </IconButton>
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        }))}
+                                return (
+                                    <TableRow
+                                        key={device.id}
+                                        hover
+                                        selected={isSelected}
+                                        onClick={() => {
+                                            const newSelected = isSelected
+                                                ? (selectedDeviceIds || []).filter(id => id !== device.id)
+                                                : [...(selectedDeviceIds || []), device.id];
+                                            onSelectionChange?.(newSelected);
+                                        }}
+                                        sx={{
+                                            cursor: "pointer",
+                                            "&.Mui-selected": { bgcolor: "primary.50", "&:hover": { bgcolor: "primary.100" } },
+                                        }}
+                                    >
+                                        <TableCell padding="checkbox">
+                                            <Checkbox
+                                                color="primary"
+                                                checked={isSelected}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                }}
+                                                onChange={(e) => {
+                                                    const checked = e.target.checked;
+                                                    const newSelected = checked
+                                                        ? [...(selectedDeviceIds || []), device.id]
+                                                        : (selectedDeviceIds || []).filter(id => id !== device.id);
+                                                    onSelectionChange?.(newSelected);
+                                                }}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" fontWeight={500} color="text.primary">
+                                                {device.device_name}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {device.device_model}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Box
+                                                sx={{
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: 0.5,
+                                                    color: typeProps.color,
+                                                    fontSize: 13,
+                                                    fontWeight: 500,
+                                                }}
+                                            >
+                                                {typeProps.icon}
+                                                {deviceType.replace("_", " ")}
+                                            </Box>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" color="text.primary">
+                                                {device.ip_address || "-"}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip
+                                                label={statusProps.label}
+                                                size="small"
+                                                sx={{
+                                                    bgcolor: statusProps.bgcolor,
+                                                    color: statusProps.color,
+                                                    fontWeight: 500,
+                                                    "& .MuiChip-icon": { color: statusProps.color, width: 8, height: 8 }
+                                                }}
+                                            />
+                                        </TableCell>
+                                        {user?.role !== "viewer" && (
+                                            <TableCell align="right">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={(e) => handleMenuOpen(e, device.id)}
+                                                    sx={{ color: "text.secondary" }}
+                                                >
+                                                    <FontAwesomeIcon icon={faEllipsisVertical} className="w-4 h-4" />
+                                                </IconButton>
+                                            </TableCell>
+                                        )}
+                                    </TableRow>
+                                );
+                            }))}
                     </TableBody>
                 </Table>
             </TableContainer>
