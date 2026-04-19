@@ -424,8 +424,23 @@ export default function TopologyCanvas({
     // Update nodes and edges when data changes
     useEffect(() => {
         if (topologyData) {
-            const dataNodes = (topologyData.nodes as unknown as TopologyNode[]) || [];
-            const dataLinks = (topologyData.links as unknown as TopologyLink[]) || [];
+            const rawNodes = (topologyData.nodes as unknown as TopologyNode[]) || [];
+            const rawLinks = (topologyData.links as unknown as TopologyLink[]) || [];
+
+            // Filter to include only ONLINE nodes
+            const dataNodes = rawNodes.filter(
+                (node) => node.status?.toUpperCase() === "ONLINE"
+            );
+
+            // Set of online node IDs for quick link filtering
+            const onlineNodeIds = new Set(dataNodes.map((n) => n.id));
+
+            // Keep only links where both source and target are ONLINE
+            const dataLinks = rawLinks.filter(
+                (link) =>
+                    onlineNodeIds.has(link.source) && onlineNodeIds.has(link.target)
+            );
+
             setNodes(layoutNodes(dataNodes, dataLinks));
             setEdges(buildEdges(dataLinks));
         } else {

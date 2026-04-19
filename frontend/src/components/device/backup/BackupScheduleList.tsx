@@ -35,6 +35,7 @@ import {
 import { $api, fetchClient } from "@/lib/apiv2/fetch";
 import { components } from "@/lib/apiv2/schema";
 import { useSnackbar } from "@/hooks/useSnackbar";
+import { MuiSnackbar } from "@/components/ui/MuiSnackbar";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface BackupScheduleListProps {
@@ -42,7 +43,7 @@ interface BackupScheduleListProps {
 }
 
 export default function BackupScheduleList({ onTriggerNew }: BackupScheduleListProps) {
-    const { showError, showSuccess } = useSnackbar();
+    const { snackbar, showError, showSuccess, hideSnackbar } = useSnackbar();
     const { user } = useAuth();
 
     // Fetch schedules
@@ -99,20 +100,29 @@ export default function BackupScheduleList({ onTriggerNew }: BackupScheduleListP
                 const { error } = await fetchClient.PUT("/backups/{backup_id}/pause", {
                     params: { path: { backup_id: targetSchedule.id } }
                 });
-                if (error) throw new Error((error as any)?.detail || "Failed to pause schedule");
+                if (error) {
+                    showError((error as any)?.detail || "Failed to pause schedule");
+                    return;
+                }
                 showSuccess("Schedule paused successfully");
             } else if (action === "reactivate") {
                 const { error } = await fetchClient.PUT("/backups/{backup_id}/reactivate", {
                     params: { path: { backup_id: targetSchedule.id } }
                 });
-                if (error) throw new Error((error as any)?.detail || "Failed to reactivate schedule");
+                if (error) {
+                    showError((error as any)?.detail || "Failed to reactivate schedule");
+                    return;
+                }
                 showSuccess("Schedule reactivated successfully");
             } else if (action === "offline") {
                 const { error } = await fetchClient.PUT("/backups/{backup_id}", {
                     params: { path: { backup_id: targetSchedule.id } },
                     body: { status: "OFFLINE" } as any
                 });
-                if (error) throw new Error((error as any)?.detail || "Failed to set to offline");
+                if (error) {
+                    showError((error as any)?.detail || "Failed to set to offline");
+                    return;
+                }
                 showSuccess("Status updated to OFFLINE");
             }
 
@@ -138,7 +148,8 @@ export default function BackupScheduleList({ onTriggerNew }: BackupScheduleListP
             });
 
             if (error) {
-                throw new Error((error as any)?.detail || "Failed to delete schedule.");
+                showError((error as any)?.detail || "Failed to delete schedule.");
+                return;
             }
 
             showSuccess("Backup schedule deleted successfully.");
@@ -424,6 +435,15 @@ export default function BackupScheduleList({ onTriggerNew }: BackupScheduleListP
                     <CloseIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} /> OFFLINE
                 </MenuItem>
             </Menu>
+
+            {/* Global Snackbar for this component */}
+            <MuiSnackbar
+                open={snackbar.open}
+                message={snackbar.message}
+                severity={snackbar.severity}
+                title={snackbar.title}
+                onClose={hideSnackbar}
+            />
         </Box>
     );
 }

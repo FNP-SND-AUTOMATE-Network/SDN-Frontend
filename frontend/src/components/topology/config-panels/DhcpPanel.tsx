@@ -26,6 +26,10 @@ export function DhcpPanel({ nodeId, showData, onStageIntent }: ConfigPanelProps)
         }[]
     >([{ pool_name: "", gateway: "", mask: "", network: "", dns_servers: "" }]);
 
+    const [excludedAddresses, setExcludedAddresses] = useState<
+        { low_address: string; high_address: string }[]
+    >([{ low_address: "", high_address: "" }]);
+
     const handleStage = (intent: string, params: Record<string, any>, label: string) => {
         if (onStageIntent) {
             onStageIntent({ intent, node_id: nodeId, params, label });
@@ -148,6 +152,89 @@ export function DhcpPanel({ nodeId, showData, onStageIntent }: ConfigPanelProps)
                 sx={{ textTransform: "none", borderStyle: "dashed", py: 1 }}
             >
                 Add Another DHCP Pool
+            </Button>
+
+            {/* --- Excluded Addresses Section --- */}
+            <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                    Global Excluded Addresses
+                </Typography>
+            </Box>
+
+            {excludedAddresses.map((addr, idx) => (
+                <Paper key={`ex-${idx}`} variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+                        <Typography variant="subtitle2" fontWeight={600}>
+                            Excluded Range {idx + 1}
+                        </Typography>
+                        {excludedAddresses.length > 1 && (
+                            <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => setExcludedAddresses((prev) => prev.filter((_, i) => i !== idx))}
+                            >
+                                <Delete fontSize="small" />
+                            </IconButton>
+                        )}
+                    </Stack>
+                    <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5, mb: 1.5 }}>
+                        <TextField
+                            label="Low IP Address"
+                            size="small"
+                            value={addr.low_address}
+                            onChange={(e) => {
+                                const updated = [...excludedAddresses];
+                                updated[idx].low_address = e.target.value;
+                                setExcludedAddresses(updated);
+                            }}
+                            placeholder="e.g. 192.168.1.1"
+                        />
+                        <TextField
+                            label="High IP Address"
+                            size="small"
+                            value={addr.high_address}
+                            onChange={(e) => {
+                                const updated = [...excludedAddresses];
+                                updated[idx].high_address = e.target.value;
+                                setExcludedAddresses(updated);
+                            }}
+                            placeholder="e.g. 192.168.1.10"
+                        />
+                    </Box>
+                    <Stack direction="row" justifyContent="flex-end">
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => {
+                                handleStage(
+                                    "dhcp.add_excluded_address",
+                                    { low_address: addr.low_address, high_address: addr.high_address },
+                                    `Exclude IP Range: ${addr.low_address} - ${addr.high_address}`
+                                );
+                            }}
+                            disabled={!addr.low_address || !addr.high_address}
+                            startIcon={<Add />}
+                            sx={{ textTransform: "none" }}
+                        >
+                            Queue Excluded Range
+                        </Button>
+                    </Stack>
+                </Paper>
+            ))}
+
+            <Button
+                variant="outlined"
+                fullWidth
+                startIcon={<Add />}
+                onClick={() =>
+                    setExcludedAddresses((prev) => [
+                        ...prev,
+                        { low_address: "", high_address: "" },
+                    ])
+                }
+                sx={{ textTransform: "none", borderStyle: "dashed", py: 1 }}
+            >
+                Add Another Excluded Range
             </Button>
 
             {/* Show Data */}

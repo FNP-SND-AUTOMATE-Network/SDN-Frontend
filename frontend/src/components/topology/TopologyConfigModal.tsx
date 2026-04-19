@@ -317,8 +317,12 @@ export default function TopologyConfigModal({
             }
 
             const bulkRes = data as any;
+
+            let hasSuccess = false;
+
             if (response?.status === 200 || bulkRes?.success) {
                 showSuccess(`Config Push success`);
+                hasSuccess = true;
 
                 // Show the success results on the modal temporarily
                 if (bulkRes.results) {
@@ -336,8 +340,10 @@ export default function TopologyConfigModal({
                     onClose();
                 }, 1500);
             } else if (response?.status === 207) {
+                const successes = bulkRes.total_executed - bulkRes.total_failed;
+                hasSuccess = successes > 0;
                 showWarning(
-                    `Config Push ${bulkRes.total_executed - bulkRes.total_failed} / ${bulkRes.total_executed} success (${bulkRes.total_failed} failed)`
+                    `Config Push ${successes} / ${bulkRes.total_executed} success (${bulkRes.total_failed} failed)`
                 );
                 if (bulkRes.results) setBulkResults(bulkRes.results);
             } else {
@@ -345,8 +351,24 @@ export default function TopologyConfigModal({
                 if (bulkRes?.results) setBulkResults(bulkRes.results);
             }
 
+            // --- AUTO SAVE CONFIG ---
+            // If at least one intent was successful, send a system.save_config intent for this node
+            if (hasSuccess && nodeId) {
+                try {
+                    await fetchClient.POST("/api/v1/nbi/intents", {
+                        body: {
+                            intent: "system.save_config",
+                            node_id: nodeId,
+                            params: {}
+                        }
+                    });
+                } catch (saveErr) {
+                    console.error("Auto-save config failed:", saveErr);
+                }
+            }
+
             // Trigger sync and reload interface list if there were successful items (since interfaces might be updated)
-            if (bulkRes?.success || (bulkRes?.succeeded && bulkRes.succeeded > 0) || response?.status === 200 || response?.status === 207) {
+            if (hasSuccess) {
                 try {
                     fetchClient.GET("/interfaces/odl/{node_id}/sync", {
                         params: { path: { node_id: nodeId } }

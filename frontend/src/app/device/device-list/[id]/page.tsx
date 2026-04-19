@@ -41,8 +41,8 @@ export default function DeviceDetailPage() {
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
   const { snackbar, hideSnackbar, showError, showSuccess, showInfo } = useSnackbar();
-  // --- Tab State ---
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [prevConnStatus, setPrevConnStatus] = useState<string | undefined>(undefined);
 
   // --- Mount/Unmount loading ---
   const [isMounting, setIsMounting] = useState(false);
@@ -80,6 +80,29 @@ export default function DeviceDetailPage() {
       },
     }
   );
+
+  // --- Watch Connection Status Transitions ---
+  useEffect(() => {
+    if (device?.odl_connection_status) {
+      const currentStatus = device.odl_connection_status.toLowerCase();
+      if (prevConnStatus === "connecting" && currentStatus === "connected") {
+        hideSnackbar();
+        showSuccess(`Device ${device.device_name || device.node_id} mounted successfully`);
+        // Auto-sync interfaces on successful mount
+        import("@/lib/apiv2/fetch").then(({ fetchClient }) => {
+            fetchClient.GET("/interfaces/odl/{node_id}/sync", {
+                params: { path: { node_id: device.node_id! } }
+            }).catch(console.error);
+        });
+      } else if (prevConnStatus === "connecting" && currentStatus !== "connected" && currentStatus !== "connecting") {
+        hideSnackbar();
+        showError(`Device failed to mount. Status: ${device.odl_connection_status}`);
+      }
+      setPrevConnStatus(currentStatus);
+    } else if (device && !device.odl_connection_status && prevConnStatus) {
+      setPrevConnStatus(undefined);
+    }
+  }, [device?.odl_connection_status, device?.device_name, device?.node_id, prevConnStatus, hideSnackbar, showSuccess, showError]);
 
   // --- Load reference data once ---
   useEffect(() => {
@@ -120,21 +143,20 @@ export default function DeviceDetailPage() {
       if (status === 200) {
         const code = (res as any)?.code;
         const readyForIntent = Boolean((res as any)?.ready_for_intent);
-
         if (code === "DEVICE_ALREADY_MOUNTED") {
-          showSuccess(`Device ${device.node_id} is already connected`);
+          showSuccess(`Device ${device.device_name || device.node_id} is already connected`);
           fetchClient.GET("/interfaces/odl/{node_id}/sync", {
             params: { path: { node_id: device.node_id } }
           }).catch(console.error);
         } else if (readyForIntent) {
-          showSuccess(res?.message || `Device ${device.node_id} is connected successfully`);
+          showSuccess(res?.message || `Device ${device.device_name || device.node_id} is connected successfully`);
           fetchClient.GET("/interfaces/odl/{node_id}/sync", {
             params: { path: { node_id: device.node_id } }
           }).catch(console.error);
         } else {
           showInfo(
             res?.message ||
-            `Device ${device.node_id} is mounting. Please wait until status is CONNECTED before syncing interfaces.`
+            `Device ${device.device_name || device.node_id} is mounting... Please wait.`
           );
         }
       } else if (status === 400) {

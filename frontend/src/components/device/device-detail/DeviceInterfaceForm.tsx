@@ -409,23 +409,13 @@ export function DeviceInterfaceForm({
                                 <Typography variant="body2">{interfaceData.mac_address || "-"}</Typography>
                             </Box>
 
-                            {/* Duplex */}
-                            {isEdit ? (
-                                <TextField
-                                    label="Duplex"
-                                    size="small"
-                                    value={duplex}
-                                    onChange={(e) => setDuplex(e.target.value)}
-                                    fullWidth
-                                />
-                            ) : (
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
-                                        Duplex
-                                    </Typography>
-                                    <Typography variant="body2">{duplex || "-"}</Typography>
-                                </Box>
-                            )}
+                            {/* Duplex (always read-only, intent not supported yet) */}
+                            <Box>
+                                <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ mb: 0.5, display: "block" }}>
+                                    Duplex
+                                </Typography>
+                                <Typography variant="body2">{interfaceData.duplex || "-"}</Typography>
+                            </Box>
 
                             {/* Auto Negotiate */}
                             <Box>
@@ -600,9 +590,7 @@ export function DeviceInterfaceForm({
                             title="Last Change"
                         />
                         <Typography variant="body2">
-                            {interfaceData.last_change
-                                ? new Date(interfaceData.last_change).toLocaleString()
-                                : "-"}
+                            {interfaceData.last_change || "-"}
                         </Typography>
                     </Box>
                 </Stack>

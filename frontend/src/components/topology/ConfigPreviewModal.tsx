@@ -34,43 +34,26 @@ export default function ConfigPreviewModal({
     onClose,
     device,
 }: ConfigPreviewModalProps) {
-    // 1. Fetch backup history for the device to get the latest record_id
-    const { data: historyData, isLoading: isLoadingHistory } = $api.useQuery(
+    // Fetch live configuration from the device
+    const { data: liveData, isLoading, error: fetchError } = $api.useQuery(
         "get",
-        "/api/v1/devices/backups/device/{device_id}",
+        "/api/v1/nbi/devices/{device_id}/live-config",
         {
             params: { path: { device_id: device?.id || "" } },
         },
         { enabled: isOpen && !!device?.id }
     );
 
-    // Find the latest successful backup record
-    const latestRecordId = historyData && historyData.length > 0
-        ? historyData.find(record => record.status === "SUCCESS")?.id
-        : null;
-
-    // 2. Fetch the actual config_content using the latest record_id
-    const { data: detailData, isLoading: isLoadingDetail } = $api.useQuery(
-        "get",
-        "/api/v1/devices/backups/{record_id}",
-        {
-            params: { path: { record_id: latestRecordId || "" } },
-        },
-        { enabled: isOpen && !!latestRecordId }
-    );
-
     if (!isOpen || !device) return null;
 
-    const isLoading = isLoadingHistory || (!!latestRecordId && isLoadingDetail);
-    const noBackupFound = !isLoadingHistory && (!historyData || historyData.length === 0 || !latestRecordId);
+    const noConfigFound = !isLoading && (!liveData || !liveData.success || !liveData.config);
 
     // Determine content text format
     const configContent = (() => {
-        const detail = detailData as any;
-        if (!detail?.config_content) return "";
-        return typeof detail.config_content === 'string'
-            ? detail.config_content
-            : JSON.stringify(detail.config_content, null, 2);
+        if (!liveData?.config) return "";
+        return typeof liveData.config === 'string'
+            ? liveData.config
+            : JSON.stringify(liveData.config, null, 2);
     })();
 
     const getStatusChip = () => {
@@ -153,11 +136,11 @@ export default function ConfigPreviewModal({
                         alignItems: "center"
                     }}>
                         <Typography variant="subtitle2" color="primary.main" fontWeight={600}>
-                            Configuration Preview (Read-only)
+                            Live Configuration Preview
                         </Typography>
-                        {(detailData as any)?.updated_at && (
+                        {liveData?.fetched_at && (
                             <Typography variant="caption" color="text.secondary">
-                                Backed up on: {new Date((detailData as any).updated_at).toLocaleString()}
+                                {liveData.cached ? "Cached at" : "Fetched live at"}: {new Date(liveData.fetched_at).toLocaleString()}
                             </Typography>
                         )}
                     </Box>
@@ -179,9 +162,9 @@ export default function ConfigPreviewModal({
                             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: 200 }}>
                                 <CircularProgress size={32} />
                             </Box>
-                        ) : noBackupFound ? (
+                        ) : noConfigFound ? (
                             <Typography color="text.secondary" sx={{ fontStyle: "italic", textAlign: "center", mt: 4 }}>
-                                No configuration backup found for this device.
+                                {fetchError ? (fetchError as any)?.message || "Error fetching live configuration." : liveData?.message || "No configuration content available from the device."}
                             </Typography>
                         ) : (
                             <Box
