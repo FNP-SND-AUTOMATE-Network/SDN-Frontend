@@ -30,6 +30,8 @@ import {
     ListItemButton,
     ListItemIcon,
     ListItemText,
+    Menu,
+    MenuItem,
 } from "@mui/material";
 import {
     ArrowBack as ArrowBackIcon,
@@ -37,7 +39,10 @@ import {
     Edit as EditIcon,
     Delete as DeleteIcon,
     AccountTree as AccountTreeIcon,
+    MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
+import { useSnackbar } from "@/hooks/useSnackbar";
+import { PieChart } from '@mui/x-charts/PieChart';
 
 type SubnetResponse = components["schemas"]["SubnetResponse"];
 type IPAddressResponse = components["schemas"]["IpAddressResponse"];
@@ -49,6 +54,7 @@ export default function SubnetDetailPage() {
     const subnetId = params.subnet_id as string;
 
     const [activeTab, setActiveTab] = useState<"details" | "spacemap">("details");
+    const { showSuccess } = useSnackbar();
 
     // Modal states
     const [showSubnetModal, setShowSubnetModal] = useState(false);
@@ -59,6 +65,7 @@ export default function SubnetDetailPage() {
     const [deleteType, setDeleteType] = useState<"subnet" | "ip">("subnet");
     const [deletingItem, setDeletingItem] = useState<any>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
 
     // --- React Query Data Fetching ---
 
@@ -181,6 +188,9 @@ export default function SubnetDetailPage() {
                 await fetchClient.DELETE("/ipam/subnets/{subnet_id}", {
                     params: { path: { subnet_id: deletingItem.id } }
                 });
+                
+                showSuccess("Subnet deleted successfully");
+                
                 if (deletingItem.id === subnetId) {
                     router.push("/ipam");
                 } else {
@@ -190,6 +200,8 @@ export default function SubnetDetailPage() {
                 await fetchClient.DELETE("/ipam/addresses/{address_id}", {
                     params: { path: { address_id: deletingItem.id } }
                 });
+                
+                showSuccess("IP Address deleted successfully");
                 refetchSubnetAddresses();
             }
             setShowDeleteModal(false);
@@ -263,13 +275,30 @@ export default function SubnetDetailPage() {
                                 Subnet details
                             </Typography>
                         </Box>
-                        <Box sx={{ display: "flex", gap: 1 }}>
-                            <Button variant="outlined" startIcon={<EditIcon />} onClick={handleEditCurrentSubnet}>
-                                Edit Subnet
+                        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                            <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddChildSubnet} sx={{ textTransform: "none" }} disabled={!!subnetDetail?.master_subnet_id}>
+                                Add Child Subnet
                             </Button>
-                            <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDeleteCurrentSubnet}>
-                                Delete
-                            </Button>
+                            <IconButton onClick={(e) => setMenuAnchorEl(e.currentTarget)} sx={{ border: "1px solid", borderColor: "divider" }}>
+                                <MoreVertIcon />
+                            </IconButton>
+                            <Menu
+                                anchorEl={menuAnchorEl}
+                                open={Boolean(menuAnchorEl)}
+                                onClose={() => setMenuAnchorEl(null)}
+                                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                                transformOrigin={{ vertical: "top", horizontal: "right" }}
+                            >
+                                <MenuItem onClick={() => { setMenuAnchorEl(null); handleEditCurrentSubnet(); }}>
+                                    <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+                                    Edit Subnet
+                                </MenuItem>
+                                <Divider />
+                                <MenuItem onClick={() => { setMenuAnchorEl(null); handleDeleteCurrentSubnet(); }} sx={{ color: "error.main" }}>
+                                    <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+                                    Delete Subnet
+                                </MenuItem>
+                            </Menu>
                         </Box>
                     </Box>
 
@@ -346,40 +375,37 @@ export default function SubnetDetailPage() {
                                     <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider", p: 4, borderRadius: 2 }}>
                                         <Typography variant="h6" fontWeight="semibold" gutterBottom>Usage graph</Typography>
                                         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: 250 }}>
-                                            <Box sx={{ position: "relative", width: 220, height: 220 }}>
-                                                <svg viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)", width: "100%", height: "100%" }}>
-                                                    {/* Background circle */}
-                                                    <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="20" />
-                                                    {/* Render each segment */}
-                                                    {(() => {
-                                                        let offset = 0;
-                                                        return segments.map((seg, i) => {
-                                                            const dashLen = (seg.pct / 100) * circumference;
-                                                            const el = (
-                                                                <circle
-                                                                    key={seg.label}
-                                                                    cx="50" cy="50" r="40"
-                                                                    fill="none"
-                                                                    stroke={seg.color}
-                                                                    strokeWidth="20"
-                                                                    strokeDasharray={`${dashLen} ${circumference - dashLen}`}
-                                                                    strokeDashoffset={-offset}
-                                                                    style={{ transition: "stroke-dasharray 0.5s ease, stroke-dashoffset 0.5s ease" }}
-                                                                />
-                                                            );
-                                                            offset += dashLen;
-                                                            return el;
-                                                        });
-                                                    })()}
-                                                </svg>
-                                                <Box sx={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                                                    <Typography variant="h3" fontWeight="bold">{usedPercent.toFixed(1)}%</Typography>
-                                                    <Typography variant="body2" color="text.secondary">Used</Typography>
+                                            <Box sx={{ position: "relative", width: 220, height: 220, dropShadow: "0px 4px 6px rgba(0,0,0,0.1)" }}>
+                                                <PieChart
+                                                    series={[
+                                                        {
+                                                            data: segments.map((s, i) => ({ id: i, value: s.pct, color: s.color })),
+                                                            innerRadius: 75,
+                                                            outerRadius: 95,
+                                                            paddingAngle: 2,
+                                                            cornerRadius: 4,
+                                                            startAngle: -180,
+                                                            endAngle: 180,
+                                                        }
+                                                    ]}
+                                                    slotProps={{ legend: { hidden: true } as any }}
+                                                    sx={{
+                                                        "& .MuiPieArc-root": {
+                                                            stroke: "none",
+                                                        }
+                                                    }}
+                                                    width={220}
+                                                    height={220}
+                                                    margin={{ top: 0, bottom: 0, left: 0, right: 0 }}
+                                                />
+                                                <Box sx={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0.5, pointerEvents: "none" }}>
+                                                    <Typography variant="h3" fontWeight="bold" sx={{ color: "text.primary" }}>{usedPercent.toFixed(1)}%</Typography>
+                                                    <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: 600, letterSpacing: 1, textTransform: "uppercase", fontSize: "0.75rem" }}>Used</Typography>
                                                 </Box>
                                             </Box>
                                         </Box>
                                         {/* Legend */}
-                                        <Box sx={{ display: "flex", justifyContent: "center", gap: 3, mt: 2, flexWrap: "wrap" }}>
+                                        <Box sx={{ display: "flex", justifyContent: "center", gap: 3, mt: 3, flexWrap: "wrap", bgcolor: "grey.50", p: 2, borderRadius: 2 }}>
                                             {[
                                                 { label: "Used",     color: "#f59e0b", value: parseFloat(usage?.used ?? 0) || 0 },
                                                 { label: "Reserved", color: "#6366f1", value: reservedPercent > 0 ? reservedPercent : 0 },
@@ -407,9 +433,6 @@ export default function SubnetDetailPage() {
                                         <Box>
                                             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                                                 <Typography variant="h6" fontWeight="semibold">Child Subnets ({childSubnets.length})</Typography>
-                                                <Button variant="outlined" startIcon={<AddIcon />} onClick={handleAddChildSubnet}>
-                                                    Add Child Subnet
-                                                </Button>
                                             </Box>
 
                                             {childSubnets.length === 0 ? (

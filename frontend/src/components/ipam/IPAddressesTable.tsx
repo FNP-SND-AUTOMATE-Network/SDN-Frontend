@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from "react";
 import { components } from "@/lib/apiv2/schema";
 import {
     Table,
@@ -14,6 +15,9 @@ import {
     Typography,
     Box,
     Tooltip,
+    Menu,
+    MenuItem,
+    ListItemIcon,
 } from "@mui/material";
 import {
     Edit as EditIcon,
@@ -21,6 +25,7 @@ import {
     Storage as ServerIcon,
     Circle as CircleIcon,
     Star as StarIcon,
+    MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
 
 type IpAddressResponse = components["schemas"]["IpAddressResponse"];
@@ -86,6 +91,28 @@ export default function IPAddressesTable({
     onEdit,
     onDelete,
 }: IPAddressesTableProps) {
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [menuAddress, setMenuAddress] = useState<IpAddressResponse | null>(null);
+
+    const handleMenuOpen = (event: React.MouseEvent<HTMLButtonElement>, address: IpAddressResponse) => {
+        setAnchorEl(event.currentTarget);
+        setMenuAddress(address);
+    };
+
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+        setMenuAddress(null);
+    };
+
+    const handleEditItem = () => {
+        if (onEdit && menuAddress) onEdit(menuAddress);
+        handleMenuClose();
+    };
+
+    const handleDeleteItem = () => {
+        if (onDelete && menuAddress) onDelete(menuAddress);
+        handleMenuClose();
+    };
 
     const renderStatusChip = (address: IpAddressResponse) => {
         const { statusKey, isGateway } = getAddressStatus(address);
@@ -185,22 +212,12 @@ export default function IPAddressesTable({
                                             {renderStatusChip(address)}
                                         </TableCell>
                                         <TableCell align="center">
-                                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                                                {onEdit && (
-                                                    <Tooltip title="Edit IP Address">
-                                                        <IconButton size="small" onClick={() => onEdit(address)} color="primary">
-                                                            <EditIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                )}
-                                                {onDelete && (
-                                                    <Tooltip title="Delete IP Address">
-                                                        <IconButton size="small" onClick={() => onDelete(address)} color="error">
-                                                            <DeleteIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                )}
-                                                {!onEdit && !onDelete && (
+                                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                {(onEdit || onDelete) ? (
+                                                    <IconButton size="small" onClick={(e) => handleMenuOpen(e, address)}>
+                                                        <MoreVertIcon fontSize="small" />
+                                                    </IconButton>
+                                                ) : (
                                                     <Typography variant="body2" color="text.disabled">-</Typography>
                                                 )}
                                             </Box>
@@ -212,6 +229,28 @@ export default function IPAddressesTable({
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleMenuClose}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                transformOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+                {onEdit && (
+                    <MenuItem onClick={handleEditItem}>
+                        <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+                        Edit
+                    </MenuItem>
+                )}
+                {onEdit && onDelete && <Box sx={{ my: 0.5, borderBottom: "1px solid", borderColor: "divider" }} />}
+                {onDelete && (
+                    <MenuItem onClick={handleDeleteItem} sx={{ color: "error.main" }}>
+                        <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+                        Delete
+                    </MenuItem>
+                )}
+            </Menu>
 
             {addresses.length > 0 && (
                 <Box sx={{ bgcolor: "grey.50", px: 3, py: 1.5, borderTop: "1px solid", borderColor: "divider" }}>
