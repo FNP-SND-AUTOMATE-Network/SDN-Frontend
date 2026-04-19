@@ -260,8 +260,10 @@ export const Sidebar: React.FC = () => {
         {/* Children Items - Show below parent when expanded */}
         {hasChildren && isExpanded && (
           <div className="ml-2">
-            {item.children?.map((child) => {
-              const childIsActive = child.href ? isActive(child.href) : false;
+            {item.children
+              ?.filter((child) => !(["Audit Log", "Templates", "IPAM", "Backup Config"].includes(child.label) && user?.role?.toLowerCase() === "viewer"))
+              .map((child) => {
+                const childIsActive = child.href ? isActive(child.href) : false;
               return (
                 <Link key={child.id} href={child.href || "#"}>
                   <div
@@ -298,7 +300,7 @@ export const Sidebar: React.FC = () => {
       <div className="p-4">
         <nav className="space-y-1">
           {menuItems
-            .filter(item => !(["Audit Log", "Templates", "IPAM"].includes(item.label) && user?.role?.toLowerCase() === "viewer"))
+            .filter(item => !(["Audit Log", "Templates", "IPAM", "Backup Config"].includes(item.label) && user?.role?.toLowerCase() === "viewer"))
             .map((item) => renderMenuItem(item))}
         </nav>
       </div>

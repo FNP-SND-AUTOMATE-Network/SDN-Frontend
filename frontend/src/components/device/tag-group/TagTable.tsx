@@ -24,6 +24,7 @@ import {
   Badge,
   TableSortLabel,
 } from "@mui/material";
+import { useAuth } from "@/contexts/AuthContext";
 import { components } from "@/lib/apiv2/schema";
 
 type TagResponse = components["schemas"]["TagResponse"];
@@ -58,6 +59,7 @@ export default function TagTable({
   onEditTag,
   onDeleteTag,
 }: TagTableProps) {
+  const { user } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedTag, setSelectedTag] = useState<TagResponse | null>(null);
   const open = Boolean(anchorEl);
@@ -198,17 +200,19 @@ export default function TagTable({
                     </Typography>
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton
-                      aria-label="more"
-                      id={`tag-button-${tag.tag_id}`}
-                      aria-controls={open ? `tag-menu-${tag.tag_id}` : undefined}
-                      aria-expanded={open ? 'true' : undefined}
-                      aria-haspopup="true"
-                      onClick={(e) => handleMenuClick(e, tag)}
-                      size="small"
-                    >
-                      <FontAwesomeIcon icon={faEllipsisVertical} style={{ width: 16 }} />
-                    </IconButton>
+                    {user?.role?.toLowerCase() !== "viewer" && (
+                      <IconButton
+                        aria-label="more"
+                        id={`tag-button-${tag.tag_id}`}
+                        aria-controls={open ? `tag-menu-${tag.tag_id}` : undefined}
+                        aria-expanded={open ? 'true' : undefined}
+                        aria-haspopup="true"
+                        onClick={(e) => handleMenuClick(e, tag)}
+                        size="small"
+                      >
+                        <FontAwesomeIcon icon={faEllipsisVertical} style={{ width: 16 }} />
+                      </IconButton>
+                    )}
                   </TableCell>
                 </TableRow>
               );

@@ -20,9 +20,10 @@ import {
   InputAdornment,
   IconButton,
   Button,
-  Select,
   MenuItem,
+  Select
 } from "@mui/material";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StatusCardProps {
   label: string;
@@ -84,6 +85,7 @@ export default function SiteHeader({
   branches,
   totalDevices,
 }: SiteHeaderProps) {
+  const { user } = useAuth();
   const [localSearch, setLocalSearch] = useState(searchTerm);
 
   useEffect(() => {
@@ -174,14 +176,16 @@ export default function SiteHeader({
         <Box flex={1} />
 
         {/* Add Site Button */}
-        <Button
-          variant="contained"
-          onClick={onAddSite}
-          startIcon={<FontAwesomeIcon icon={faPlus} className="w-4 h-4" />}
-          sx={{ whiteSpace: "nowrap", borderRadius: 2 }}
-        >
-          Add Site
-        </Button>
+        {user?.role?.toLowerCase() !== "viewer" && (
+          <Button
+            variant="contained"
+            onClick={onAddSite}
+            startIcon={<FontAwesomeIcon icon={faPlus} className="w-4 h-4" />}
+            sx={{ whiteSpace: "nowrap", borderRadius: 2 }}
+          >
+            Add Site
+          </Button>
+        )}
       </Stack>
 
       {/* Status Cards */}

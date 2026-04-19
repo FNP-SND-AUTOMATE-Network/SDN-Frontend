@@ -26,6 +26,7 @@ import {
   faTrash,
   faMapMarkerAlt,
 } from "@fortawesome/free-solid-svg-icons";
+import { useAuth } from "@/contexts/AuthContext";
 import { components } from "@/lib/apiv2/schema";
 
 type LocalSiteResponse = components["schemas"]["LocalSiteResponse"];
@@ -77,6 +78,7 @@ export default function SiteTable({
   onEditSite,
   onDeleteSite,
 }: SiteTableProps) {
+  const { user } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [menuSiteId, setMenuSiteId] = useState<string | null>(null);
 
@@ -221,13 +223,15 @@ export default function SiteTable({
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        onClick={(e) => handleMenuClick(e, site.site_code)}
-                        sx={{ color: "text.secondary", "&:hover": { color: "text.primary" } }}
-                      >
-                        <FontAwesomeIcon icon={faEllipsisVertical} style={{ width: 16 }} />
-                      </IconButton>
+                      {user?.role?.toLowerCase() !== "viewer" && (
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleMenuClick(e, site.site_code)}
+                          sx={{ color: "text.secondary", "&:hover": { color: "text.primary" } }}
+                        >
+                          <FontAwesomeIcon icon={faEllipsisVertical} style={{ width: 16 }} />
+                        </IconButton>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

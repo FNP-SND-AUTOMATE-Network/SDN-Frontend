@@ -13,6 +13,7 @@ import {
   MenuItem,
   Select,
 } from "@mui/material";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Add,
   Search,
@@ -82,6 +83,7 @@ export default function OperationHeader({
   totalBackups,
   totalUsage,
 }: OperationHeaderProps) {
+  const { user } = useAuth();
   const [localSearch, setLocalSearch] = useState(searchTerm);
 
   useEffect(() => {
@@ -164,14 +166,16 @@ export default function OperationHeader({
 
         <Box flex={1} />
 
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={onAddOs}
-          sx={{ whiteSpace: "nowrap", borderRadius: 2 }}
-        >
-          Add OS
-        </Button>
+        {user?.role?.toLowerCase() !== "viewer" && (
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={onAddOs}
+            sx={{ whiteSpace: "nowrap", borderRadius: 2 }}
+          >
+            Add OS
+          </Button>
+        )}
       </Stack>
 
       {/* Status Cards */}

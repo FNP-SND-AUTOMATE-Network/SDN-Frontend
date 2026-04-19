@@ -23,6 +23,7 @@ import {
   Paper,
   Select,
 } from "@mui/material";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StatusCardProps {
   label: string;
@@ -91,6 +92,7 @@ export default function TagHeader({
   totalUsage,
 }: TagHeaderProps) {
   const [localSearch, setLocalSearch] = useState(searchTerm);
+  const { user } = useAuth();
 
   useEffect(() => {
     setLocalSearch(searchTerm);
@@ -172,14 +174,16 @@ export default function TagHeader({
         <Box sx={{ flexGrow: 1 }} />
 
         {/* Add Tag Button */}
-        <Button
-          variant="contained"
-          onClick={onAddTag}
-          startIcon={<FontAwesomeIcon icon={faPlus} style={{ width: 14 }} />}
-          sx={{ whiteSpace: "nowrap", boxShadow: "none" }}
-        >
-          Add Tag
-        </Button>
+        {user?.role?.toLowerCase() !== "viewer" && (
+          <Button
+            variant="contained"
+            onClick={onAddTag}
+            startIcon={<FontAwesomeIcon icon={faPlus} style={{ width: 14 }} />}
+            sx={{ whiteSpace: "nowrap", boxShadow: "none" }}
+          >
+            Add Tag
+          </Button>
+        )}
       </Stack>
 
       {/* Status Cards */}

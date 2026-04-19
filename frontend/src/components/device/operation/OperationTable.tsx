@@ -27,6 +27,7 @@ import {
   Visibility,
   Memory,
 } from "@mui/icons-material";
+import { useAuth } from "@/contexts/AuthContext";
 import { components } from "@/lib/apiv2/schema";
 
 type OperatingSystem = components["schemas"]["OperatingSystemResponse"];
@@ -71,6 +72,7 @@ export default function OperationTable({
   onDeleteOs,
   onViewOs,
 }: OperationTableProps) {
+  const { user } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [menuOs, setMenuOs] = useState<OperatingSystem | null>(null);
 
@@ -257,12 +259,14 @@ export default function OperationTable({
 
                     {/* Actions */}
                     <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        onClick={(e) => handleMenuOpen(e, os)}
-                      >
-                        <MoreVert fontSize="small" />
-                      </IconButton>
+                      {user?.role?.toLowerCase() !== "viewer" && (
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleMenuOpen(e, os)}
+                        >
+                          <MoreVert fontSize="small" />
+                        </IconButton>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

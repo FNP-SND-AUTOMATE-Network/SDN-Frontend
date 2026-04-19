@@ -37,6 +37,7 @@ import {
 } from "@mui/icons-material";
 import { paths } from "@/lib/apiv2/schema";
 import DeleteDeviceModal from "./DeleteDeviceModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 type DeviceNetwork =
   paths["/device-networks/"]["get"]["responses"]["200"]["content"]["application/json"]["devices"][number];
@@ -65,6 +66,7 @@ const typeConfig: Record<string, { color: string; icon: React.ReactNode }> = {
 
 export default function DeviceTable({ devices, onEdit, onSync }: DeviceTableProps) {
   const router = useRouter();
+  const { user } = useAuth();
 
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [orderBy, setOrderBy] = useState<keyof DeviceNetwork>("device_name");
@@ -174,7 +176,7 @@ export default function DeviceTable({ devices, onEdit, onSync }: DeviceTableProp
               <TableCell sx={{ fontWeight: "bold", color: "text.secondary", textTransform: "uppercase", fontSize: "0.75rem" }}>
                 <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? order : 'asc'} onClick={createSortHandler('status')}>Status</TableSortLabel>
               </TableCell>
-              <TableCell align="right" />
+              {user?.role?.toLowerCase() !== "viewer" && <TableCell align="right" />}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -256,14 +258,16 @@ export default function DeviceTable({ devices, onEdit, onSync }: DeviceTableProp
                     </TableCell>
 
                     {/* Actions */}
-                    <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        onClick={(e) => handleMenuOpen(e, device.id)}
-                      >
-                        <MoreVert fontSize="small" />
-                      </IconButton>
-                    </TableCell>
+                    {user?.role?.toLowerCase() !== "viewer" && (
+                      <TableCell align="right">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleMenuOpen(e, device.id)}
+                        >
+                          <MoreVert fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })
