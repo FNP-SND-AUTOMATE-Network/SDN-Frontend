@@ -41,15 +41,32 @@ export const getTypeColor = (type: string): string => {
  */
 export const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return "-";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
+
+  const hasTimezone = /(?:[zZ]|[+\-]\d{2}(?::?\d{2})?)$/.test(dateString);
+  const normalizedDateString = hasTimezone ? dateString : `${dateString}Z`;
+  const date = new Date(normalizedDateString);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Bangkok",
     year: "numeric",
     month: "short",
     day: "numeric",
-    hour: "2-digit",
+    hour: "numeric",
     minute: "2-digit",
     hour12: false,
-  });
+  }).formatToParts(date);
+
+  const getPart = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((part) => part.type === type)?.value ?? "";
+
+  const day = getPart("day");
+  const month = getPart("month");
+  const year = getPart("year");
+  const hour = getPart("hour");
+  const minute = getPart("minute");
+
+  return `${day} ${month} ${year}, ${hour}.${minute}`;
 };
 
 // Keep backward compatibility for old references
