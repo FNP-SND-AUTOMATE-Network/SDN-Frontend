@@ -219,21 +219,49 @@ export default function DeviceModal({
     setIsLoading(true);
     try {
       
+      // Build payload without tag_ids (backend PUT doesn't handle tags)
       const payload = Object.fromEntries(
         Object.entries(data).map(([key, value]) => [key, value === "" ? null : value])
       );
 
+      let deviceId: string | undefined;
+
       if (mode === "add") {
-        const { error } = await fetchClient.POST("/device-networks/", {
+        const { data: created, error } = await fetchClient.POST("/device-networks/", {
           body: payload as any,
         });
         if (error) throw error;
+        deviceId = (created as any)?.device?.id;
       } else if (mode === "edit" && device) {
         const { error } = await fetchClient.PUT("/device-networks/{device_id}", {
           params: { path: { device_id: device.id } },
           body: payload as any,
         });
         if (error) throw error;
+        deviceId = device.id;
+      }
+
+      // ── Sync tags ──────────────────────────────────────────────────
+      if (deviceId) {
+        const originalTagIds: string[] = mode === "edit" && device?.tags
+          ? (device.tags as any[]).map((t) => t.tag_id)
+          : [];
+
+        const toAdd    = selectedTagIds.filter((id) => !originalTagIds.includes(id));
+        const toRemove = originalTagIds.filter((id) => !selectedTagIds.includes(id));
+
+        if (toAdd.length > 0) {
+          await fetchClient.POST("/device-networks/{device_id}/tags" as any, {
+            params: { path: { device_id: deviceId } },
+            body: { tag_ids: toAdd } as any,
+          });
+        }
+        if (toRemove.length > 0) {
+          await fetchClient.DELETE("/device-networks/{device_id}/tags" as any, {
+            params: { path: { device_id: deviceId } },
+            body: { tag_ids: toRemove } as any,
+          });
+        }
       }
 
       // Invalidate device list cache so table auto-refreshes
