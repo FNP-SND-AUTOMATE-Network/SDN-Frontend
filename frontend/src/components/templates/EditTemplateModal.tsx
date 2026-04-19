@@ -101,7 +101,7 @@ export default function EditTemplateModal({
                     template_name: templateName.trim(),
                     description: description.trim() || null,
                     template_type: templateType,
-                    tag_names: selectedTags.length > 0 ? selectedTags : null,
+                    tag_names: selectedTags,
                 }
             );
 
