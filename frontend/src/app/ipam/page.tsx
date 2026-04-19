@@ -196,7 +196,7 @@ export default function IPAMPage() {
                     )}
                     
                     {/* Action buttons - MoreVert */}
-                    {user?.role !== "viewer" && (
+                    {user?.role?.toLowerCase() !== "viewer" && (
                         <Box className="action-buttons" sx={{ opacity: 0, transition: "opacity 0.2s" }}>
                             <IconButton
                                 size="small"
@@ -237,7 +237,7 @@ export default function IPAMPage() {
                                     Manage your IP address space, subnets, and VLANs
                                 </Typography>
                             </Box>
-                            {user?.role !== "viewer" && (
+                            {user?.role?.toLowerCase() !== "viewer" && (
                                 <Button 
                                     variant="contained" 
                                     color="primary" 
@@ -318,7 +318,7 @@ export default function IPAMPage() {
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                                         Get started by creating your first section
                                     </Typography>
-                                    {user?.role !== "viewer" && (
+                                    {user?.role?.toLowerCase() !== "viewer" && (
                                         <Button 
                                             variant="contained" 
                                             color="primary" 

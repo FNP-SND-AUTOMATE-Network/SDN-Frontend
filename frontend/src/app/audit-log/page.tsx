@@ -156,7 +156,7 @@ export default function AuditLogPage() {
     setPage(0);
   };
 
-  if (user?.role === "VIEWER") {
+  if (user?.role?.toLowerCase() === "viewer") {
     return (
       <ProtectedRoute>
         <PageLayout>

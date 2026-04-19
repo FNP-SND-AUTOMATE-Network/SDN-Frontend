@@ -275,7 +275,7 @@ export default function SubnetDetailPage() {
                                 Subnet details
                             </Typography>
                         </Box>
-                        {user?.role !== "viewer" && (
+                        {user?.role?.toLowerCase() !== "viewer" && (
                             <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                                 <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddChildSubnet} sx={{ textTransform: "none" }} disabled={!!subnetDetail?.master_subnet_id}>
                                     Add Child Subnet
@@ -463,7 +463,7 @@ export default function SubnetDetailPage() {
                                                                         secondary={childSubnet.description}
                                                                         primaryTypographyProps={{ fontWeight: "semibold", color: "text.primary" }}
                                                                     />
-                                                                    {user?.role !== "viewer" && (
+                                                                    {user?.role?.toLowerCase() !== "viewer" && (
                                                                         <Box sx={{ display: "flex", gap: 1, opacity: 0.5, "&:hover": { opacity: 1 } }}>
                                                                             <IconButton size="small" onClick={(e) => handleEditChildSubnet(childSubnet, e)}>
                                                                                 <EditIcon fontSize="small" />
@@ -486,7 +486,7 @@ export default function SubnetDetailPage() {
                                     <Box>
                                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                                             <Typography variant="h6" fontWeight="semibold">IP Addresses ({addresses.length})</Typography>
-                                            {user?.role !== "viewer" && (
+                                            {user?.role?.toLowerCase() !== "viewer" && (
                                                 <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddIP}>
                                                     Add IP Address
                                                 </Button>

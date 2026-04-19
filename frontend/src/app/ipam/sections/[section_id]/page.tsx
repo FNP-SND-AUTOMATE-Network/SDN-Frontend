@@ -335,7 +335,7 @@ export default function SectionDetailPage() {
                                             </Box>
                                         </Box>
                                     </Box>
-                                    {user?.role !== "viewer" && (
+                                    {user?.role?.toLowerCase() !== "viewer" && (
                                         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                                             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddSubnet} sx={{ textTransform: "none" }}>
                                                 Add Subnet

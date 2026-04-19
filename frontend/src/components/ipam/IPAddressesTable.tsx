@@ -215,7 +215,7 @@ export default function IPAddressesTable({
                                         </TableCell>
                                         <TableCell align="center">
                                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                {(onEdit || onDelete) && user?.role !== "viewer" ? (
+                                                {(onEdit || onDelete) && user?.role?.toLowerCase() !== "viewer" ? (
                                                     <IconButton size="small" onClick={(e) => handleMenuOpen(e, address)}>
                                                         <MoreVertIcon fontSize="small" />
                                                     </IconButton>

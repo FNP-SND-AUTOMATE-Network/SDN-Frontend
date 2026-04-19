@@ -247,7 +247,7 @@ export default function TopologyDeviceTable({
                     <Typography color="primary" variant="subtitle1" fontWeight={600}>
                         {selectedDeviceIds.length} device{selectedDeviceIds.length > 1 ? "s" : ""} selected
                     </Typography>
-                    {user?.role !== "viewer" && (
+                    {user?.role?.toLowerCase() !== "viewer" && (
                         <>
                             <Button
                                 variant="contained"
@@ -325,7 +325,7 @@ export default function TopologyDeviceTable({
                                     Status
                                 </TableSortLabel>
                             </TableCell>
-                            {user?.role !== "viewer" && <TableCell align="right" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}></TableCell>}
+                            {user?.role?.toLowerCase() !== "viewer" && <TableCell align="right" sx={{ color: "text.secondary", fontWeight: 600, textTransform: "uppercase" }}></TableCell>}
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -416,7 +416,7 @@ export default function TopologyDeviceTable({
                                                 }}
                                             />
                                         </TableCell>
-                                        {user?.role !== "viewer" && (
+                                        {user?.role?.toLowerCase() !== "viewer" && (
                                             <TableCell align="right">
                                                 <IconButton
                                                     size="small"

@@ -232,7 +232,7 @@ export default function TemplateDetailModal({
 
             {/* Footer Actions */}
             <DialogActions sx={{ px: 3, py: 2, bgcolor: "grey.50", borderTop: 1, borderColor: "divider", justifyContent: "space-between" }}>
-                {user?.role !== "viewer" ? (
+                {user?.role?.toLowerCase() !== "viewer" ? (
                     showDeleteConfirm ? (
                         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                             <Typography variant="body2" color="error.main" fontWeight="medium">
@@ -284,7 +284,7 @@ export default function TemplateDetailModal({
                     >
                         Close
                     </Button>
-                    {user?.role !== "viewer" && (
+                    {user?.role?.toLowerCase() !== "viewer" && (
                         <Button
                             variant="contained"
                             color="primary"

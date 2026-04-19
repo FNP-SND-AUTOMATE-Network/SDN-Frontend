@@ -209,7 +209,7 @@ export default function TemplatesConfigurationPage() {
 
           <Box flex={1} />
 
-          {user?.role !== "viewer" && (
+          {user?.role?.toLowerCase() !== "viewer" && (
             <Button
               variant="contained"
               color="success"
@@ -234,7 +234,7 @@ export default function TemplatesConfigurationPage() {
             <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
               No templates found
             </Typography>
-            {user?.role !== "viewer" && (
+            {user?.role?.toLowerCase() !== "viewer" && (
               <Button
                 variant="contained"
                 color="primary"

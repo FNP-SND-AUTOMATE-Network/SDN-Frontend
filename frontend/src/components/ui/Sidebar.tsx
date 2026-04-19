@@ -298,7 +298,7 @@ export const Sidebar: React.FC = () => {
       <div className="p-4">
         <nav className="space-y-1">
           {menuItems
-            .filter(item => !(item.label === "Audit Log" && user?.role === "viewer"))
+            .filter(item => !(["Audit Log", "Templates", "IPAM"].includes(item.label) && user?.role?.toLowerCase() === "viewer"))
             .map((item) => renderMenuItem(item))}
         </nav>
       </div>
