@@ -122,7 +122,7 @@ export default function SiteTable({
 
   const handleEdit = () => {
     if (!menuSiteId) return;
-    const site = sites.find((s) => s.site_code === menuSiteId);
+    const site = sites.find((s) => s.id === menuSiteId);
     if (site) {
       onEditSite(site);
     }
@@ -131,9 +131,9 @@ export default function SiteTable({
 
   const handleDelete = () => {
     if (!menuSiteId) return;
-    const site = sites.find((s) => s.site_code === menuSiteId);
+    const site = sites.find((s) => s.id === menuSiteId);
     if (site) {
-      onDeleteSite(site.site_code, site.site_name || site.site_code); // Use site_code as ID
+      onDeleteSite(site.id, site.site_name || site.site_code); // Use UUID as ID
     }
     handleMenuClose();
   };
@@ -226,7 +226,7 @@ export default function SiteTable({
                       {user?.role?.toLowerCase() !== "viewer" && (
                         <IconButton
                           size="small"
-                          onClick={(e) => handleMenuClick(e, site.site_code)}
+                          onClick={(e) => handleMenuClick(e, site.id)}
                           sx={{ color: "text.secondary", "&:hover": { color: "text.primary" } }}
                         >
                           <FontAwesomeIcon icon={faEllipsisVertical} style={{ width: 16 }} />
