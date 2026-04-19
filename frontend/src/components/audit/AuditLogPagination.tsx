@@ -32,7 +32,7 @@ export default function AuditLogPagination({
 
       {/* Pagination Info */}
       <div className="text-center text-sm text-gray-600 font-sf-pro-text">
-        แสดง {auditLogsLength} จาก {total} รายการ
+        {auditLogsLength} / {total} items
       </div>
     </>
   );
