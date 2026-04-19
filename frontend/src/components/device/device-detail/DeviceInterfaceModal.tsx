@@ -19,6 +19,7 @@ interface DeviceInterfaceModalProps {
     isOpen: boolean;
     onClose: () => void;
     interfaceData: NetworkInterface | null;
+    allInterfaces?: NetworkInterface[];
     mode: "view" | "edit";
     deviceId: string;
     onSuccess: (msg?: string) => void;
@@ -28,6 +29,7 @@ export function DeviceInterfaceModal({
     isOpen,
     onClose,
     interfaceData,
+    allInterfaces = [],
     mode,
     deviceId,
     onSuccess,
@@ -79,6 +81,7 @@ export function DeviceInterfaceModal({
             <DialogContent dividers sx={{ p: 0 }}>
                 <DeviceInterfaceForm
                     interfaceData={interfaceData}
+                    allInterfaces={allInterfaces}
                     mode={mode}
                     deviceId={deviceId}
                     onSuccess={(msg) => {

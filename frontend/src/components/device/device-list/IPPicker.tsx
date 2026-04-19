@@ -165,7 +165,7 @@ export default function IPPicker({ onIpSelect, disabled }: IPPickerProps) {
                     }
                 }}
             >
-                IPAM Select
+                IPAM
             </Button>
 
             <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>

@@ -293,6 +293,7 @@ export function DeviceInterfacesTab({ device }: DeviceInterfacesTabProps) {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 interfaceData={selectedInterface}
+                allInterfaces={interfaces}
                 mode={modalMode}
                 deviceId={device.node_id || ""}
                 onSuccess={(msg) => {

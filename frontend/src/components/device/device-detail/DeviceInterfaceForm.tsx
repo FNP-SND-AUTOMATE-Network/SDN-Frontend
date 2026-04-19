@@ -44,6 +44,7 @@ export interface InterfaceDraft {
 
 interface DeviceInterfaceFormProps {
     interfaceData: NetworkInterface;
+    allInterfaces?: NetworkInterface[];
     mode: "view" | "edit";
     deviceId: string;
     onSuccess: (msg?: string) => void;
@@ -58,6 +59,126 @@ interface DeviceInterfaceFormProps {
     draft?: InterfaceDraft;
     /** Callback when draft changes so parent can persist it */
     onDraftChange?: (draft: InterfaceDraft) => void;
+}
+
+const IPV4_MASK_PATTERN = /^(\d{1,3}\.){3}\d{1,3}$/;
+const IPV4_ADDRESS_PATTERN = /^(\d{1,3}\.){3}\d{1,3}$/;
+
+function ipv4ToInt(ip: string): number {
+    const octets = ip.split(".").map((part) => Number(part));
+    if (octets.length !== 4 || octets.some((octet) => Number.isNaN(octet) || octet < 0 || octet > 255)) {
+        throw new Error(`IPv4 address ไม่ถูกต้อง: ${ip}`);
+    }
+    return (((octets[0] << 24) >>> 0) | (octets[1] << 16) | (octets[2] << 8) | octets[3]) >>> 0;
+}
+
+function intToIpv4(value: number): string {
+    return [
+        (value >>> 24) & 255,
+        (value >>> 16) & 255,
+        (value >>> 8) & 255,
+        value & 255,
+    ].join(".");
+}
+
+function isValidIpv4Address(ip: string): boolean {
+    if (!IPV4_ADDRESS_PATTERN.test(ip)) return false;
+    const octets = ip.split(".").map((part) => Number(part));
+    return octets.length === 4 && octets.every((octet) => !Number.isNaN(octet) && octet >= 0 && octet <= 255);
+}
+
+function getIpv4Range(ip: string, mask: string): { start: number; end: number; network: string } {
+    const ipInt = ipv4ToInt(ip);
+    const maskInt = ipv4ToInt(mask);
+    const start = (ipInt & maskInt) >>> 0;
+    const end = (start | ((~maskInt) >>> 0)) >>> 0;
+    return { start, end, network: intToIpv4(start) };
+}
+
+function findOverlappingInterface(
+    targetInterfaceName: string,
+    targetIp: string,
+    targetMask: string,
+    allInterfaces: NetworkInterface[],
+): { interfaceName: string; network: string } | null {
+    const targetRange = getIpv4Range(targetIp, targetMask);
+
+    for (const iface of allInterfaces) {
+        if (iface.name === targetInterfaceName) continue;
+        const otherIp = (iface.ipv4_address || "").trim();
+        const rawOtherMask = (iface.subnet_mask || "").trim();
+        if (!otherIp || !rawOtherMask) continue;
+        if (!isValidIpv4Address(otherIp)) continue;
+
+        let otherMask = "";
+        try {
+            otherMask = normalizeIpv4Mask(rawOtherMask);
+        } catch {
+            continue;
+        }
+
+        const otherRange = getIpv4Range(otherIp, otherMask);
+        const overlaps = Math.max(targetRange.start, otherRange.start) <= Math.min(targetRange.end, otherRange.end);
+
+        if (overlaps) {
+            return { interfaceName: iface.name, network: otherRange.network };
+        }
+    }
+
+    return null;
+}
+
+function prefixToIpv4Mask(prefix: number): string {
+    if (prefix < 16 || prefix > 30) {
+        throw new Error("IPv4 prefix ต้องอยู่ระหว่าง 16 ถึง 30");
+    }
+
+    const mask = prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
+    return [
+        (mask >>> 24) & 255,
+        (mask >>> 16) & 255,
+        (mask >>> 8) & 255,
+        mask & 255,
+    ].join(".");
+}
+
+function isValidIpv4SubnetMask(mask: string): boolean {
+    if (!IPV4_MASK_PATTERN.test(mask)) return false;
+
+    const octets = mask.split(".").map((part) => Number(part));
+    if (octets.some((octet) => Number.isNaN(octet) || octet < 0 || octet > 255)) {
+        return false;
+    }
+
+    const bits = octets
+        .map((octet) => octet.toString(2).padStart(8, "0"))
+        .join("");
+
+    return /^1*0*$/.test(bits);
+}
+
+function normalizeIpv4Mask(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+
+    const prefixCandidate = trimmed.startsWith("/") ? trimmed.slice(1) : trimmed;
+    if (/^\d{1,2}$/.test(prefixCandidate)) {
+        return prefixToIpv4Mask(Number(prefixCandidate));
+    }
+
+    if (isValidIpv4SubnetMask(trimmed)) {
+        return trimmed;
+    }
+
+    throw new Error("Subnet Mask ไม่ถูกต้อง (รองรับ Prefix 16-30 เช่น 24 หรือ Subnet Mask เช่น 255.255.255.0)");
+}
+
+function normalizeMaskForCompare(value: string): string {
+    try {
+        return normalizeIpv4Mask(value);
+    } catch {
+        return value.trim();
+    }
 }
 
 // --- Helper: Section Header ---
@@ -82,6 +203,7 @@ function SectionHeader({ icon, title, action }: { icon: React.ReactNode; title: 
 
 export function DeviceInterfaceForm({
     interfaceData,
+    allInterfaces = [],
     mode,
     deviceId,
     onSuccess,
@@ -101,7 +223,9 @@ export function DeviceInterfaceForm({
     const [duplex, setDuplex] = useState("");
     const [autoNegotiate, setAutoNegotiate] = useState(true);
     const [ipv4Address, setIpv4Address] = useState("");
+    const [ipv4AddressError, setIpv4AddressError] = useState("");
     const [subnetMask, setSubnetMask] = useState("");
+    const [subnetMaskError, setSubnetMaskError] = useState("");
     const [ipv6Address, setIpv6Address] = useState("");
     const [mtu, setMtu] = useState<string | number>("");
     const [ospfProcessId, setOspfProcessId] = useState("");
@@ -134,7 +258,9 @@ export function DeviceInterfaceForm({
             setDuplex(interfaceData.duplex || "Auto");
             setAutoNegotiate(interfaceData.auto_negotiate ?? true);
             setIpv4Address(interfaceData.ipv4_address || "");
+            setIpv4AddressError("");
             setSubnetMask(interfaceData.subnet_mask || "");
+            setSubnetMaskError("");
             setIpv6Address(interfaceData.ipv6 || "");
             setMtu(interfaceData.mtu || "");
 
@@ -173,6 +299,25 @@ export function DeviceInterfaceForm({
     }, [adminStatus, description, duplex, autoNegotiate, ipv4Address, subnetMask, ipv6Address, mtu, ospfProcessId, ospfArea]);
 
     // ==================== Build Intent List (shared between staging & direct modes) ====================
+    const applyInlineValidationError = (message: string): boolean => {
+        if (message.includes("IPv4 Address") || message.includes("IPv4 is incomplete") || message.includes("IPv4 ไม่ครบ") || message.includes("IPv4 ไม่ถูกต้อง")) {
+            setIpv4AddressError("IPv4 is incomplete or invalid (must be in x.x.x.x format)");
+            return true;
+        }
+
+        if (message.includes("Subnet Mask") || message.includes("IPv4 prefix")) {
+            setSubnetMaskError(message);
+            return true;
+        }
+
+        if (message.includes("overlap")) {
+            setSubnetMaskError(message);
+            return true;
+        }
+
+        return false;
+    };
+
     const buildIntents = (): StagedIntent[] => {
         const intents: StagedIntent[] = [];
         const ifName = interfaceData.name;
@@ -186,9 +331,24 @@ export function DeviceInterfaceForm({
         }
 
         // 2. IPv4
-        const ipChanged = ipv4Address !== (interfaceData.ipv4_address || "") || subnetMask !== (interfaceData.subnet_mask || "");
-        if (ipChanged && ipv4Address && subnetMask) {
-            intents.push({ intent: "interface.set_ipv4", node_id: deviceId, params: { interface: ifName, ip: ipv4Address, mask: subnetMask }, label: `${ifName}: Set IPv4 → ${ipv4Address}` });
+        const normalizedInputIp = ipv4Address.trim();
+        if (normalizedInputIp && !isValidIpv4Address(normalizedInputIp)) {
+            throw new Error("IPv4 Address is invalid (must be in x.x.x.x format)");
+        }
+
+        const normalizedCurrentMask = normalizeMaskForCompare(interfaceData.subnet_mask || "");
+        const normalizedInputMask = subnetMask ? normalizeIpv4Mask(subnetMask) : "";
+        const ipChanged =
+            normalizedInputIp !== (interfaceData.ipv4_address || "") ||
+            normalizedInputMask !== normalizedCurrentMask;
+
+        if (ipChanged && normalizedInputIp && normalizedInputMask) {
+            const overlap = findOverlappingInterface(ifName, normalizedInputIp, normalizedInputMask, allInterfaces);
+            if (overlap) {
+                throw new Error(`Network ${intToIpv4(getIpv4Range(normalizedInputIp, normalizedInputMask).start)} overlaps with ${overlap.interfaceName}`);
+            }
+
+            intents.push({ intent: "interface.set_ipv4", node_id: deviceId, params: { interface: ifName, ip: normalizedInputIp, mask: normalizedInputMask }, label: `${ifName}: Set IPv4 → ${normalizedInputIp}` });
         }
 
         // 3. Description
@@ -235,14 +395,24 @@ export function DeviceInterfaceForm({
 
     // ==================== Staging Mode: Queue intents ====================
     const handleStageIntents = () => {
-        const intents = buildIntents();
+        let intents: StagedIntent[] = [];
+        try {
+            intents = buildIntents();
+        } catch (error: any) {
+            if (applyInlineValidationError(error?.message || "")) {
+                return;
+            }
+            showError(error?.message || "Invalid IPv4/Subnet Mask");
+            return;
+        }
+
         if (intents.length === 0) {
-            showError("ไม่มีการเปลี่ยนแปลง — ไม่มี Intent ที่ต้อง Queue");
+            showError("No changes — No intents to queue");
             return;
         }
         if (onStageIntent) {
             onStageIntent(intents);
-            showSuccess(`เพิ่ม ${intents.length} รายการของ ${interfaceData.name} เข้าคิว`);
+            showSuccess(`Add ${intents.length} intents of ${interfaceData.name} to queue`);
         }
     };
 
@@ -315,6 +485,9 @@ export function DeviceInterfaceForm({
             onSuccess(`Interface ${interfaceData.name} updated successfully`);
         } catch (error: any) {
             console.error("❌ [handleSave] ERROR:", error);
+            if (applyInlineValidationError(error?.message || "")) {
+                return;
+            }
             showError(`Failed to save config: ${error?.message || "Unknown error"}`);
         } finally {
             setIsSaving(false);
@@ -457,18 +630,40 @@ export function DeviceInterfaceForm({
                             }}
                         >
                             {isEdit ? (
-                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                                     <TextField
                                         label="IPv4 Address"
                                         size="small"
                                         value={ipv4Address}
-                                        onChange={(e) => setIpv4Address(e.target.value)}
+                                        error={Boolean(ipv4AddressError)}
+                                        helperText={ipv4AddressError || undefined}
+                                        onChange={(e) => {
+                                            const nextValue = e.target.value;
+                                            setIpv4Address(nextValue);
+                                            if (!nextValue.trim() || isValidIpv4Address(nextValue.trim())) {
+                                                setIpv4AddressError("");
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            const trimmed = ipv4Address.trim();
+                                            if (!trimmed) {
+                                                setIpv4AddressError("");
+                                                return;
+                                            }
+                                            if (!isValidIpv4Address(trimmed)) {
+                                                setIpv4AddressError("IPv4 is incomplete or invalid (must be in x.x.x.x format)");
+                                            } else {
+                                                setIpv4AddressError("");
+                                            }
+                                        }}
                                         fullWidth
                                     />
-                                    <IPPicker 
-                                        onIpSelect={(ip) => setIpv4Address(ip)} 
-                                        disabled={isSaving} 
-                                    />
+                                    <Box sx={{ height: 40, display: 'flex', alignItems: 'center' }}>
+                                        <IPPicker
+                                            onIpSelect={(ip) => setIpv4Address(ip)}
+                                            disabled={isSaving}
+                                        />
+                                    </Box>
                                 </Box>
                             ) : (
                                 <Box>
@@ -484,7 +679,34 @@ export function DeviceInterfaceForm({
                                     label="Subnet Mask (or Prefix)"
                                     size="small"
                                     value={subnetMask}
-                                    onChange={(e) => setSubnetMask(e.target.value)}
+                                    error={Boolean(subnetMaskError)}
+                                    helperText={subnetMaskError || undefined}
+                                    onChange={(e) => {
+                                        const nextValue = e.target.value;
+                                        setSubnetMask(nextValue);
+                                        if (!nextValue.trim()) {
+                                            setSubnetMaskError("");
+                                            return;
+                                        }
+                                        try {
+                                            normalizeIpv4Mask(nextValue);
+                                            setSubnetMaskError("");
+                                        } catch {
+                                            // Keep existing error state until blur or save.
+                                        }
+                                    }}
+                                    onBlur={() => {
+                                        if (!subnetMask.trim()) {
+                                            setSubnetMaskError("");
+                                            return;
+                                        }
+                                        try {
+                                            setSubnetMask(normalizeIpv4Mask(subnetMask));
+                                            setSubnetMaskError("");
+                                        } catch (error: any) {
+                                            setSubnetMaskError(error?.message || "Subnet Mask ไม่ถูกต้อง");
+                                        }
+                                    }}
                                     fullWidth
                                 />
                             ) : (
