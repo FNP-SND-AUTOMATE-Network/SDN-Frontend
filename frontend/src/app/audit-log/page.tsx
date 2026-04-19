@@ -161,7 +161,7 @@ export default function AuditLogPage() {
       <ProtectedRoute>
         <PageLayout>
           <Alert severity="error" sx={{ m: 4 }}>
-            คุณไม่มีสิทธิ์เข้าถึงหน้านี้
+            You do not have permission to access this page.
           </Alert>
         </PageLayout>
       </ProtectedRoute>
