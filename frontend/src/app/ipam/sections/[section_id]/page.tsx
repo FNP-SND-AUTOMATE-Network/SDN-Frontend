@@ -52,7 +52,7 @@ type SubnetResponse = components["schemas"]["SubnetResponse"];
 export default function SectionDetailPage() {
     const params = useParams();
     const router = useRouter();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
     const initialSectionId = params.section_id as string;
 
     // View state
@@ -335,37 +335,39 @@ export default function SectionDetailPage() {
                                             </Box>
                                         </Box>
                                     </Box>
-                                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                                        <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddSubnet} sx={{ textTransform: "none" }}>
-                                            Add Subnet
-                                        </Button>
-                                        <IconButton onClick={(e) => setMenuAnchorEl(e.currentTarget)} sx={{ border: "1px solid", borderColor: "divider" }}>
-                                            <MoreVertIcon />
-                                        </IconButton>
-                                        <Menu
-                                            anchorEl={menuAnchorEl}
-                                            open={Boolean(menuAnchorEl)}
-                                            onClose={() => setMenuAnchorEl(null)}
-                                            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                                            transformOrigin={{ vertical: "top", horizontal: "right" }}
-                                        >
-                                            <MenuItem onClick={() => { setMenuAnchorEl(null); handleEditSection(); }}>
-                                                <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-                                                Edit Section
-                                            </MenuItem>
-                                            {!isChildSection && (
-                                                <MenuItem onClick={() => { setMenuAnchorEl(null); handleAddSection(); }}>
-                                                    <ListItemIcon><AddIcon fontSize="small" /></ListItemIcon>
-                                                    Add Sub-section
+                                    {user?.role !== "viewer" && (
+                                        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                                            <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddSubnet} sx={{ textTransform: "none" }}>
+                                                Add Subnet
+                                            </Button>
+                                            <IconButton onClick={(e) => setMenuAnchorEl(e.currentTarget)} sx={{ border: "1px solid", borderColor: "divider" }}>
+                                                <MoreVertIcon />
+                                            </IconButton>
+                                            <Menu
+                                                anchorEl={menuAnchorEl}
+                                                open={Boolean(menuAnchorEl)}
+                                                onClose={() => setMenuAnchorEl(null)}
+                                                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                                                transformOrigin={{ vertical: "top", horizontal: "right" }}
+                                            >
+                                                <MenuItem onClick={() => { setMenuAnchorEl(null); handleEditSection(); }}>
+                                                    <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+                                                    Edit Section
                                                 </MenuItem>
-                                            )}
-                                            <Divider />
-                                            <MenuItem onClick={() => { setMenuAnchorEl(null); handleDeleteSectionClick(); }} sx={{ color: "error.main" }}>
-                                                <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
-                                                Delete Section
-                                            </MenuItem>
-                                        </Menu>
-                                    </Box>
+                                                {!isChildSection && (
+                                                    <MenuItem onClick={() => { setMenuAnchorEl(null); handleAddSection(); }}>
+                                                        <ListItemIcon><AddIcon fontSize="small" /></ListItemIcon>
+                                                        Add Sub-section
+                                                    </MenuItem>
+                                                )}
+                                                <Divider />
+                                                <MenuItem onClick={() => { setMenuAnchorEl(null); handleDeleteSectionClick(); }} sx={{ color: "error.main" }}>
+                                                    <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+                                                    Delete Section
+                                                </MenuItem>
+                                            </Menu>
+                                        </Box>
+                                    )}
                                 </Box>
 
                                 {/* Stats Cards */}

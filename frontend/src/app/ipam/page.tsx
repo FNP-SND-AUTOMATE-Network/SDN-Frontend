@@ -40,7 +40,7 @@ import { fetchClient } from "@/lib/apiv2/fetch";
 type SectionResponse = components["schemas"]["SectionResponse"];
 
 export default function IPAMPage() {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
     // Modal states
@@ -196,19 +196,21 @@ export default function IPAMPage() {
                     )}
                     
                     {/* Action buttons - MoreVert */}
-                    <Box className="action-buttons" sx={{ opacity: 0, transition: "opacity 0.2s" }}>
-                        <IconButton
-                            size="small"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                setMenuAnchorEl(e.currentTarget);
-                                setMenuSection(section);
-                            }}
-                        >
-                            <MoreVertIcon fontSize="small" />
-                        </IconButton>
-                    </Box>
+                    {user?.role !== "viewer" && (
+                        <Box className="action-buttons" sx={{ opacity: 0, transition: "opacity 0.2s" }}>
+                            <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    setMenuAnchorEl(e.currentTarget);
+                                    setMenuSection(section);
+                                }}
+                            >
+                                <MoreVertIcon fontSize="small" />
+                            </IconButton>
+                        </Box>
+                    )}
                 </Box>
                 
                 <Collapse in={isExpanded} timeout="auto" unmountOnExit>
@@ -235,15 +237,17 @@ export default function IPAMPage() {
                                     Manage your IP address space, subnets, and VLANs
                                 </Typography>
                             </Box>
-                            <Button 
-                                variant="contained" 
-                                color="primary" 
-                                startIcon={<AddIcon />} 
-                                onClick={handleAddSection}
-                                sx={{ textTransform: "none", fontWeight: 500 }}
-                            >
-                                Add Section
-                            </Button>
+                            {user?.role !== "viewer" && (
+                                <Button 
+                                    variant="contained" 
+                                    color="primary" 
+                                    startIcon={<AddIcon />} 
+                                    onClick={handleAddSection}
+                                    sx={{ textTransform: "none", fontWeight: 500 }}
+                                >
+                                    Add Section
+                                </Button>
+                            )}
                         </Box>
 
                         {/* Stats Cards */}
@@ -314,15 +318,17 @@ export default function IPAMPage() {
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                                         Get started by creating your first section
                                     </Typography>
-                                    <Button 
-                                        variant="contained" 
-                                        color="primary" 
-                                        startIcon={<AddIcon />} 
-                                        onClick={handleAddSection}
-                                        sx={{ textTransform: "none", fontWeight: 500 }}
-                                    >
-                                        Add Section
-                                    </Button>
+                                    {user?.role !== "viewer" && (
+                                        <Button 
+                                            variant="contained" 
+                                            color="primary" 
+                                            startIcon={<AddIcon />} 
+                                            onClick={handleAddSection}
+                                            sx={{ textTransform: "none", fontWeight: 500 }}
+                                        >
+                                            Add Section
+                                        </Button>
+                                    )}
                                 </Box>
                             ) : (
                                 <Box>

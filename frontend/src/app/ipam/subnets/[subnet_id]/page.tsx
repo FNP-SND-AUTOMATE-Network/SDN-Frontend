@@ -50,7 +50,7 @@ type IPAddressResponse = components["schemas"]["IpAddressResponse"];
 export default function SubnetDetailPage() {
     const params = useParams();
     const router = useRouter();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
     const subnetId = params.subnet_id as string;
 
     const [activeTab, setActiveTab] = useState<"details" | "spacemap">("details");
@@ -275,31 +275,33 @@ export default function SubnetDetailPage() {
                                 Subnet details
                             </Typography>
                         </Box>
-                        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                            <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddChildSubnet} sx={{ textTransform: "none" }} disabled={!!subnetDetail?.master_subnet_id}>
-                                Add Child Subnet
-                            </Button>
-                            <IconButton onClick={(e) => setMenuAnchorEl(e.currentTarget)} sx={{ border: "1px solid", borderColor: "divider" }}>
-                                <MoreVertIcon />
-                            </IconButton>
-                            <Menu
-                                anchorEl={menuAnchorEl}
-                                open={Boolean(menuAnchorEl)}
-                                onClose={() => setMenuAnchorEl(null)}
-                                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                                transformOrigin={{ vertical: "top", horizontal: "right" }}
-                            >
-                                <MenuItem onClick={() => { setMenuAnchorEl(null); handleEditCurrentSubnet(); }}>
-                                    <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-                                    Edit Subnet
-                                </MenuItem>
-                                <Divider />
-                                <MenuItem onClick={() => { setMenuAnchorEl(null); handleDeleteCurrentSubnet(); }} sx={{ color: "error.main" }}>
-                                    <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
-                                    Delete Subnet
-                                </MenuItem>
-                            </Menu>
-                        </Box>
+                        {user?.role !== "viewer" && (
+                            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                                <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddChildSubnet} sx={{ textTransform: "none" }} disabled={!!subnetDetail?.master_subnet_id}>
+                                    Add Child Subnet
+                                </Button>
+                                <IconButton onClick={(e) => setMenuAnchorEl(e.currentTarget)} sx={{ border: "1px solid", borderColor: "divider" }}>
+                                    <MoreVertIcon />
+                                </IconButton>
+                                <Menu
+                                    anchorEl={menuAnchorEl}
+                                    open={Boolean(menuAnchorEl)}
+                                    onClose={() => setMenuAnchorEl(null)}
+                                    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                                    transformOrigin={{ vertical: "top", horizontal: "right" }}
+                                >
+                                    <MenuItem onClick={() => { setMenuAnchorEl(null); handleEditCurrentSubnet(); }}>
+                                        <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+                                        Edit Subnet
+                                    </MenuItem>
+                                    <Divider />
+                                    <MenuItem onClick={() => { setMenuAnchorEl(null); handleDeleteCurrentSubnet(); }} sx={{ color: "error.main" }}>
+                                        <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+                                        Delete Subnet
+                                    </MenuItem>
+                                </Menu>
+                            </Box>
+                        )}
                     </Box>
 
                     {/* Tabs */}
@@ -461,14 +463,16 @@ export default function SubnetDetailPage() {
                                                                         secondary={childSubnet.description}
                                                                         primaryTypographyProps={{ fontWeight: "semibold", color: "text.primary" }}
                                                                     />
-                                                                    <Box sx={{ display: "flex", gap: 1, opacity: 0.5, "&:hover": { opacity: 1 } }}>
-                                                                        <IconButton size="small" onClick={(e) => handleEditChildSubnet(childSubnet, e)}>
-                                                                            <EditIcon fontSize="small" />
-                                                                        </IconButton>
-                                                                        <IconButton size="small" color="error" onClick={(e) => handleDeleteChildSubnetClick(childSubnet, e)}>
-                                                                            <DeleteIcon fontSize="small" />
-                                                                        </IconButton>
-                                                                    </Box>
+                                                                    {user?.role !== "viewer" && (
+                                                                        <Box sx={{ display: "flex", gap: 1, opacity: 0.5, "&:hover": { opacity: 1 } }}>
+                                                                            <IconButton size="small" onClick={(e) => handleEditChildSubnet(childSubnet, e)}>
+                                                                                <EditIcon fontSize="small" />
+                                                                            </IconButton>
+                                                                            <IconButton size="small" color="error" onClick={(e) => handleDeleteChildSubnetClick(childSubnet, e)}>
+                                                                                <DeleteIcon fontSize="small" />
+                                                                            </IconButton>
+                                                                        </Box>
+                                                                    )}
                                                                 </ListItemButton>
                                                             </div>
                                                         ))}
@@ -482,9 +486,11 @@ export default function SubnetDetailPage() {
                                     <Box>
                                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                                             <Typography variant="h6" fontWeight="semibold">IP Addresses ({addresses.length})</Typography>
-                                            <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddIP}>
-                                                Add IP Address
-                                            </Button>
+                                            {user?.role !== "viewer" && (
+                                                <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddIP}>
+                                                    Add IP Address
+                                                </Button>
+                                            )}
                                         </Box>
 
                                         {addresses.length === 0 ? (

@@ -19,6 +19,7 @@ import {
     MenuItem,
     ListItemIcon,
 } from "@mui/material";
+import { useAuth } from "@/contexts/AuthContext";
 import {
     Edit as EditIcon,
     Delete as DeleteIcon,
@@ -91,6 +92,7 @@ export default function IPAddressesTable({
     onEdit,
     onDelete,
 }: IPAddressesTableProps) {
+    const { user } = useAuth();
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [menuAddress, setMenuAddress] = useState<IpAddressResponse | null>(null);
 
@@ -213,7 +215,7 @@ export default function IPAddressesTable({
                                         </TableCell>
                                         <TableCell align="center">
                                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                {(onEdit || onDelete) ? (
+                                                {(onEdit || onDelete) && user?.role !== "viewer" ? (
                                                     <IconButton size="small" onClick={(e) => handleMenuOpen(e, address)}>
                                                         <MoreVertIcon fontSize="small" />
                                                     </IconButton>
