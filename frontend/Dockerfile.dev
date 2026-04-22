@@ -6,20 +6,15 @@ WORKDIR /app
 # Install curl for healthcheck
 RUN apk add --no-cache curl
 
-# Copy package files first for better caching
-COPY package.json bun.lock ./
+# Copy package.json
+COPY package.json ./
 
-# Install all dependencies (including devDependencies)
+# **CRITICAL FIX FOR SWC NATIVE BINARY ON DOCKER/ALPINE**
 RUN bun install
 
-# Bun doesn't auto-install Next.js optional SWC binaries for Alpine ARM64
-# Install them explicitly to prevent "Failed to load SWC binary" error
-RUN bun add @next/swc-linux-arm64-musl @next/swc-linux-arm64-gnu 2>/dev/null || true
-
-# Copy source code (แต่ไม่ใช้ package-lock.json ภายใน container)
+# Copy source code (แต่ไม่ใช้ package-lock.json หรือ bun.lock ภายใน container)
 COPY . .
-# ลบ package-lock.json เพื่อไม่ให้ Next.js เข้าใจผิดว่าใช้ npm
-RUN rm -f package-lock.json
+RUN rm -f package-lock.json bun.lockb bun.lock
 
 # Expose port
 EXPOSE 3000

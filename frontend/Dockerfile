@@ -4,14 +4,16 @@ FROM oven/bun:1-alpine AS base
 # 1. Install dependencies only when needed
 FROM base AS deps
 WORKDIR /app
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+# Do not copy bun.lock here to avoid OS-mismatch with Next.js SWC bindings
+COPY package.json ./
+RUN bun install
 
 # 2. Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN rm -f package-lock.json bun.lockb bun.lock
 
 ENV NEXT_TELEMETRY_DISABLED 1
 
