@@ -97,6 +97,30 @@ const createHeaders = () => ({
   "Content-Type": "application/json",
 });
 
+/**
+ * Read a named cookie from document.cookie.
+ */
+function getCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const prefix = `${name}=`;
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(prefix));
+  return match ? decodeURIComponent(match.slice(prefix.length)) : undefined;
+}
+
+// Headers for mutating requests (POST/PUT/PATCH/DELETE) — includes CSRF token
+const createMutatingHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const csrfToken = getCookie("csrf_token");
+  if (csrfToken) {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+  return headers;
+};
+
 // Helper function สำหรับ handle response
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
@@ -154,7 +178,7 @@ export const siteService = {
   ): Promise<LocalSiteCreateResponse> {
     const response = await fetch(`${API_BASE_URL}/local-sites/`, {
       method: "POST",
-      headers: createHeaders(), credentials: 'include',
+      headers: createMutatingHeaders(), credentials: 'include',
       body: JSON.stringify(siteData),
     });
     return handleResponse(response);
@@ -168,7 +192,7 @@ export const siteService = {
   ): Promise<LocalSiteUpdateResponse> {
     const response = await fetch(`${API_BASE_URL}/local-sites/${siteId}`, {
       method: "PUT",
-      headers: createHeaders(), credentials: 'include',
+      headers: createMutatingHeaders(), credentials: 'include',
       body: JSON.stringify(siteData),
     });
     return handleResponse(response);
@@ -181,7 +205,7 @@ export const siteService = {
   ): Promise<LocalSiteDeleteResponse> {
     const response = await fetch(`${API_BASE_URL}/local-sites/${siteId}`, {
       method: "DELETE",
-      headers: createHeaders(), credentials: 'include',
+      headers: createMutatingHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },

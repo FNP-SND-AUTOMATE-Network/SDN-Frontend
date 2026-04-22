@@ -80,10 +80,36 @@ export class APIError extends Error {
     }
 }
 
+/**
+ * Read a named cookie from document.cookie.
+ * Returns undefined when running on the server (SSR) or when the cookie is absent.
+ */
+function getCookie(name: string): string | undefined {
+    if (typeof document === "undefined") return undefined;
+    const prefix = `${name}=`;
+    const match = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith(prefix));
+    return match ? decodeURIComponent(match.slice(prefix.length)) : undefined;
+}
+
 // Helper function สำหรับสร้าง headers (ไม่ต้องมี Bearer token แล้ว — ใช้ Cookie แทน)
-const createHeaders = () => ({
+const createHeaders = (): Record<string, string> => ({
     'Content-Type': 'application/json',
 });
+
+// Helper function สำหรับสร้าง headers สำหรับ mutating requests (POST/PUT/PATCH/DELETE)
+// รวม X-CSRF-Token header เพื่อ CSRF protection (double-submit cookie pattern)
+const createMutatingHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+    };
+    const csrfToken = getCookie('csrf_token');
+    if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+    }
+    return headers;
+};
 
 // Helper function สำหรับ handle response
 const handleResponse = async (response: Response) => {
@@ -126,7 +152,7 @@ export const userService = {
     async updateProfile(userId: string, profileData: UserUpdateRequest): Promise<UserUpdateResponse> {
         const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
             method: 'PUT',
-            headers: createHeaders(),
+            headers: createMutatingHeaders(),
             credentials: 'include',
             body: JSON.stringify(profileData),
         });
@@ -137,7 +163,7 @@ export const userService = {
     async changePassword(userId: string, passwordData: ChangePasswordRequest): Promise<PasswordChangeResponse> {
         const response = await fetch(`${API_BASE_URL}/users/${userId}/change-password`, {
             method: 'POST',
-            headers: createHeaders(),
+            headers: createMutatingHeaders(),
             credentials: 'include',
             body: JSON.stringify(passwordData),
         });
@@ -182,7 +208,7 @@ export const userService = {
     async createUser(userData: UserCreateRequest): Promise<UserCreateResponse> {
         const response = await fetch(`${API_BASE_URL}/users/`, {
             method: 'POST',
-            headers: createHeaders(),
+            headers: createMutatingHeaders(),
             credentials: 'include',
             body: JSON.stringify(userData),
         });
@@ -193,7 +219,7 @@ export const userService = {
     async deleteUser(userId: string): Promise<{ message: string; user_id: string }> {
         const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
             method: 'DELETE',
-            headers: createHeaders(),
+            headers: createMutatingHeaders(),
             credentials: 'include',
         });
         return handleResponse(response);
@@ -203,7 +229,7 @@ export const userService = {
     async resetPasswordByAdmin(userId: string, newPassword: string): Promise<PasswordChangeResponse> {
         const response = await fetch(`${API_BASE_URL}/users/${userId}/reset-password`, {
             method: 'POST',
-            headers: createHeaders(),
+            headers: createMutatingHeaders(),
             credentials: 'include',
             body: JSON.stringify({
                 user_id: userId,
@@ -217,7 +243,7 @@ export const userService = {
     async promoteUserRole(userId: string, targetRole: UserRole): Promise<UserUpdateResponse> {
         const response = await fetch(`${API_BASE_URL}/users/${userId}/promote-role?target_role=${targetRole}`, {
             method: 'POST',
-            headers: createHeaders(),
+            headers: createMutatingHeaders(),
             credentials: 'include',
         });
         return handleResponse(response);

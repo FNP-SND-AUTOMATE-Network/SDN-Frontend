@@ -81,6 +81,30 @@ const createHeaders = () => ({
   "Content-Type": "application/json",
 });
 
+/**
+ * Read a named cookie from document.cookie.
+ */
+function getCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const prefix = `${name}=`;
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(prefix));
+  return match ? decodeURIComponent(match.slice(prefix.length)) : undefined;
+}
+
+// Headers for mutating requests (POST/PUT/PATCH/DELETE) — includes CSRF token
+const createMutatingHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const csrfToken = getCookie("csrf_token");
+  if (csrfToken) {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+  return headers;
+};
+
 // Helper function สำหรับ handle response
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
@@ -150,7 +174,7 @@ export const tagService = {
   ): Promise<TagCreateResponse> {
     const response = await fetch(`${API_BASE_URL}/tags/`, {
       method: "POST",
-      headers: createHeaders(),
+      headers: createMutatingHeaders(),
       credentials: "include",
       body: JSON.stringify(tagData),
     });
@@ -164,7 +188,7 @@ export const tagService = {
   ): Promise<TagUpdateResponse> {
     const response = await fetch(`${API_BASE_URL}/tags/${tagId}`, {
       method: "PUT",
-      headers: createHeaders(),
+      headers: createMutatingHeaders(),
       credentials: "include",
       body: JSON.stringify(tagData),
     });
@@ -182,7 +206,7 @@ export const tagService = {
 
     const response = await fetch(`${API_BASE_URL}/tags/${tagId}?${params}`, {
       method: "DELETE",
-      headers: createHeaders(),
+      headers: createMutatingHeaders(),
       credentials: "include",
     });
     return handleResponse(response);

@@ -41,6 +41,30 @@ const createHeaders = () => ({
   "Content-Type": "application/json",
 });
 
+/**
+ * Read a named cookie from document.cookie.
+ */
+function getCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const prefix = `${name}=`;
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(prefix));
+  return match ? decodeURIComponent(match.slice(prefix.length)) : undefined;
+}
+
+// Headers for mutating requests (POST/PUT/PATCH/DELETE) — includes CSRF token
+const createMutatingHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const csrfToken = getCookie("csrf_token");
+  if (csrfToken) {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+  return headers;
+};
+
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
     let errorMessage = `HTTP error! status: ${response.status}`;
@@ -89,7 +113,7 @@ export const topologyService = {
 
     const response = await fetch(url, {
       method: "POST",
-      headers: createHeaders(), credentials: 'include',
+      headers: createMutatingHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },

@@ -52,6 +52,18 @@ export interface ConfigurationTemplateUpdate {
   tag_names?: string[] | null;
 }
 
+/**
+ * Read a named cookie from document.cookie.
+ */
+function getCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const prefix = `${name}=`;
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(prefix));
+  return match ? decodeURIComponent(match.slice(prefix.length)) : undefined;
+}
+
 class ConfigurationTemplateService {
   // [SECURITY FIX] Allowed file extensions for template uploads
   private static readonly ALLOWED_FILE_EXTENSIONS = [
@@ -64,6 +76,28 @@ class ConfigurationTemplateService {
       "Content-Type": "application/json",
       
     };
+  }
+
+  // Headers for mutating requests (POST/PUT/PATCH/DELETE) — includes CSRF token
+  private getMutatingHeaders() {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    const csrfToken = getCookie("csrf_token");
+    if (csrfToken) {
+      headers["X-CSRF-Token"] = csrfToken;
+    }
+    return headers;
+  }
+
+  // Headers for FormData uploads (no Content-Type) — includes CSRF token
+  private getUploadHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {};
+    const csrfToken = getCookie("csrf_token");
+    if (csrfToken) {
+      headers["X-CSRF-Token"] = csrfToken;
+    }
+    return headers;
   }
 
   /**
@@ -180,10 +214,7 @@ class ConfigurationTemplateService {
     const response = await fetch(`${API_BASE_URL}/configuration-templates/`, {
       method: "POST",
       credentials: "include",
-      headers: {
-        
-        // Don't set Content-Type - let browser set it with boundary for FormData
-      },
+      headers: this.getUploadHeaders(),
       body: formData,
     });
 
@@ -204,7 +235,7 @@ class ConfigurationTemplateService {
       `${API_BASE_URL}/configuration-templates/${templateId}`,
       {
         method: "PUT",
-        headers: this.getHeaders(), credentials: "include",
+        headers: this.getMutatingHeaders(), credentials: "include",
         body: JSON.stringify(data),
       },
     );
@@ -229,7 +260,7 @@ class ConfigurationTemplateService {
       `${API_BASE_URL}/configuration-templates/${templateId}?${params.toString()}`,
       {
         method: "DELETE",
-        headers: this.getHeaders(), credentials: "include",
+        headers: this.getMutatingHeaders(), credentials: "include",
       },
     );
 
@@ -265,10 +296,7 @@ class ConfigurationTemplateService {
       {
         method: "POST",
         credentials: "include",
-        headers: {
-          
-          // Don't set Content-Type - let browser set it with boundary for FormData
-        },
+        headers: this.getUploadHeaders(),
         body: formData,
       },
     );

@@ -109,6 +109,40 @@ const createHeaders = () => ({
   "Content-Type": "application/json",
 });
 
+/**
+ * Read a named cookie from document.cookie.
+ */
+function getCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const prefix = `${name}=`;
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(prefix));
+  return match ? decodeURIComponent(match.slice(prefix.length)) : undefined;
+}
+
+// Headers for mutating requests (POST/PUT/PATCH/DELETE) — includes CSRF token
+const createMutatingHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const csrfToken = getCookie("csrf_token");
+  if (csrfToken) {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+  return headers;
+};
+
+// Headers for file uploads (no Content-Type) — includes CSRF token
+const createUploadHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {};
+  const csrfToken = getCookie("csrf_token");
+  if (csrfToken) {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+  return headers;
+};
+
 // Helper function สำหรับ handle response
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
@@ -187,7 +221,7 @@ export const operatingSystemService = {
   ): Promise<OperatingSystemCreateResponse> {
     const response = await fetch(`${API_BASE_URL}/operating-systems/`, {
       method: "POST",
-      headers: createHeaders(), credentials: 'include',
+      headers: createMutatingHeaders(), credentials: 'include',
       body: JSON.stringify(osData),
     });
     return handleResponse(response);
@@ -201,7 +235,7 @@ export const operatingSystemService = {
   ): Promise<OperatingSystemUpdateResponse> {
     const response = await fetch(`${API_BASE_URL}/operating-systems/${osId}`, {
       method: "PUT",
-      headers: createHeaders(), credentials: 'include',
+      headers: createMutatingHeaders(), credentials: 'include',
       body: JSON.stringify(osData),
     });
     return handleResponse(response);
@@ -223,7 +257,7 @@ export const operatingSystemService = {
 
     const response = await fetch(url, {
       method: "DELETE",
-      headers: createHeaders(), credentials: 'include',
+      headers: createMutatingHeaders(), credentials: 'include',
     });
     return handleResponse(response);
   },
@@ -245,10 +279,8 @@ export const operatingSystemService = {
       `${API_BASE_URL}/operating-systems/${osId}/upload`,
       {
         method: "POST",
-        headers: {
-          
-          // ไม่กำหนด Content-Type ให้ browser จัดการ boundary เอง
-        } as HeadersInit,
+        headers: createUploadHeaders() as HeadersInit,
+        credentials: 'include',
         body: formData,
       },
     );
@@ -277,7 +309,7 @@ export const operatingSystemService = {
       `${API_BASE_URL}/operating-systems/${osId}/files/${fileId}`,
       {
         method: "DELETE",
-        headers: createHeaders(), credentials: 'include',
+        headers: createMutatingHeaders(), credentials: 'include',
       },
     );
     return handleResponse(response);
@@ -323,7 +355,7 @@ export const operatingSystemService = {
       `${API_BASE_URL}/operating-systems/${osId}/tags`,
       {
         method: "POST",
-        headers: createHeaders(), credentials: 'include',
+        headers: createMutatingHeaders(), credentials: 'include',
         body: JSON.stringify(tagIds),
       },
     );
@@ -340,7 +372,7 @@ export const operatingSystemService = {
       `${API_BASE_URL}/operating-systems/${osId}/tags`,
       {
         method: "DELETE",
-        headers: createHeaders(), credentials: 'include',
+        headers: createMutatingHeaders(), credentials: 'include',
         body: JSON.stringify(tagIds),
       },
     );
