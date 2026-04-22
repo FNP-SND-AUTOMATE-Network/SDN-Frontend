@@ -53,11 +53,38 @@ export interface ConfigurationTemplateUpdate {
 }
 
 class ConfigurationTemplateService {
+  // [SECURITY FIX] Allowed file extensions for template uploads
+  private static readonly ALLOWED_FILE_EXTENSIONS = [
+    '.txt', '.conf', '.cfg', '.xml', '.json', '.yaml', '.yml', '.j2', '.jinja2',
+  ];
+  private static readonly MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
   private getHeaders() {
     return {
       "Content-Type": "application/json",
       
     };
+  }
+
+  /**
+   * Validate file before upload (defense-in-depth)
+   */
+  private validateFile(file: File): void {
+    // Check file size
+    if (file.size > ConfigurationTemplateService.MAX_FILE_SIZE_BYTES) {
+      const maxSizeMB = ConfigurationTemplateService.MAX_FILE_SIZE_BYTES / (1024 * 1024);
+      throw new Error(`File size exceeds maximum limit of ${maxSizeMB}MB`);
+    }
+
+    // Check file extension
+    const fileName = file.name.toLowerCase();
+    const hasAllowedExtension = ConfigurationTemplateService.ALLOWED_FILE_EXTENSIONS.some(
+      (ext) => fileName.endsWith(ext)
+    );
+    if (!hasAllowedExtension) {
+      const allowed = ConfigurationTemplateService.ALLOWED_FILE_EXTENSIONS.join(', ');
+      throw new Error(`File type not allowed. Allowed types: ${allowed}`);
+    }
   }
 
   async getTemplates(
@@ -143,6 +170,7 @@ class ConfigurationTemplateService {
     // Add content if provided
     if (content) {
       if (content instanceof File) {
+        this.validateFile(content);
         formData.append("file", content);
       } else {
         formData.append("config_content", content);
@@ -224,6 +252,7 @@ class ConfigurationTemplateService {
     const formData = new FormData();
 
     if (content instanceof File) {
+      this.validateFile(content);
       formData.append("file", content);
     } else {
       // Create a text file from the content string

@@ -341,7 +341,6 @@ export const deviceNetworkService = {
 
   async mountDevice(nodeId: string): Promise<any> {
     const url = `${API_BASE_URL}/api/v1/nbi/devices/${nodeId}/mount`;
-    console.log("Calling POST:", url);
     const response = await fetch(url, {
       method: "POST",
       headers: createHeaders(), credentials: 'include',
@@ -350,7 +349,6 @@ export const deviceNetworkService = {
   },
   async unmountDevice(nodeId: string): Promise<any> {
     const url = `${API_BASE_URL}/api/v1/nbi/devices/${nodeId}/unmount`;
-    console.log("Calling POST:", url);
     const response = await fetch(url, {
       method: "POST",
       headers: createHeaders(), credentials: 'include',
