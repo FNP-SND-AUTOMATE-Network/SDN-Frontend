@@ -102,6 +102,26 @@ export interface ApiError {
       }>;
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Read a named cookie from document.cookie.
+ * Returns undefined when running on the server (SSR) or when the cookie is absent.
+ */
+function getCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const prefix = `${name}=`;
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(prefix));
+  return match ? decodeURIComponent(match.slice(prefix.length)) : undefined;
+}
+
+/** HTTP methods that mutate state and therefore require CSRF protection. */
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
 // API Helper function
 async function apiRequest<T>(
   endpoint: string,
@@ -109,13 +129,25 @@ async function apiRequest<T>(
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
 
+  const method = (options.method ?? "GET").toUpperCase();
+
+  // Build headers with CSRF token for mutating requests
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (MUTATING_METHODS.has(method)) {
+    const csrfToken = getCookie("csrf_token");
+    if (csrfToken) {
+      headers["X-CSRF-Token"] = csrfToken;
+    }
+  }
+
   const config: RequestInit = {
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-    credentials: "include", // This enables sending HttpOnly cookies
     ...options,
+    headers,
+    credentials: "include", // This enables sending HttpOnly cookies
   };
   try {
     let response = await fetch(url, config);

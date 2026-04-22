@@ -12,10 +12,12 @@ import type { paths } from "./schema";
  */
 function getCookie(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
-  return document.cookie
+  const prefix = `${name}=`;
+  const match = document.cookie
     .split("; ")
-    .find((row) => row.startsWith(`${name}=`))
-    ?.split("=")[1];
+    .find((row) => row.startsWith(prefix));
+  // Use slice instead of split("=")[1] to handle values containing "="
+  return match ? decodeURIComponent(match.slice(prefix.length)) : undefined;
 }
 
 /** HTTP methods that mutate state and therefore require CSRF protection. */
@@ -63,14 +65,19 @@ fetchClient.use({
     // ── 401 Unauthorized — silent token refresh ────────────────────────────
     if (response.status === 401 && !isAuthRoute) {
       try {
-        const refreshResponse = await fetch(
+        // Use customFetch so the refresh POST includes credentials + CSRF token
+        const refreshResponse = await customFetch(
           `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`,
-          { method: "POST", credentials: "include" }
+          { method: "POST" }
         );
 
         if (refreshResponse.ok) {
-          // Retry the original request (new access token is now in the cookie)
-          return await fetch(request);
+          // Retry the original request via customFetch so CSRF token is attached
+          return await customFetch(request.url, {
+            method: request.method,
+            headers: request.headers,
+            body: request.body,
+          });
         } else {
           // Refresh token expired or revoked — force logout
           window.location.href = "/login";
