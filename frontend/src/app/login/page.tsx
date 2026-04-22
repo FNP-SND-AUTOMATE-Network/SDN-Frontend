@@ -1,19 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Button } from "@/components/ui/Button";
 import { authApi, getErrorMessage } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { userService } from "@/services/userService";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faCircleXmark, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
 import { PublicRoute } from "@/components/auth/AuthGuard";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
@@ -362,5 +361,13 @@ export default function LoginPage() {
         </div>
       </div>
     </PublicRoute>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }
