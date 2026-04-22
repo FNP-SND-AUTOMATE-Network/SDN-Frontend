@@ -1504,12 +1504,7 @@ export interface paths {
         post: operations["mount_device_api_v1_nbi_devices__node_id__mount_post"];
         /**
          * Unmount Device
-         * @description 🔌 Unmount device จาก ODL
-         *
-         *     **Error Codes:**
-         *     - `DEVICE_NOT_FOUND`: ไม่พบ device
-         *     - `DEVICE_NOT_MOUNTED`: Device ไม่ได้ mount อยู่
-         *     - `ODL_UNMOUNT_FAILED`: Unmount failed
+         * @description 🔌 Unmount device จาก ODL (requires ENGINEER+)
          */
         delete: operations["unmount_device_api_v1_nbi_devices__node_id__mount_delete"];
         options?: never;
@@ -1639,11 +1634,7 @@ export interface paths {
         };
         /**
          * Get Odl Mounted Nodes
-         * @description ดึงรายการ nodes ที่ mount อยู่ใน ODL โดยตรง (real-time)
-         *
-         *     **Error Codes:**
-         *     - `ODL_CONNECTION_FAILED`: ไม่สามารถเชื่อมต่อ ODL ได้
-         *     - `ODL_TIMEOUT`: ODL timeout
+         * @description ดึงรายการ nodes ที่ mount อยู่ใน ODL โดยตรง (requires login)
          */
         get: operations["get_odl_mounted_nodes_api_v1_nbi_odl_nodes_get"];
         put?: never;
@@ -1665,11 +1656,7 @@ export interface paths {
         put?: never;
         /**
          * Sync Netconf Devices From Odl
-         * @description Sync ข้อมูล Device จาก ODL มา update ใน Database
-         *
-         *     **Error Codes:**
-         *     - `ODL_CONNECTION_FAILED`: ไม่สามารถเชื่อมต่อ ODL ได้
-         *     - `DATABASE_ERROR`: Database update failed
+         * @description Sync Device จาก ODL มา update ใน Database (requires ENGINEER+)
          */
         post: operations["sync_netconf_devices_from_odl_api_v1_nbi_odl_sync_post"];
         delete?: never;
@@ -1687,7 +1674,7 @@ export interface paths {
         };
         /**
          * Get Odl Config
-         * @description ดึงค่า Config ของ ODL จากระบบ (อ่านจาก .env)
+         * @description ดึงค่า Config ของ ODL จากระบบ (requires ADMIN+)
          */
         get: operations["get_odl_config_api_v1_nbi_odl_config_get"];
         put?: never;
@@ -1709,11 +1696,7 @@ export interface paths {
         put?: never;
         /**
          * Sync All Devices
-         * @description Sync ข้อมูล Device จาก NETCONF topology ใน ODL
-         *
-         *     **Response:**
-         *     - `netconf`: ผลลัพธ์จากการ sync NETCONF devices
-         *     - `summary`: สรุปรวม (total_synced, total_not_found, total_errors)
+         * @description Sync ข้อมูล Device จาก NETCONF topology ใน ODL (requires ENGINEER+)
          */
         post: operations["sync_all_devices_api_v1_nbi_odl_sync_all_post"];
         delete?: never;
@@ -1733,19 +1716,7 @@ export interface paths {
         put?: never;
         /**
          * Sync Single Device Status
-         * @description Sync connection status ของ device ตัวเดียวจาก ODL → DB
-         *
-         *     ดึง connection-status จาก NETCONF topology
-         *
-         *     **Response:**
-         *     - `previous_status`: สถานะก่อน sync
-         *     - `current_status`: สถานะหลัง sync
-         *     - `connection_status`: raw status จาก ODL (เช่น "connected", "not-mounted")
-         *     - `protocol`: NETCONF
-         *
-         *     **Error Codes:**
-         *     - `404`: Device ไม่พบใน database
-         *     - `502`: ODL ไม่ตอบ
+         * @description Sync connection status ของ device ตัวเดียวจาก ODL → DB (requires ENGINEER+)
          */
         post: operations["sync_single_device_status_api_v1_nbi_devices__node_id__sync_status_post"];
         delete?: never;
@@ -1761,10 +1732,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Supported Intents */
+        /**
+         * List Supported Intents
+         * @description List all supported intents (requires login)
+         */
         get: operations["list_supported_intents_api_v1_nbi_intents_get"];
         put?: never;
-        /** Handle Intent */
+        /**
+         * Handle Intent
+         * @description Execute a network intent (requires ENGINEER+)
+         */
         post: operations["handle_intent_api_v1_nbi_intents_post"];
         delete?: never;
         options?: never;
@@ -1779,7 +1756,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Intent Info */
+        /**
+         * Get Intent Info
+         * @description Get details for a specific intent (requires login)
+         */
         get: operations["get_intent_info_api_v1_nbi_intents__intent_name__get"];
         put?: never;
         post?: never;
@@ -1824,8 +1804,7 @@ export interface paths {
         put?: never;
         /**
          * Trigger Topology Sync
-         * @description Trigger a manual synchronization of the Topology from ODL to the Prisma Database.
-         *     This fetches nodes, interface ports, and links and upserts them.
+         * @description Trigger manual Topology sync from ODL to DB (requires ENGINEER+)
          */
         post: operations["trigger_topology_sync_api_v1_nbi_topology_sync_post"];
         delete?: never;
@@ -1843,8 +1822,7 @@ export interface paths {
         };
         /**
          * Get Hybrid Topology
-         * @description ดึงข้อมูล Topology ล่าสุดจาก Database (ที่ Sync ลงมาแล้ว)
-         *     คืน nodes (devices) และ links (เส้นเชื่อมระหว่าง interfaces) สำหรับวาดกราฟ
+         * @description ดึงข้อมูล Topology ล่าสุดจาก Database (requires login)
          */
         get: operations["get_hybrid_topology_api_v1_nbi_topology_get"];
         put?: never;
@@ -1862,10 +1840,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Lldp Bindings */
+        /**
+         * Get Lldp Bindings
+         * @description Get LLDP chassis-to-node bindings (requires login)
+         */
         get: operations["get_lldp_bindings_api_v1_nbi_topology_lldp_bindings_get"];
         put?: never;
-        /** Create Or Update Lldp Binding */
+        /**
+         * Create Or Update Lldp Binding
+         * @description Create or update an LLDP binding (requires ENGINEER+)
+         */
         post: operations["create_or_update_lldp_binding_api_v1_nbi_topology_lldp_bindings_post"];
         delete?: never;
         options?: never;
@@ -1883,7 +1867,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Remove Lldp Binding */
+        /**
+         * Remove Lldp Binding
+         * @description Delete an LLDP binding (requires ADMIN+)
+         */
         delete: operations["remove_lldp_binding_api_v1_nbi_topology_lldp_bindings__chassis_id__delete"];
         options?: never;
         head?: never;
@@ -1901,8 +1888,7 @@ export interface paths {
         put?: never;
         /**
          * Add Arp Flood Flow
-         * @description 📡 ARP Flood — กระจาย ARP ทุกพอร์ต
-         *     Match: `ethernet-type = 0x0806 (ARP)` → Action: `FLOOD`
+         * @description 📡 ARP Flood — กระจาย ARP ทุกพอร์ต (requires ENGINEER+)
          */
         post: operations["add_arp_flood_flow_api_v1_nbi_devices__node_id__flows_connectivity_arp_flood_post"];
         delete?: never;
@@ -1922,7 +1908,7 @@ export interface paths {
         put?: never;
         /**
          * Add Flow
-         * @description 🔀 Base Connectivity — L1 Forwarding
+         * @description 🔀 Base Connectivity — L1 Forwarding (requires ENGINEER+)
          */
         post: operations["add_flow_api_v1_nbi_devices__node_id__flows_connectivity_base_post"];
         delete?: never;
@@ -1942,7 +1928,7 @@ export interface paths {
         put?: never;
         /**
          * Add Default Gateway Flow
-         * @description 🌐 Default Gateway — ทราฟฟิกที่ไม่ตรงกับกฎใดๆ ให้ส่งออกไปที่ Gateway
+         * @description 🌐 Default Gateway (requires ENGINEER+)
          */
         post: operations["add_default_gateway_flow_api_v1_nbi_devices__node_id__flows_connectivity_default_gateway_post"];
         delete?: never;
@@ -1962,7 +1948,7 @@ export interface paths {
         put?: never;
         /**
          * Add Traffic Steer Flow
-         * @description 🎯 Traffic Steering — L4 TCP/UDP Redirect
+         * @description 🎯 Traffic Steering — L4 TCP/UDP Redirect (requires ENGINEER+)
          */
         post: operations["add_traffic_steer_flow_api_v1_nbi_devices__node_id__flows_steering_l4_port_post"];
         delete?: never;
@@ -1982,7 +1968,7 @@ export interface paths {
         put?: never;
         /**
          * Add Mac Steer Flow
-         * @description 🏷️ L2 MAC Steering — redirect traffic จาก source MAC เฉพาะเครื่อง
+         * @description 🏷️ L2 MAC Steering (requires ENGINEER+)
          */
         post: operations["add_mac_steer_flow_api_v1_nbi_devices__node_id__flows_steering_l2_mac_post"];
         delete?: never;
@@ -2002,7 +1988,7 @@ export interface paths {
         put?: never;
         /**
          * Add Ip Steer Flow
-         * @description 🌐 L3 IP Steering — redirect traffic ไปหา destination IP
+         * @description 🌐 L3 IP Steering (requires ENGINEER+)
          */
         post: operations["add_ip_steer_flow_api_v1_nbi_devices__node_id__flows_steering_l3_ip_post"];
         delete?: never;
@@ -2022,7 +2008,7 @@ export interface paths {
         put?: never;
         /**
          * Add Subnet Steer Flow
-         * @description 🌐 L3 Subnet Steering — redirect traffic ตามวง Source IP
+         * @description 🌐 L3 Subnet Steering (requires ENGINEER+)
          */
         post: operations["add_subnet_steer_flow_api_v1_nbi_devices__node_id__flows_steering_l3_subnet_post"];
         delete?: never;
@@ -2042,7 +2028,7 @@ export interface paths {
         put?: never;
         /**
          * Add Acl Mac Drop
-         * @description 🛑 L2 ACL — Drop traffic จาก source MAC เฉพาะเครื่อง
+         * @description 🛑 L2 ACL — Drop by source MAC (requires ENGINEER+)
          */
         post: operations["add_acl_mac_drop_api_v1_nbi_devices__node_id__flows_acl_block_mac_post"];
         delete?: never;
@@ -2062,7 +2048,7 @@ export interface paths {
         put?: never;
         /**
          * Add Acl Ip Blacklist
-         * @description 🛑 L3 ACL — Drop traffic ระหว่าง source IP กับ destination IP
+         * @description 🛑 L3 ACL — Drop by IP pair (requires ENGINEER+)
          */
         post: operations["add_acl_ip_blacklist_api_v1_nbi_devices__node_id__flows_acl_block_ip_post"];
         delete?: never;
@@ -2082,7 +2068,7 @@ export interface paths {
         put?: never;
         /**
          * Add Acl Port Drop
-         * @description 🛑 L4 ACL — Drop traffic ที่ไปหา destination port (TCP/UDP)
+         * @description 🛑 L4 ACL — Drop by destination port (requires ENGINEER+)
          */
         post: operations["add_acl_port_drop_api_v1_nbi_devices__node_id__flows_acl_block_port_post"];
         delete?: never;
@@ -2102,7 +2088,7 @@ export interface paths {
         put?: never;
         /**
          * Add Acl Whitelist
-         * @description ✅ Whitelist — อนุญาตเฉพาะ port ที่กำหนด (TCP/UDP, action: NORMAL)
+         * @description ✅ Whitelist — allow specific port (requires ENGINEER+)
          */
         post: operations["add_acl_whitelist_api_v1_nbi_devices__node_id__flows_acl_whitelist_port_post"];
         delete?: never;
@@ -2122,80 +2108,9 @@ export interface paths {
         put?: never;
         /**
          * Add Icmp Control
-         * @description 🛑 L3 ICMP Control — บล็อกหรืออนุญาตการ Ping
+         * @description 🛑 L3 ICMP Control (requires ENGINEER+)
          */
         post: operations["add_icmp_control_api_v1_nbi_devices__node_id__flows_acl_icmp_control_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/nbi/devices/{node_id}/flows/{flow_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Flow By Id
-         * @description 🔍 ดู Flow เฉพาะตัว — ดึงรายละเอียดเชิงลึกจาก ODL
-         *
-         *     ใช้เมื่อกดที่รายการ Flow บน Dashboard เพื่อดู Match/Action details
-         */
-        get: operations["get_flow_by_id_api_v1_nbi_devices__node_id__flows__flow_id__get"];
-        put?: never;
-        post?: never;
-        /**
-         * Delete Flow
-         * @description 🗑️ ลบ Flow Rule (ใช้ได้ทุกประเภท)
-         */
-        delete: operations["delete_flow_api_v1_nbi_devices__node_id__flows__flow_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/nbi/devices/{node_id}/flows": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Flows
-         * @description 📋 ดู OpenFlow Flow Rules ทั้งหมดของ Device
-         */
-        get: operations["get_flows_api_v1_nbi_devices__node_id__flows_get"];
-        put?: never;
-        post?: never;
-        /**
-         * Reset Table
-         * @description 💥 Reset Table — ล้าง Flow Rules ทั้งหมดใน table
-         */
-        delete: operations["reset_table_api_v1_nbi_devices__node_id__flows_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/nbi/flows/templates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Flow Templates
-         * @description 📋 Flow Templates — Metadata สำหรับวาด UI สร้าง Flow
-         *     ส่งคืน หมวดหมู่ > Templates > ฟิลด์ที่จำเป็น สำหรับสร้าง frontend wizard
-         */
-        get: operations["get_flow_templates_api_v1_nbi_flows_templates_get"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2213,36 +2128,9 @@ export interface paths {
         put?: never;
         /**
          * Sync Flow Rules
-         * @description 🔄 Flow Sync — เทียบ DB กับ ODL ตรวจจับ zombie/unmanaged
-         *
-         *     - **zombie**: DB ยัง ACTIVE แต่ ODL ไม่มี → auto mark DELETED
-         *     - **unmanaged**: ODL มี flow แต่ DB ไม่มี → report (ไม่ได้สร้างผ่าน Backend)
-         *
-         *     ใช้สำหรับปุ่ม **"Sync Flows"** บนหน้า Dashboard
+         * @description 🔄 Flow Sync — เทียบ DB กับ ODL (requires ENGINEER+)
          */
         post: operations["sync_flow_rules_api_v1_nbi_devices__node_id__flows_sync_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/nbi/flow-rules": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Flow Rules
-         * @description 📋 Dashboard Flow List — ดึง Flow Rules จาก DB (structured, fast)
-         *
-         *     ใช้แสดง flow list บนหน้า Dashboard พร้อม status, type, created_at
-         */
-        get: operations["get_flow_rules_api_v1_nbi_flow_rules_get"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2260,9 +2148,7 @@ export interface paths {
         put?: never;
         /**
          * Retry Flow
-         * @description 🔄 Retry FAILED Flow — ลอง PUT ไป ODL อีกครั้ง
-         *
-         *     ใช้เมื่อ flow มี status=FAILED แล้วต้องการลองใหม่
+         * @description 🔄 Retry FAILED Flow (requires ENGINEER+)
          */
         post: operations["retry_flow_api_v1_nbi_flow_rules__flow_rule_id__retry_post"];
         delete?: never;
@@ -2282,13 +2168,58 @@ export interface paths {
         put?: never;
         /**
          * Reactivate Flow
-         * @description ✨ Reactivate DELETED Flow — เปิดใช้งาน Flow ที่เคยลบไปแล้วกลับมาใหม่
-         *
-         *     ใช้เมื่อ flow ถูกลบออกจาก ODL ไปแล้ว (Status = DELETED) แต่ต้องการนำประวัติเดิม
-         *     ที่เคยเก็บใน Database ขึ้นมาใช้งาน (Deploy) บน ODL อีกครั้ง
+         * @description ✨ Reactivate DELETED Flow (requires ENGINEER+)
          */
         post: operations["reactivate_flow_api_v1_nbi_flow_rules__flow_rule_id__reactivate_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nbi/devices/{node_id}/flows/{flow_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Flow By Id
+         * @description 🔍 ดู Flow เฉพาะตัว (requires login)
+         */
+        get: operations["get_flow_by_id_api_v1_nbi_devices__node_id__flows__flow_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Flow
+         * @description 🗑️ ลบ Flow Rule (requires ADMIN+)
+         */
+        delete: operations["delete_flow_api_v1_nbi_devices__node_id__flows__flow_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nbi/devices/{node_id}/flows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Flows
+         * @description 📋 ดู OpenFlow Flow Rules ทั้งหมดของ Device (requires login)
+         */
+        get: operations["get_flows_api_v1_nbi_devices__node_id__flows_get"];
+        put?: never;
+        post?: never;
+        /**
+         * Reset Table
+         * @description 💥 Reset Table — ล้าง Flow Rules ทั้งหมด (requires ADMIN+)
+         */
+        delete: operations["reset_table_api_v1_nbi_devices__node_id__flows_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2306,12 +2237,49 @@ export interface paths {
         post?: never;
         /**
          * Hard Delete Flow
-         * @description 🗑️ Hard Delete Flow — ลบประวัติ Flow ออกจาก Database ถาวร
-         *
-         *     ใช้สำหรับลบ Flow Rule ที่ผู้ใช้ไม่ต้องการเก็บประวัติไว้อีกต่อไป
-         *     (ข้อมูลจะหายไปจากตาราง Flow เลย ไม่สามารถ Reactivate ได้อีก)
+         * @description 🗑️ Hard Delete Flow from DB (requires ADMIN+)
          */
         delete: operations["hard_delete_flow_api_v1_nbi_flow_rules__flow_rule_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nbi/flows/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Flow Templates
+         * @description 📋 Flow Templates (requires login)
+         */
+        get: operations["get_flow_templates_api_v1_nbi_flows_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nbi/flow-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Flow Rules
+         * @description 📋 Dashboard Flow List from DB (requires login)
+         */
+        get: operations["get_flow_rules_api_v1_nbi_flow_rules_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -11338,168 +11306,9 @@ export interface operations {
             };
         };
     };
-    get_flow_by_id_api_v1_nbi_devices__node_id__flows__flow_id__get: {
-        parameters: {
-            query?: {
-                /** @description Flow Table ID */
-                table_id?: number;
-            };
-            header?: never;
-            path: {
-                node_id: string;
-                flow_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FlowResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_flow_api_v1_nbi_devices__node_id__flows__flow_id__delete: {
-        parameters: {
-            query?: {
-                /** @description Flow Table ID */
-                table_id?: number;
-            };
-            header?: never;
-            path: {
-                node_id: string;
-                flow_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FlowResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_flows_api_v1_nbi_devices__node_id__flows_get: {
-        parameters: {
-            query?: {
-                /** @description Filter by table ID (optional) */
-                table_id?: number | null;
-            };
-            header?: never;
-            path: {
-                node_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FlowResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    reset_table_api_v1_nbi_devices__node_id__flows_delete: {
-        parameters: {
-            query?: {
-                /** @description Flow Table ID */
-                table_id?: number;
-            };
-            header?: never;
-            path: {
-                node_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FlowResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_flow_templates_api_v1_nbi_flows_templates_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FlowTemplateResponse"];
-                };
-            };
-        };
-    };
     sync_flow_rules_api_v1_nbi_devices__node_id__flows_sync_post: {
         parameters: {
             query?: {
-                /** @description Flow Table ID */
                 table_id?: number;
             };
             header?: never;
@@ -11517,42 +11326,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FlowResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_flow_rules_api_v1_nbi_flow_rules_get: {
-        parameters: {
-            query?: {
-                /** @description Filter by node_id */
-                node_id?: string | null;
-                /** @description Filter by status: ACTIVE, PENDING, FAILED, DELETED */
-                status?: string | null;
-                /** @description Filter by flow_type */
-                flow_type?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FlowRuleListResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11628,6 +11401,140 @@ export interface operations {
             };
         };
     };
+    get_flow_by_id_api_v1_nbi_devices__node_id__flows__flow_id__get: {
+        parameters: {
+            query?: {
+                table_id?: number;
+            };
+            header?: never;
+            path: {
+                node_id: string;
+                flow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_flow_api_v1_nbi_devices__node_id__flows__flow_id__delete: {
+        parameters: {
+            query?: {
+                table_id?: number;
+            };
+            header?: never;
+            path: {
+                node_id: string;
+                flow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_flows_api_v1_nbi_devices__node_id__flows_get: {
+        parameters: {
+            query?: {
+                table_id?: number | null;
+            };
+            header?: never;
+            path: {
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_table_api_v1_nbi_devices__node_id__flows_delete: {
+        parameters: {
+            query?: {
+                table_id?: number;
+            };
+            header?: never;
+            path: {
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     hard_delete_flow_api_v1_nbi_flow_rules__flow_rule_id__delete: {
         parameters: {
             query?: never;
@@ -11646,6 +11553,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FlowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_flow_templates_api_v1_nbi_flows_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowTemplateResponse"];
+                };
+            };
+        };
+    };
+    get_flow_rules_api_v1_nbi_flow_rules_get: {
+        parameters: {
+            query?: {
+                node_id?: string | null;
+                status?: string | null;
+                flow_type?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowRuleListResponse"];
                 };
             };
             /** @description Validation Error */
