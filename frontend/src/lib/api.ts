@@ -201,19 +201,10 @@ export const authApi = {
 
   // Verify OTP
   async verifyOtp(otpData: VerifyOtpRequest): Promise<VerifyOtpResponse> {
-    console.log("🔍 OTP Verification Request:", {
-      endpoint: "/auth/verify-otp",
-      data: { email: otpData.email, otp_code: "***" },
-    });
-
     const result = await apiRequest<VerifyOtpResponse>("/auth/verify-otp", {
       method: "POST",
       body: JSON.stringify(otpData),
     });
-
-    console.log("🔍 OTP Verification Response:", result);
-    console.log("🔍 OTP Response Type:", typeof result);
-    console.log("🔍 OTP Response Keys:", Object.keys(result || {}));
 
     return result;
   },
