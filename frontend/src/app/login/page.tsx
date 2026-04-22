@@ -170,8 +170,6 @@ export default function LoginPage() {
       // ส่ง temp_token และ otp_code ไปยัง /auth/mfa-verify-totp-login
       const response = await authApi.verifyMfaLogin(tempAuthData.token, mfaCode);
 
-      console.log("MFA Verify Response:", response);
-
       // ใช้ access_token ที่ได้จาก response (ไม่ใช่ temp_token)
       if (response && response.access_token) {
         login(tempAuthData.user, response.access_token);

@@ -46,11 +46,7 @@ export const ConfigurationTemplatePanel: React.FC<ConfigurationTemplatePanelProp
     );
     const selectedTemplateDetail = templateDetailData as ConfigurationTemplateDetailResponse | undefined;
 
-    useEffect(() => {
-        if (selectedTemplateId) {
-            console.log("Template detail fetched:", selectedTemplateDetail);
-        }
-    }, [selectedTemplateDetail, selectedTemplateId]);
+
 
     useEffect(() => {
         if (selectedTemplateDetail) {

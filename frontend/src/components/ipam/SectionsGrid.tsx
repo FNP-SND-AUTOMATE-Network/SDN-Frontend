@@ -144,7 +144,7 @@ export default function SectionsGrid({ sections, onRefresh }: SectionsGridProps)
                                         size="small" 
                                         onClick={(e) => {
                                             e.preventDefault();
-                                            console.log("Section menu:", section.id);
+                                            // TODO: implement section context menu
                                         }}
                                         sx={{ color: "text.secondary" }}
                                     >
