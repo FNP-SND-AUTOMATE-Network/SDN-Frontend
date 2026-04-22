@@ -102,7 +102,10 @@ export default function DeviceModal({
   useEffect(() => {
     if (isOpen) {
       if (mode === "edit" && device) {
-        // Edit mode: preload device data
+        // Edit mode: preload device data.
+        // Note: ipam_subnet_id is a write-only field (used in Create/Update payload only).
+        // DeviceNetworkResponse does not return it, so we leave it null here.
+        // The existing IP is tracked via phpipam_address_id instead.
         setData({
           device_name: device.device_name,
           serial_number: device.serial_number,
@@ -121,7 +124,7 @@ export default function DeviceModal({
           netconf_host: device.netconf_host || "",
           netconf_port: device.netconf_port || 830,
           phpipam_address_id: device.phpipam_address_id || null,
-          ipam_subnet_id: (device as any).ipam_subnet_id || null,
+          ipam_subnet_id: null, // Not returned in response; reset to null on edit open
         } as DeviceBody);
         setSelectedTagIds(device.tags ? device.tags.map((t: any) => t.tag_id) : []);
       } else {

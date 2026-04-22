@@ -152,6 +152,24 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [isAuthenticated, connectWebSocket]);
 
+  // ── 403 Forbidden global handler (RBAC) ──────────────────────────────────
+  // fetch.ts dispatches "api:forbidden" whenever a request returns HTTP 403.
+  // We surface it here so every page gets a consistent "Permission denied"
+  // error toast without each component needing its own 403 handler.
+  useEffect(() => {
+    const handleForbidden = () => {
+      setSnackbar({
+        open: true,
+        title: "Permission Denied",
+        message: "You do not have permission to perform this action.",
+        severity: "error",
+      });
+    };
+
+    window.addEventListener("api:forbidden", handleForbidden);
+    return () => window.removeEventListener("api:forbidden", handleForbidden);
+  }, []);
+
   const markAllAsRead = () => {
     setAlerts((prev) => prev.map((a) => ({ ...a, isRead: true })));
   };
