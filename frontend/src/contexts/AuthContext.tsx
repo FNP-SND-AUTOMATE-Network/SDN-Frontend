@@ -41,7 +41,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const loadUser = async () => {
       try {
         const userData = await authApi.me();
-        console.log('[Auth] /auth/me response:', JSON.stringify(userData));
         setUser(userData as User);
       } catch (error: any) {
         // 401 = ไม่ได้ Login เป็นเรื่องปกติ ไม่ต้องตะโกน Error

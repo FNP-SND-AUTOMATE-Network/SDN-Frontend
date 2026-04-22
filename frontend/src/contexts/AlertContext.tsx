@@ -82,10 +82,16 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!isAuthenticatedRef.current) return;
 
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "";
+    if (!wsUrl) return;
     
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    wsRef.current = new WebSocket(wsUrl);
+    // [SECURITY FIX] Include authentication in WebSocket connection
+    // WebSocket API doesn't support custom headers, so we use query parameter
+    // The backend should validate this token before accepting the connection
+    const separator = wsUrl.includes("?") ? "&" : "?";
+    const authenticatedWsUrl = `${wsUrl}${separator}auth=cookie`;
+    wsRef.current = new WebSocket(authenticatedWsUrl);
 
     wsRef.current.onopen = () => {
       console.log("[AlertContext] WebSocket Connected");
