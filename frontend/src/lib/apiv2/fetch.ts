@@ -27,9 +27,18 @@ const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 // Custom fetch — credentials + CSRF token (double-submit cookie pattern)
 // ──────────────────────────────────────────────────────────────────────────────
 const customFetch = (url: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-  const method = (init?.method ?? "GET").toUpperCase();
+  // openapi-fetch passes a Request object as `url` (with method/headers baked in)
+  // and `init` may be undefined. Extract the real method from either source.
+  const isRequest = url instanceof Request;
+  const method = (init?.method ?? (isRequest ? url.method : "GET")).toUpperCase();
 
-  const headers = new Headers(init?.headers);
+  // Merge headers from both the Request object and init
+  const headers = new Headers(isRequest ? url.headers : undefined);
+  if (init?.headers) {
+    new Headers(init.headers).forEach((value, key) => {
+      headers.set(key, value);
+    });
+  }
 
   // Attach X-CSRF-Token for all state-mutating requests.
   // The backend sets a "csrf_token" cookie (non-HttpOnly) after login.
