@@ -173,7 +173,6 @@ export default function DevicePage() {
               onEdit={openEditModal}
               onSync={(device) => {
                 // TODO: Implement sync functionality
-                console.log("Sync device:", device.device_name);
               }}
             />
 

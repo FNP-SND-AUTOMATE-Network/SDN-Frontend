@@ -82,7 +82,6 @@ export default function DeviceDetailHeader({
   } else if (connStatus === "unable-to-connect") {
     status = { color: "error", label: "Unable to Connect" };
   }
-  console.log(device.odl_connection_status)
 
   const typeIcon = typeIconMap[device.type] || typeIconMap.OTHER;
 
