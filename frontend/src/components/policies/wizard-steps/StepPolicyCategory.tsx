@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Card, CardActionArea, CardContent } from '@mui/material';
+import { Box, Typography, Card, CardActionArea } from '@mui/material';
 import { Grid } from '@mui/material';
 import {
     Cable as ConnectivityIcon,

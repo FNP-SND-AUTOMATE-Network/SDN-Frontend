@@ -4,7 +4,6 @@ import {
     Typography, CircularProgress, Box, Checkbox, List, ListItem,
     ListItemButton, ListItemIcon, ListItemText, Alert
 } from '@mui/material';
-import { Router as RouterIcon } from '@mui/icons-material';
 import { $api, fetchClient } from "@/lib/apiv2/fetch";
 import { useSnackbar } from "@/hooks/useSnackbar";
 
@@ -21,10 +20,16 @@ export const SyncFlowsModal: React.FC<SyncFlowsModalProps> = ({ open, onClose, o
 
     // Fetch all devices from NBI
     const { data, isLoading, error } = $api.useQuery("get", "/api/v1/nbi/devices", {}, { enabled: open });
-    const allDevices = (data as any)?.devices || [];
+    interface DeviceItem {
+        node_id: string;
+        device_type?: string;
+        name?: string;
+    }
+
+    const allDevices = ((data as Record<string, unknown>)?.devices as DeviceItem[]) || [];
 
     // L2 / OpenFlow devices filter (Assuming node_id contains openflow: or they are switches)
-    const switchDevices = allDevices.filter((d: any) =>
+    const switchDevices = allDevices.filter((d) =>
         String(d.node_id).toLowerCase().includes('openflow') ||
         String(d.device_type).toUpperCase() === 'SWITCH'
     );
@@ -46,7 +51,7 @@ export const SyncFlowsModal: React.FC<SyncFlowsModalProps> = ({ open, onClose, o
         if (selectedDevices.length === switchDevices.length) {
             setSelectedDevices([]);
         } else {
-            setSelectedDevices(switchDevices.map((d: any) => d.node_id));
+            setSelectedDevices(switchDevices.map((d) => d.node_id));
         }
     };
 
@@ -71,8 +76,8 @@ export const SyncFlowsModal: React.FC<SyncFlowsModalProps> = ({ open, onClose, o
                 showSuccess(`Successfully synced flows for ${selectedDevices.length} device(s)`);
             }
             onSuccess();
-        } catch (err: any) {
-            showError(err?.message || "Failed to trigger flow sync");
+        } catch (err: unknown) {
+            showError((err as Error)?.message || "Failed to trigger flow sync");
         } finally {
             setIsSyncing(false);
         }
@@ -122,7 +127,7 @@ export const SyncFlowsModal: React.FC<SyncFlowsModalProps> = ({ open, onClose, o
                                     <ListItemText primary="Select All" primaryTypographyProps={{ fontWeight: 600 }} />
                                 </ListItemButton>
                             </ListItem>
-                            {switchDevices.map((device: any) => {
+                            {switchDevices.map((device) => {
                                 const labelId = `checkbox-list-label-${device.node_id}`;
                                 return (
                                     <ListItem

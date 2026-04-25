@@ -2,24 +2,44 @@ import React, { useEffect } from 'react';
 import { Box, Typography, TextField, Divider } from '@mui/material';
 import Grid from '@mui/material/Grid';
 
+export interface PolicyFormData {
+    flow_id?: string;
+    priority?: number;
+    table_id?: number;
+    in_port?: string;
+    out_port?: string;
+    src_mac?: string;
+    dst_mac?: string;
+    gateway_ip?: string;
+    gateway_mac?: string;
+    router_port?: string;
+    dst_ip?: string;
+    dst_subnet?: string;
+    protocol?: string;
+    dst_port?: string | number;
+    src_ip?: string;
+    port?: string | number;
+    icmp_type?: number;
+    icmp_code?: number;
+    [key: string]: unknown;
+}
+
 interface StepPolicyConfigProps {
     nodeId: string;
-    category: string;
     flowType: string;
-    formData: any;
-    setFormData: (data: any) => void;
+    formData: PolicyFormData;
+    setFormData: React.Dispatch<React.SetStateAction<PolicyFormData>>;
 }
 
 export const StepPolicyConfig: React.FC<StepPolicyConfigProps> = ({
     nodeId,
-    category,
     flowType,
     formData,
     setFormData
 }) => {
     // Initialize standard fields on mount or type change
     useEffect(() => {
-        setFormData((prev: any) => ({
+        setFormData((prev: PolicyFormData) => ({
             ...prev,
             // Default auto-generated ID if missing
             flow_id: prev.flow_id || `flow-${Date.now().toString().slice(-6)}`,
@@ -48,7 +68,7 @@ export const StepPolicyConfig: React.FC<StepPolicyConfigProps> = ({
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type } = e.target;
-        setFormData((prev: any) => ({
+        setFormData((prev: PolicyFormData) => ({
             ...prev,
             [name]: type === 'number' ? Number(value) : value
         }));
@@ -61,7 +81,7 @@ export const StepPolicyConfig: React.FC<StepPolicyConfigProps> = ({
                 return (
                     <>
                         <Grid size={{ xs: 12, sm: 6 }}>
-                            <TextField fullWidth label="In Port" name="in_port" value={formData.in_port || ''} onChange={handleChange} required />
+                            <TextField fullWidth label="In Port" name="in_port" value={formData.in_port as string || ''} onChange={handleChange} required />
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField fullWidth label="Out Port" name="out_port" value={formData.out_port || ''} onChange={handleChange} required />

@@ -6,7 +6,7 @@ import {
 import { Close as CloseIcon } from '@mui/icons-material';
 import { StepTargetDevice } from './wizard-steps/StepTargetDevice';
 import { StepPolicyCategory } from './wizard-steps/StepPolicyCategory';
-import { StepPolicyConfig } from './wizard-steps/StepPolicyConfig';
+import { StepPolicyConfig, PolicyFormData } from './wizard-steps/StepPolicyConfig';
 import { $api } from '@/lib/apiv2/fetch';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { MuiSnackbar } from '@/components/ui/MuiSnackbar';
@@ -26,7 +26,7 @@ export const CreatePolicyModal: React.FC<CreatePolicyModalProps> = ({ open, onCl
     const [selectedNodeId, setSelectedNodeId] = useState<string>('');
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [selectedFlowType, setSelectedFlowType] = useState<string>('');
-    const [formData, setFormData] = useState<any>({});
+    const [formData, setFormData] = useState<PolicyFormData>({});
     const { snackbar, showSnackbar, hideSnackbar } = useSnackbar();
 
     const addFlowMutation = $api.useMutation('post', '/api/v1/nbi/devices/{node_id}/flows/connectivity/base');
@@ -64,7 +64,7 @@ export const CreatePolicyModal: React.FC<CreatePolicyModalProps> = ({ open, onCl
     const handleSubmit = async () => {
         try {
             const params = { path: { node_id: selectedNodeId } };
-            const payload: any = { ...formData }; // Assume formData is correctly shaped by StepPolicyConfig
+            const payload = { ...formData } as Record<string, unknown>;
 
             let mutationToCall;
 
@@ -92,18 +92,19 @@ export const CreatePolicyModal: React.FC<CreatePolicyModalProps> = ({ open, onCl
             await mutationToCall.mutateAsync({
                 params: params,
                 body: payload
-            } as any);
+            } as never);
 
             showSnackbar('success', `Successfully added ${selectedFlowType} policy!`);
             onSuccess();
             handleClose();
-        } catch (error: any) {
+        } catch (err: unknown) {
+            const error = err as Record<string, unknown>;
             console.error("Failed to add policy:", error);
-            let errorMsg = error.message || 'Unknown error';
+            let errorMsg = error.message as string || 'Unknown error';
 
             // Check for FastAPI validation error array shape
             if (error.detail && Array.isArray(error.detail)) {
-                errorMsg = error.detail.map((err: any) => err.msg).join(' | ');
+                errorMsg = error.detail.map((e: Record<string, unknown>) => e.msg as string).join(' | ');
             } else if (error.detail && typeof error.detail === 'string') {
                 errorMsg = error.detail;
             }
@@ -135,7 +136,6 @@ export const CreatePolicyModal: React.FC<CreatePolicyModalProps> = ({ open, onCl
                 return (
                     <StepPolicyConfig
                         nodeId={selectedNodeId}
-                        category={selectedCategory}
                         flowType={selectedFlowType}
                         formData={formData}
                         setFormData={setFormData}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, FormHelperText, CircularProgress } from '@mui/material';
 import { $api } from "@/lib/apiv2/fetch";
-import { components } from "@/lib/apiv2/schema";
+
 
 interface StepTargetDeviceProps {
     nodeId: string;
@@ -11,8 +11,8 @@ interface StepTargetDeviceProps {
 export const StepTargetDevice: React.FC<StepTargetDeviceProps> = ({ nodeId, setNodeId }) => {
     // Fetch available devices
     const { data, isLoading, error } = $api.useQuery("get", "/api/v1/nbi/devices");
-    const devices = (data as any)?.devices || [];
-    const switchDevices = devices.filter((d: any) =>
+    const devices = ((data as Record<string, unknown>)?.devices as { node_id: string; device_type?: string; name?: string }[]) || [];
+    const switchDevices = devices.filter((d) =>
         String(d.node_id).toLowerCase().includes('openflow') ||
         String(d.device_type).toUpperCase() === 'SWITCH'
     );
@@ -45,7 +45,7 @@ export const StepTargetDevice: React.FC<StepTargetDeviceProps> = ({ nodeId, setN
                             No switch devices available
                         </MenuItem>
                     ) : (
-                        switchDevices.map((device: any) => (
+                        switchDevices.map((device) => (
                             <MenuItem key={device.node_id} value={device.node_id}>
                                 {device.name} ({device.node_id})
                             </MenuItem>
