@@ -1,66 +1,175 @@
 # SDN Frontend
 
-โปรเจค Frontend สำหรับระบบจัดการเครือข่าย SDN (Software-Defined Networking) พัฒนาด้วย Next.js 15 และ TypeScript
+A modern, full-featured frontend for an SDN (Software-Defined Networking) management platform. Built with **Next.js 15**, **React 19**, **TypeScript**, and **MUI (Material UI) v7**, it provides a comprehensive web interface for managing network devices, topology, IP addresses, policies, configuration templates, backups, and real-time monitoring — all with robust authentication and role-based access control.
 
+## ✨ Key Features
 
-## 🚀 การติดตั้งและเริ่มต้นใช้งาน
+### 🔐 Authentication & Security
 
-### 1. Clone โปรเจค
+- **Login / Register** with email OTP verification
+- **TOTP-based MFA (2FA)** — Google Authenticator compatible (setup, verify, disable)
+- **Forgot Password / Reset Password** flow with email OTP
+- **CSRF Protection** — double-submit cookie pattern on all mutating requests
+- **HttpOnly Cookie Sessions** with automatic token refresh on 401
+- **Role-Based Access Control (RBAC)** — `VIEWER`, `ENGINEER`, `ADMIN`, `OWNER` roles with UI-level enforcement
+
+### 📊 Dashboard
+
+- System overview with summary cards
+- **Zabbix Integration** — live host monitoring, active problems, top metrics, and host detail modals
+- Real-time WebSocket alerts / notifications
+
+### 🖥️ Device Management
+
+- Full CRUD for network devices (switches, routers, firewalls, access points, etc.)
+- Device detail view with live configuration retrieval
+- Network interface management
+- Tag and tag-group management
+- Site management (hierarchical site tree)
+- Device operation tracking (create, edit, delete operations)
+- **IPAM Picker** integration for Management IP and Netconf Host fields
+
+### 🌐 Network Topology
+
+- Interactive topology canvas powered by **React Flow** (`@xyflow/react`)
+- Site-based tree navigation sidebar
+- Device table with bulk selection
+- Configuration modal with per-device config panels
+- Template deployment onto topology devices
+- Config preview and confirmation modals
+
+### 📋 Policy Management (Intent-Based Networking)
+
+- Policy creation wizard with step-by-step flow (category → configuration)
+- Policy table with filtering and search
+- Policy detail drawer
+- OpenDaylight flow synchronization modal
+
+### 📝 Configuration Templates
+
+- Template card grid with create / edit / detail modals
+- Jinja2-style templating with variable support
+- Template deployment to devices via topology
+
+### 🗂️ IP Address Management (IPAM)
+
+- Hierarchical tree sidebar (Sections → Subnets → IPs)
+- Subnet table and IP address table views
+- **IP Space Map** — visual grid showing IP allocation status with paginated loading
+- IP address form modal with IPAM picker for interactive selection
+- Section and subnet CRUD modals
+- Full IPAM lifecycle: book, release, reactivate
+
+### 💾 Configuration Backup
+
+- Backup profile management with scheduling (cron-based)
+- Backup history table with diff comparison
+- Manual and scheduled backup triggers
+- Pause / resume / offline backup profiles
+- Configuration diff viewer (side-by-side comparison)
+
+### 📜 Audit Logs
+
+- System-wide activity logging
+- Filterable and searchable audit log table
+
+### ⚙️ Settings
+
+- **Profile** — update personal information
+- **Account** — change password
+- **MFA/2FA** — enable/disable TOTP with QR code scanning
+
+### 👥 User Management (Admin)
+
+- User listing and role management
+- Password reset by administrators
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | [Next.js 15](https://nextjs.org/) (App Router) |
+| Language | [TypeScript 5](https://www.typescriptlang.org/) |
+| UI Library | [React 19](https://react.dev/) |
+| Component Library | [MUI v7](https://mui.com/) (Material UI, MUI Lab, MUI X Charts) |
+| Styling | [Tailwind CSS 3](https://tailwindcss.com/) + [Emotion](https://emotion.sh/) |
+| Icons | [Font Awesome 7](https://fontawesome.com/), [Lucide React](https://lucide.dev/), [React Icons](https://react-icons.github.io/react-icons/) |
+| Topology Canvas | [@xyflow/react](https://reactflow.dev/) (React Flow) |
+| API Client | Custom fetch wrapper + [openapi-fetch](https://openapi-ts.dev/) with generated types |
+| Date Utilities | [date-fns](https://date-fns.org/) |
+| QR Code | [react-qr-code](https://github.com/rosskhanas/react-qr-code) |
+| Package Manager | [Bun](https://bun.sh/) |
+| Containerization | Docker + Docker Compose |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 20+ or [Bun](https://bun.sh/)
+- [Docker](https://www.docker.com/) (optional, for containerized deployment)
+
+### 1. Clone the Repository
 
 ```bash
 git clone <repository-url>
 cd SDN-Frontend
 ```
 
-### 2. ติดตั้ง Dependencies
-
-เข้าไปในโฟลเดอร์ `frontend`:
+### 2. Install Dependencies
 
 ```bash
 cd frontend
-```
-ใช้ bun :
-
-```bash
 bun install
 ```
 
-### 3. ตั้งค่า Environment Variables
+### 3. Configure Environment Variables
 
-สร้างไฟล์ `.env.local` ในโฟลเดอร์ `frontend`
-## 🐳 การใช้งาน Docker
+Create a `.env.local` file inside the `frontend/` directory:
 
-### Production Mode
-
-รันจาก root directory ของโปรเจค:
-
-```bash
-# Build และรัน production container
-docker-compose up --build (Recommand)
-
-# หรือรันเฉพาะ production service
-docker-compose up nextjs-frontend --build
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws/alerts
 ```
 
-Application จะรันที่ [http://localhost:3000](http://localhost:3000)
+| Variable | Description | Default |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | Backend API base URL | `http://localhost:8000` |
+| `NEXT_PUBLIC_WS_URL` | WebSocket endpoint for real-time alerts | `ws://localhost:8000/ws/alerts` |
 
-### Development Mode
+### 4. Run Development Server
 
 ```bash
-# รัน development container พร้อม hot reload
-docker-compose --profile dev up nextjs-dev --build
+bun run dev
 ```
 
-Application จะรันที่ [http://localhost:3001](http://localhost:3001)
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
-### คำสั่ง Docker อื่นๆ
+---
+
+## 🐳 Docker
+
+### Development Mode (Recommended)
+
+Run from the project root directory:
+
+```bash
+docker-compose up --build
+```
+
+The application will be available at [http://localhost:3000](http://localhost:3000) with hot-reload enabled.
+
+### Common Docker Commands
 
 ```bash
 # Stop containers
 docker-compose down
 
 # View logs
-docker-compose logs nextjs-frontend
+docker-compose logs sdn-frontend
 
 # Rebuild without cache
 docker-compose build --no-cache
@@ -69,80 +178,97 @@ docker-compose build --no-cache
 docker-compose down -v
 ```
 
-## 📁 โครงสร้างโปรเจค
+---
+
+## 📁 Project Structure
 
 ```
-frontend/
-├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── login/             # หน้า Login
-│   │   ├── register/          # หน้า Register
-│   │   ├── dashboard/         # หน้า Dashboard
-│   │   ├── device/            # จัดการอุปกรณ์
-│   │   ├── setting/           # การตั้งค่า
-│   │   │   ├── mfa/          # MFA/2FA Settings
-│   │   │   ├── profile/      # โปรไฟล์ผู้ใช้
-│   │   │   └── account/      # จัดการบัญชี
-│   │   └── ...
-│   ├── components/            # React Components
-│   │   ├── ui/               # UI Components พื้นฐาน
-│   │   ├── auth/             # Authentication Components
-│   │   ├── device/           # Device-related Components
-│   │   └── ...
-│   ├── contexts/             # React Contexts (AuthContext, etc.)
-│   ├── hooks/                # Custom React Hooks
-│   ├── lib/                  # Utilities และ Helpers
-│   │   ├── api.ts           # API Client
-│   │   └── utils.ts         # Helper Functions
-│   └── services/             # API Services
-│       ├── userService.ts
-│       ├── deviceNetworkService.ts
-│       └── ...
-├── public/                   # Static Files
-├── .env.local               # Environment Variables (ไม่ commit)
-├── .env.example             # ตัวอย่าง Environment Variables
-├── package.json
-├── tsconfig.json
-└── tailwind.config.ts
+SDN-Frontend/
+├── docker-compose.yml           # Docker Compose orchestration
+├── README.md
+└── frontend/
+    ├── Dockerfile               # Production Docker image
+    ├── Dockerfile.dev           # Development Docker image
+    ├── package.json
+    ├── tailwind.config.ts
+    ├── tsconfig.json
+    ├── next.config.js
+    └── src/
+        ├── app/                 # Next.js App Router pages
+        │   ├── login/           # Login page
+        │   ├── register/        # Registration page
+        │   ├── otp/             # OTP verification page
+        │   ├── forgot-password/ # Forgot password page
+        │   ├── reset-password/  # Reset password page
+        │   ├── dashboard/       # Dashboard (Zabbix monitoring)
+        │   ├── device/          # Device management
+        │   ├── topology/        # Network topology canvas
+        │   ├── policies/        # Policy management (IBN)
+        │   ├── templates/       # Configuration templates
+        │   ├── ipam/            # IPAM management
+        │   ├── ip-management/   # IP management views
+        │   ├── audit-log/       # Audit log viewer
+        │   └── setting/         # User settings
+        │       ├── profile/     # Profile settings
+        │       ├── account/     # Account / password
+        │       └── mfa/         # MFA/2FA settings
+        ├── components/          # React components
+        │   ├── ui/              # Reusable UI (Navbar, Sidebar, Pagination, etc.)
+        │   ├── auth/            # Authentication components
+        │   ├── dashboard/       # Dashboard & Zabbix components
+        │   ├── device/          # Device CRUD, detail, backup, operations
+        │   │   ├── device-list/ # Device listing
+        │   │   ├── device-detail/ # Device detail views
+        │   │   ├── backup/      # Backup management components
+        │   │   ├── operation/   # Operation tracking components
+        │   │   ├── site/        # Site management
+        │   │   └── tag-group/   # Tag & tag-group management
+        │   ├── topology/        # Topology canvas, config, deployment
+        │   ├── policies/        # Policy wizard, table, filters
+        │   ├── templates/       # Template CRUD modals & cards
+        │   ├── ipam/            # IPAM tree, tables, space map, forms
+        │   ├── audit/           # Audit log components
+        │   ├── profile/         # Profile components
+        │   ├── account/         # Account components
+        │   ├── layout/          # Layout wrappers
+        │   ├── modals/          # Shared modal components
+        │   └── providers/       # Context providers (MUI theme, etc.)
+        ├── contexts/            # React Contexts
+        │   ├── AuthContext.tsx   # Authentication state
+        │   └── AlertContext.tsx  # Global alert/notification state
+        ├── hooks/               # Custom React hooks
+        │   └── useSnackbar.ts   # Snackbar notification hook
+        ├── lib/                 # Utilities & configuration
+        │   ├── api.ts           # Primary API client (fetch wrapper)
+        │   ├── apiv2/           # OpenAPI-generated typed API client
+        │   ├── theme.ts         # MUI theme configuration
+        │   ├── emotion.ts       # Emotion cache setup
+        │   ├── fontawesome.ts   # Font Awesome library config
+        │   └── utils.ts         # Helper functions
+        └── services/            # Domain-specific API services
+            ├── userService.ts
+            ├── deviceNetworkService.ts
+            ├── topologyService.ts
+            ├── intentService.ts
+            ├── ipamService.ts
+            ├── auditService.ts
+            ├── siteService.ts
+            ├── tagService.ts
+            ├── configurationTemplateService.ts
+            └── operatingSystemService.ts
 ```
 
-## ✨ ฟีเจอร์หลัก
+---
 
-### 🔐 Authentication & Security
+## 📜 Available Scripts
 
-- **Login/Register** - ระบบเข้าสู่ระบบและสมัครสมาชิก
-- **Email OTP Verification** - ยืนยันอีเมลด้วย OTP
-- **TOTP MFA (2FA)** - Two-Factor Authentication ด้วย TOTP (Google Authenticator)
-- **Role-based Access Control** - ระบบสิทธิ์ตาม Role (VIEWER, ENGINEER, ADMIN, OWNER)
+Run from the `frontend/` directory:
 
-### 📊 Dashboard
-
-- แสดงภาพรวมของระบบ
-- สถิติและข้อมูลสำคัญ
-
-### 🖥️ Device Management
-
-- จัดการอุปกรณ์เครือข่าย (Switches, Routers, Firewalls, Access Points)
-- ดูรายละเอียดอุปกรณ์
-- จัดการ Tags และ Categories
-- ดู Network Interfaces
-
-### ⚙️ Settings
-
-- **Profile** - จัดการข้อมูลส่วนตัว
-- **Account** - เปลี่ยนรหัสผ่าน
-- **MFA/2FA** - ตั้งค่า Two-Factor Authentication
-  - Enable/Disable TOTP
-  - QR Code Scanning
-  - Backup Codes (Coming Soon)
-
-### 👥 User Management (Admin)
-
-- จัดการผู้ใช้ในระบบ
-- เปลี่ยน Role
-- รีเซ็ตรหัสผ่าน
-
-### Audit Logs
-
-- ดูประวัติการใช้งานระบบ
-- Filter และ Search
+| Command | Description |
+|---|---|
+| `bun run dev` | Start Next.js development server with hot-reload |
+| `bun run build` | Create optimized production build |
+| `bun run start` | Start production server |
+| `bun run lint` | Run ESLint checks |
+| `bun run type-check` | Run TypeScript type checking (`tsc --noEmit`) |
+| `bun run api:gen` | Generate typed API client from OpenAPI spec |
