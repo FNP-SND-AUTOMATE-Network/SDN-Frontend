@@ -80,7 +80,7 @@ export function DhcpPanel({ nodeId, showData, onStageIntent }: ConfigPanelProps)
     >([{ low_address: "", high_address: "" }]);
     const [maskErrors, setMaskErrors] = useState<string[]>([""]);
 
-    const handleStage = (intent: string, params: Record<string, any>, label: string) => {
+    const handleStage = (intent: string, params: Record<string, unknown>, label: string) => {
         if (onStageIntent) {
             onStageIntent({ intent, node_id: nodeId, params, label });
         }
@@ -208,7 +208,7 @@ export function DhcpPanel({ nodeId, showData, onStageIntent }: ConfigPanelProps)
                                 updated[idx].mask = normalizedMask;
                                 setDhcpPools(updated);
 
-                                const params: any = {
+                                const params: Record<string, unknown> = {
                                     pool_name: pool.pool_name,
                                     gateway: pool.gateway,
                                     mask: normalizedMask,

@@ -23,7 +23,6 @@ import { $api } from "@/lib/apiv2/fetch";
 import { components } from "@/lib/apiv2/schema";
 
 type LocalSite = components["schemas"]["LocalSiteResponse"];
-type DeviceNetwork = components["schemas"]["DeviceNetworkResponse"];
 
 const getDeviceIcon = (type: string, className: string) => {
     switch (type) {
@@ -214,7 +213,7 @@ export default function TopologySiteTree({
         },
     });
 
-    const sites = sitesData?.sites || [];
+    const sites = useMemo(() => sitesData?.sites || [], [sitesData?.sites]);
 
     // Group sites by city
     const sitesByCity = useMemo(() => {
@@ -239,7 +238,7 @@ export default function TopologySiteTree({
     if (error) {
         return (
             <Box p={2} m={2} bgcolor="error.50" color="error.main" borderRadius={1} border={1} borderColor="error.100">
-                <Typography variant="body2">{((error as any)?.message) || "Failed to load sites"}</Typography>
+                <Typography variant="body2">{((error as Error)?.message) || "Failed to load sites"}</Typography>
             </Box>
         );
     }

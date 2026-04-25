@@ -29,7 +29,6 @@ interface TopologyConfigConfirmModalProps {
     isPushing: boolean;
     results: BulkIntentItemResult[] | null;
     onConfirm: () => void;
-    onReset?: () => void;
 }
 
 export function TopologyConfigConfirmModal({
@@ -41,7 +40,6 @@ export function TopologyConfigConfirmModal({
     isPushing,
     results,
     onConfirm,
-    onReset,
 }: TopologyConfigConfirmModalProps) {
     const isFinished = results !== null;
     return (

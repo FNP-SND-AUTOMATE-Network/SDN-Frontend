@@ -21,7 +21,7 @@ export function SettingPanel({ device, nodeId, onStageIntent }: ConfigPanelProps
 
     useEffect(() => { }, [device]);
 
-    const handleStage = (intent: string, params: Record<string, any>, label: string) => {
+    const handleStage = (intent: string, params: Record<string, unknown>, label: string) => {
         if (onStageIntent) {
             onStageIntent({ intent, node_id: nodeId, params, label });
         }

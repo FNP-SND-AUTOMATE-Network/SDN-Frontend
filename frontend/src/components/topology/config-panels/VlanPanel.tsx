@@ -24,12 +24,18 @@ import { Delete, Add } from "@mui/icons-material";
 import { ConfigPanelProps } from "./types";
 
 export function VlanPanel({ nodeId, showData, onStageIntent }: ConfigPanelProps) {
+    interface VlanItem {
+        id?: string | number;
+        vlan_id?: string | number;
+        name?: string;
+        status?: string;
+    }
     const defaultFormState = { vlanId: "", name: "", intf: "", mode: "access" as "access" | "trunk" };
     const [vlans, setVlans] = useState<typeof defaultFormState[]>([defaultFormState]);
 
-    const existingVlans = showData?.vlans || [];
+    const existingVlans = (showData?.vlans as VlanItem[]) || [];
 
-    const handleStage = (intent: string, params: Record<string, any>, label: string) => {
+    const handleStage = (intent: string, params: Record<string, unknown>, label: string) => {
         if (onStageIntent) {
             onStageIntent({ intent, node_id: nodeId, params, label });
         }
@@ -53,7 +59,7 @@ export function VlanPanel({ nodeId, showData, onStageIntent }: ConfigPanelProps)
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {existingVlans.map((vlan: any, idx: number) => (
+                            {existingVlans.map((vlan: VlanItem, idx: number) => (
                                 <TableRow key={idx}>
                                     <TableCell sx={{ fontWeight: 600 }}>{vlan.vlan_id || vlan.id}</TableCell>
                                     <TableCell>{vlan.name || "-"}</TableCell>

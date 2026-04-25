@@ -14,12 +14,12 @@ import {
 import { Delete, Add, PlaylistAdd, PlaylistRemove } from "@mui/icons-material";
 import { ConfigPanelProps, StagedIntent } from "./types";
 
-export function StaticRoutePanel({ nodeId, showData, onStageIntent }: ConfigPanelProps) {
+export function StaticRoutePanel({ nodeId, onStageIntent }: ConfigPanelProps) {
     const [staticRoutes, setStaticRoutes] = useState<
         { prefix: string; next_hop: string; mask: string }[]
     >([{ prefix: "", next_hop: "", mask: "" }]);
 
-    const handleStage = (intent: string, params: Record<string, any>, label: string) => {
+    const handleStage = (intent: string, params: Record<string, unknown>, label: string) => {
         if (onStageIntent) {
             onStageIntent({ intent, node_id: nodeId, params, label });
         }

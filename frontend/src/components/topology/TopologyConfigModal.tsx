@@ -57,15 +57,15 @@ interface NetworkInterface {
     ipv4_address: string | null;
     subnet_mask: string | null;
     ipv6: string | null;
-    mtu: number | null;
     has_ospf: boolean;
-    ospf: any;
+    ospf: unknown;
     oper_status: string;
     mac_address: string;
     speed: string;
     duplex: string;
     auto_negotiate: boolean;
     media_type: string;
+    mtu: number | null;
     last_change: string;
 }
 
@@ -73,7 +73,6 @@ interface TopologyConfigModalProps {
     isOpen: boolean;
     onClose: () => void;
     device: DeviceNetwork | null;
-    onDeviceUpdated?: (device: DeviceNetwork) => void;
 }
 
 type MainTab = "config" | "template";
@@ -83,7 +82,6 @@ export default function TopologyConfigModal({
     isOpen,
     onClose,
     device,
-    onDeviceUpdated,
 }: TopologyConfigModalProps) {
     const { snackbar, showSuccess, showError, showWarning, hideSnackbar } = useSnackbar();
     const [mainTab, setMainTab] = useState<MainTab>("config");
@@ -91,7 +89,7 @@ export default function TopologyConfigModal({
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
     // Show data state
-    const [showData, setShowData] = useState<Record<string, any> | null>(null);
+    const [showData, setShowData] = useState<Record<string, unknown> | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [discoveredInterfaces, setDiscoveredInterfaces] = useState<NetworkInterface[]>([]);
 
@@ -181,7 +179,7 @@ export default function TopologyConfigModal({
             setStagedIntents([]);
             setInterfaceDrafts({});
         }
-    }, [deviceId]);
+    }, [deviceId, device]);
 
     const loadSectionData = useCallback(
         async (section: string) => {
@@ -201,7 +199,7 @@ export default function TopologyConfigModal({
                         setDiscoveredInterfaces(payload.interfaces || []);
                     }
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("Failed to load section data:", err);
             } finally {
                 setIsLoading(false);
@@ -232,14 +230,6 @@ export default function TopologyConfigModal({
         setActiveSection(key);
     };
 
-    const handleSidebarClick = (key: string, expandable: boolean) => {
-        if (expandable) {
-            toggleSection(key);
-        } else {
-            setActiveSection(key);
-        }
-    };
-
     const getContentTitle = () => {
         if (activeSection === "setting") return "System Settings";
         if (activeSection === "interface") return "Interfaces";
@@ -267,18 +257,19 @@ export default function TopologyConfigModal({
                     body: {
                         template_id: selectedTemplateId,
                         device_ids: [device.id],
-                        variables: {},
-                        config_content: editedConfigContent || undefined,
-                    } as any
+                        variables: {
+                            config_content: editedConfigContent || undefined,
+                        },
+                    }
                 });
 
                 if (error) {
-                    showError((error as any)?.detail || "Failed to deploy template.");
+                    showError((error as Record<string, unknown>)?.detail as string || "Failed to deploy template.");
                 } else if (response.ok || response.status === 202 || response.status === 200) {
                     showSuccess("Template deployment job triggered successfully.");
                 }
-            } catch (err: any) {
-                showError(err.message || "Failed to deploy template.");
+            } catch (err: unknown) {
+                showError((err as Error).message || "Failed to deploy template.");
             } finally {
                 setIsDeploying(false);
             }
@@ -311,12 +302,12 @@ export default function TopologyConfigModal({
             );
 
             if (error) {
-                const detail = (error as any)?.detail;
+                const detail = (error as Record<string, unknown>)?.detail;
                 showError(typeof detail === "string" ? detail : JSON.stringify(detail) || "Bulk push failed");
                 return;
             }
 
-            const bulkRes = data as any;
+            const bulkRes = data as Record<string, unknown>;
 
             let hasSuccess = false;
 
@@ -326,9 +317,9 @@ export default function TopologyConfigModal({
 
                 // Show the success results on the modal temporarily
                 if (bulkRes.results) {
-                    setBulkResults(bulkRes.results);
+                    setBulkResults(bulkRes.results as BulkIntentItemResult[]);
                 } else {
-                    setBulkResults(stagedIntents.map((_, i) => ({ index: i, status: "SUCCESS", message: "Success" } as any)));
+                    setBulkResults(stagedIntents.map((_, i) => ({ index: i, status: "SUCCESS", message: "Success" } as unknown as BulkIntentItemResult)));
                 }
 
                 // Wait 1.5 seconds for user to see the success state, then close the modal completely
@@ -340,15 +331,15 @@ export default function TopologyConfigModal({
                     onClose();
                 }, 1500);
             } else if (response?.status === 207) {
-                const successes = bulkRes.total_executed - bulkRes.total_failed;
+                const successes = (bulkRes.total_executed as number) - (bulkRes.total_failed as number);
                 hasSuccess = successes > 0;
                 showWarning(
                     `Config Push ${successes} / ${bulkRes.total_executed} success (${bulkRes.total_failed} failed)`
                 );
-                if (bulkRes.results) setBulkResults(bulkRes.results);
+                if (bulkRes.results) setBulkResults(bulkRes.results as BulkIntentItemResult[]);
             } else {
                 showError("Unexpected response from bulk endpoint");
-                if (bulkRes?.results) setBulkResults(bulkRes.results);
+                if (bulkRes?.results) setBulkResults(bulkRes.results as BulkIntentItemResult[]);
             }
 
             // --- AUTO SAVE CONFIG ---
@@ -386,9 +377,9 @@ export default function TopologyConfigModal({
                 }
             }
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("❌ Bulk Push ERROR:", error);
-            showError(`Failed to push bulk config: ${error?.message || "Unknown error"}`);
+            showError(`Failed to push bulk config: ${(error as Error)?.message || "Unknown error"}`);
         } finally {
             setIsBulkPushing(false);
         }
@@ -623,11 +614,6 @@ export default function TopologyConfigModal({
                         setStagedIntents([]);
                         setBulkResults(null);
                     }
-                }}
-                onReset={() => {
-                    setConfirmDialogOpen(false);
-                    setStagedIntents([]);
-                    setBulkResults(null);
                 }}
                 deviceName={device.device_name || ""}
                 nodeId={nodeId}

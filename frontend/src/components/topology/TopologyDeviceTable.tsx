@@ -12,8 +12,6 @@ import {
     Router as RouterIcon,
     Shield,
     Wifi,
-    Box as BoxIcon,
-    Server,
 } from "lucide-react";
 import {
     Box,
@@ -24,7 +22,6 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    Paper,
     IconButton,
     Menu,
     MenuItem,
@@ -57,21 +54,6 @@ interface TopologyDeviceTableProps {
     onDeviceSelect?: (deviceId: string) => void;
 }
 
-const getTypeIcon = (type: string, className = "w-4 h-4") => {
-    switch (type) {
-        case "SWITCH":
-            return <Server className={className} />;
-        case "ROUTER":
-            return <RouterIcon className={className} />;
-        case "FIREWALL":
-            return <Shield className={className} />;
-        case "ACCESS_POINT":
-            return <Wifi className={className} />;
-        default:
-            return <BoxIcon className={className} />;
-    }
-};
-
 const typeConfig: Record<string, { color: string; icon: React.ReactNode }> = {
     SWITCH: { color: "#2563EB", icon: <DnsRounded fontSize="small" /> },
     ROUTER: { color: "#7C3AED", icon: <RouterIcon fontSize="small" /> },
@@ -97,12 +79,11 @@ export default function TopologyDeviceTable({
     devices,
     selectedDeviceIds,
     onSelectionChange,
-    onDeviceSelect,
 }: TopologyDeviceTableProps) {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [menuDeviceId, setMenuDeviceId] = useState<string | null>(null);
-    const [configModalDevice, setConfigModalDevice] = useState<any | null>(null);
-    const [configEditorDevice, setConfigEditorDevice] = useState<any | null>(null);
+    const [configModalDevice, setConfigModalDevice] = useState<DeviceNetwork | null>(null);
+    const [configEditorDevice, setConfigEditorDevice] = useState<DeviceNetwork | null>(null);
     const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
     const { user } = useAuth();
 
@@ -211,11 +192,11 @@ export default function TopologyDeviceTable({
                             params: { path: { record_id: idToPoll } }
                         });
                         if (res.data) {
-                            // @ts-ignore
+                            // @ts-expect-error backend status doesn't exactly match typed status
                             const currentStatus = res.data.status || "IN_PROGRESS";
 
                             setBackupJobs(prev => prev.map(job =>
-                                job.id === idToPoll ? { ...job, status: currentStatus as any } : job
+                                job.id === idToPoll ? { ...job, status: currentStatus as "IN_PROGRESS" | "SUCCESS" | "FAILED" } : job
                             ));
 
                             if (currentStatus === "IN_PROGRESS" && retryCount < 60) {
@@ -446,7 +427,7 @@ export default function TopologyDeviceTable({
                 <MenuItem onClick={(e) => {
                     e.stopPropagation();
                     handleMenuClose();
-                    setConfigEditorDevice(currentDevice);
+                    setConfigEditorDevice(currentDevice ?? null);
                 }}>
                     <ListItemIcon>
                         <FontAwesomeIcon icon={faCog} className="text-green-600 w-4 h-4" />
@@ -456,7 +437,7 @@ export default function TopologyDeviceTable({
                 <MenuItem onClick={(e) => {
                     e.stopPropagation();
                     handleMenuClose();
-                    setConfigModalDevice(currentDevice);
+                    setConfigModalDevice(currentDevice ?? null);
                 }}>
                     <ListItemIcon>
                         <FontAwesomeIcon icon={faFile} className="text-blue-600 w-4 h-4" />

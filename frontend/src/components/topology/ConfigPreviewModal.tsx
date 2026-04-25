@@ -86,7 +86,7 @@ export default function ConfigPreviewModal({
                 ? liveData.config
                 : JSON.stringify(liveData.config, null, 2);
         } else {
-            const detail = detailData as any;
+            const detail = detailData as Record<string, unknown>;
             if (!detail?.config_content) return "";
             return typeof detail.config_content === 'string'
                 ? detail.config_content
@@ -182,9 +182,9 @@ export default function ConfigPreviewModal({
                                 </Typography>
                             )
                         ) : (
-                            (detailData as any)?.updated_at && (
+                            latestRecordId && (
                                 <Typography variant="caption" color="text.secondary">
-                                    Backup from: {formatDate((detailData as any).updated_at)}
+                                    Backup from: {formatDate((detailData as Record<string, unknown>).updated_at as string)}
                                 </Typography>
                             )
                         )}
@@ -210,7 +210,7 @@ export default function ConfigPreviewModal({
                         ) : noConfigFound ? (
                             <Typography color="text.secondary" sx={{ fontStyle: "italic", textAlign: "center", mt: 4 }}>
                                 {isOnline 
-                                    ? (fetchError ? (fetchError as any)?.message || "Error fetching live configuration." : liveData?.message || "No configuration content available from the device.")
+                                    ? (fetchError ? (fetchError as Error)?.message || "Error fetching live configuration." : liveData?.message || "No configuration content available from the device.")
                                     : "No configuration backup found for this offline device."}
                             </Typography>
                         ) : (

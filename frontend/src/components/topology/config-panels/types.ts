@@ -16,7 +16,7 @@ export type ConfigurationTemplateDetailResponse =
 export interface StagedIntent {
   intent: string;
   node_id: string;
-  params: Record<string, any>;
+  params: Record<string, unknown>;
   /** UI label for the pending changes list */
   label?: string;
 }
@@ -24,7 +24,7 @@ export interface StagedIntent {
 export interface ConfigPanelProps {
   device: DeviceNetwork;
   nodeId: string;
-  showData: Record<string, any> | null;
+  showData: Record<string, unknown> | null;
   /** Queue an intent (or array of intents) for bulk push */
   onStageIntent?: (intent: StagedIntent | StagedIntent[]) => void;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
     ReactFlow,
     Background,
@@ -10,7 +10,6 @@ import {
     Edge,
     useNodesState,
     useEdgesState,
-    MarkerType,
     Handle,
     Position,
     NodeProps,
@@ -35,7 +34,6 @@ import {
     Box as BoxIcon,
 } from "lucide-react";
 import { $api, fetchClient } from "@/lib/apiv2/fetch";
-import { useAuth } from "@/contexts/AuthContext";
 import { Box, Typography, Button, CircularProgress } from "@mui/material";
 
 export interface TopologyNode {
@@ -100,7 +98,6 @@ const getDeviceConfig = (type: string) =>
     DEVICE_CONFIG[type.toLowerCase()] || DEVICE_CONFIG.other;
 
 const getDeviceIcon = (type: string, size: number = 20) => {
-    const className = `w-[${size}px] h-[${size}px]`;
     switch (type.toLowerCase()) {
         case "router":
             return <RouterIcon style={{ width: size, height: size }} />;
@@ -392,7 +389,6 @@ interface TopologyCanvasProps {
 export default function TopologyCanvas({
     selectedSiteId,
 }: TopologyCanvasProps) {
-    const { isAuthenticated } = useAuth();
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -419,7 +415,7 @@ export default function TopologyCanvas({
         }
     );
 
-    const error = queryError ? (queryError as any).message || "Failed to load topology" : syncError;
+    const error = queryError ? (queryError as Error).message || "Failed to load topology" : syncError;
 
     // Update nodes and edges when data changes
     useEffect(() => {
@@ -456,9 +452,9 @@ export default function TopologyCanvas({
         try {
             await fetchClient.POST("/api/v1/nbi/topology/sync");
             await refetch();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Topology sync failed:", err);
-            setSyncError(err.message || "Sync failed");
+            setSyncError((err as Error).message || "Sync failed");
         } finally {
             setIsSyncing(false);
         }

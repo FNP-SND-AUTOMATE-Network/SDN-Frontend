@@ -63,6 +63,7 @@ export default function DevicePage() {
     data: devicesResponse,
     isLoading,
     error: devicesError,
+    refetch: refetchDevices,
   } = $api.useQuery("get", "/device-networks/", {
     params: {
       query: {
@@ -138,6 +139,22 @@ export default function DevicePage() {
     showSuccess("Device updated successfully");
   };
 
+  const handleSyncDevice = async (device: DeviceNetwork) => {
+    try {
+      showSuccess(`Initiating sync for ${device.device_name}...`);
+      const res = await fetchClient.POST("/api/v1/nbi/devices/{node_id}/sync-status", {
+        params: { path: { node_id: device.id } },
+      });
+      if (res.error) {
+        throw new Error((res.error as any)?.detail || "Failed to sync device");
+      }
+      showSuccess(`Device ${device.device_name} synced successfully`);
+      refetchDevices();
+    } catch (err: any) {
+      showError(err.message || "An error occurred during sync");
+    }
+  };
+
   return (
     <ProtectedRoute>
       <PageLayout>
@@ -171,9 +188,7 @@ export default function DevicePage() {
             <DeviceTable
               devices={devices}
               onEdit={openEditModal}
-              onSync={(device) => {
-                // TODO: Implement sync functionality
-              }}
+              onSync={handleSyncDevice}
             />
 
             {/* MUI Pagination */}

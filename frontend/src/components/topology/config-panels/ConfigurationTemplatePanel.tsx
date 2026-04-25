@@ -51,12 +51,12 @@ export const ConfigurationTemplatePanel: React.FC<ConfigurationTemplatePanelProp
     useEffect(() => {
         if (selectedTemplateDetail) {
             // The API response places the content inside a nested 'detail' object
-            const detailObj = (selectedTemplateDetail as any).detail || selectedTemplateDetail;
+            const detailObj = ((selectedTemplateDetail as Record<string, unknown>).detail as Record<string, unknown>) || (selectedTemplateDetail as Record<string, unknown>);
 
             let contentStr = "";
             if (detailObj.config_content) {
                 contentStr = typeof detailObj.config_content === 'string'
-                    ? detailObj.config_content
+                    ? detailObj.config_content as string
                     : JSON.stringify(detailObj.config_content, null, 2);
             }
             setEditedConfigContent(contentStr);

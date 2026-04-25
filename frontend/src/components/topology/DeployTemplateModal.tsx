@@ -24,10 +24,10 @@ interface DeployTemplateModalProps {
     onSuccess: () => void;
     onError?: (error: string) => void;
     onWarning?: (warning: string) => void;
-    selectedDevices: any[]; // Using any to be compatible with DeviceNetwork or raw items
+    selectedDevices: { id: string; device_name?: string | null }[];
 }
 
-export default function DeployTemplateModal({ isOpen, onClose, onSuccess, onError, onWarning, selectedDevices }: DeployTemplateModalProps) {
+export default function DeployTemplateModal({ isOpen, onClose, onSuccess, onError, selectedDevices }: DeployTemplateModalProps) {
     const [templateId, setTemplateId] = useState<string>("");
     const [error, setError] = useState<string | null>(null);
     const [editedConfigContent, setEditedConfigContent] = useState<string>("");
@@ -56,11 +56,11 @@ export default function DeployTemplateModal({ isOpen, onClose, onSuccess, onErro
 
     useEffect(() => {
         if (selectedTemplateDetail) {
-            const detailObj = (selectedTemplateDetail as any).detail || selectedTemplateDetail;
+            const detailObj = ((selectedTemplateDetail as Record<string, unknown>).detail as Record<string, unknown>) || (selectedTemplateDetail as Record<string, unknown>);
             let contentStr = "";
             if (detailObj.config_content) {
                 contentStr = typeof detailObj.config_content === 'string'
-                    ? detailObj.config_content
+                    ? detailObj.config_content as string
                     : JSON.stringify(detailObj.config_content, null, 2);
             }
             setEditedConfigContent(contentStr);
@@ -77,23 +77,24 @@ export default function DeployTemplateModal({ isOpen, onClose, onSuccess, onErro
             onSuccess: () => {
                 onSuccess();
             },
-            onError: (error: any) => {
+            onError: (error: unknown) => {
                 console.error("Deploy template error:", error);
                 let errorMessage = "Failed to trigger deployment. Please try again.";
-                if (error && typeof error === 'object') {
-                    if (error.detail) {
-                        if (Array.isArray(error.detail)) {
-                            errorMessage = error.detail.map((e: any) => `${e.loc?.join('->') || 'Field'}: ${e.msg}`).join(', ');
-                        } else if (typeof error.detail === 'string') {
-                            errorMessage = error.detail;
+                const errObj = error as Record<string, unknown> | null;
+                if (errObj && typeof errObj === 'object') {
+                    if (errObj.detail) {
+                        if (Array.isArray(errObj.detail)) {
+                            errorMessage = errObj.detail.map((e: Record<string, unknown>) => `${(e.loc as string[])?.join('->') || 'Field'}: ${e.msg as string}`).join(', ');
+                        } else if (typeof errObj.detail === 'string') {
+                            errorMessage = errObj.detail;
                         } else {
-                            errorMessage = JSON.stringify(error.detail);
+                            errorMessage = JSON.stringify(errObj.detail);
                         }
-                    } else if (error.message) {
-                        errorMessage = error.message;
+                    } else if (errObj.message) {
+                        errorMessage = errObj.message as string;
                     } else {
                         try {
-                            const str = JSON.stringify(error);
+                            const str = JSON.stringify(errObj);
                             if (str !== "{}") errorMessage = str;
                         } catch (e) {}
                     }
@@ -121,9 +122,9 @@ export default function DeployTemplateModal({ isOpen, onClose, onSuccess, onErro
                 template_id: templateId,
                 device_ids: selectedDevices.map(d => d.id),
                 variables: {
-                    config_content: editedConfigContent // Payload inside variables matching schema 
+                    config_content: editedConfigContent
                 }
-            } as any
+            }
         });
     };
 
