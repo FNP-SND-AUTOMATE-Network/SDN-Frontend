@@ -122,12 +122,12 @@ export default function EditTemplateModal({
             queryClient.invalidateQueries({ queryKey: ["get", "/configuration-templates/"] });
             // Also invalidate single template fetch just in case
             if (template?.id) {
-                queryClient.invalidateQueries({ queryKey: ["get", `/configuration-templates/${template.id}` as any] });
+                queryClient.invalidateQueries({ queryKey: ["get", `/configuration-templates/${template.id}`] });
             }
             onSuccess();
             handleClose();
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             showError(error instanceof Error ? error.message : "Failed to save changes");
         }
     });
@@ -142,7 +142,6 @@ export default function EditTemplateModal({
             setSelectedTags(template.tags?.map(t => t.tag_name) || []);
             setContentMode("keep");
             setSelectedFile(null);
-            editMutation.reset();
         }
     }, [isOpen, template]);
 

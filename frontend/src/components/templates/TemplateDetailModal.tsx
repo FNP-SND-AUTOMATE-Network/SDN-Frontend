@@ -27,7 +27,6 @@ import {
     Skeleton,
     Paper,
     Stack,
-    Divider,
 } from "@mui/material";
 import { useAuth } from "@/contexts/AuthContext";
 

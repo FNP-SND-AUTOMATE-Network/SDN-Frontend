@@ -25,7 +25,6 @@ import {
     MenuItem,
     Typography,
     Box,
-    IconButton,
     Chip,
     Paper,
     Stack,
@@ -110,7 +109,7 @@ export default function CreateTemplateModal({
             onSuccess();
             handleClose();
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             showError(error instanceof Error ? error.message : "Failed to create template");
         }
     });
